@@ -10,11 +10,11 @@ from TauFW.PicoProducer.corrections.MuonSFs import *
 from TauPOG.TauIDSFs.TauIDSFTool import TauIDSFTool, TauESTool
 
 
-class ModuleMuTau(ModuleTauPair):
+class ModuleMuTauDeepTau_woVS(ModuleTauPair):
   
   def __init__(self, fname, **kwargs):
     kwargs['channel'] = 'mutau'
-    super(ModuleMuTau,self).__init__(fname,**kwargs)
+    super(ModuleMuTauDeepTau_woVS,self).__init__(fname,**kwargs)
     self.out = TreeProducerMuTau(fname,self)
     print("=====> ERA: ", self.era)
     print("=====> YEAR: ", self.year) 
@@ -65,7 +65,7 @@ class ModuleMuTau(ModuleTauPair):
   
   def beginJob(self):
     """Before processing any events or files."""
-    super(ModuleMuTau,self).beginJob()
+    super(ModuleMuTauDeepTau_woVS,self).beginJob()
     print(">>> %-12s = %s"%('tauwp',      self.tauwp))
     print(">>> %-12s = %s"%('muonCutPt',  self.muonCutPt))
     print(">>> %-12s = %s"%('muonCutEta', self.muonCutEta))
@@ -114,9 +114,9 @@ class ModuleMuTau(ModuleTauPair):
       if tau.decayMode not in [0,1,10,11]: continue
       if abs(tau.charge)!=1: continue
       #id cuts v2p5
-      if tau.idDeepTau2018v2p5VSe<1: continue # VVVLoose
-      if tau.idDeepTau2018v2p5VSmu<1: continue # VLoose
-      if tau.idDeepTau2018v2p5VSjet<1: continue # VVVLoose
+      # if tau.idDeepTau2018v2p5VSe<1: continue # VVVLoose
+      # if tau.idDeepTau2018v2p5VSmu<1: continue # VLoose
+      # if tau.idDeepTau2018v2p5VSjet<1: continue # VVVLoose
       if self.ismc:
         tau.es   = 1 # store energy scale for propagating to MET
         genmatch = tau.genPartFlav
@@ -170,8 +170,8 @@ class ModuleMuTau(ModuleTauPair):
     if self.out.lepton_vetoes[0] and self.out.lepton_vetoes_notau[0]: return False
     self.out.cutflow.fill('lepvetoes')
 
-    # if self.jetveto(event): return False
-    # self.out.cutflow.fill('jetvetoes')
+    if self.jetveto(event): return False
+    self.out.cutflow.fill('jetvetoes')
    
  
     # EVENT
@@ -225,13 +225,6 @@ class ModuleMuTau(ModuleTauPair):
     self.out.rawPNetVSe_2[0]               = tau.rawPNetVSe
     self.out.rawPNetVSmu_2[0]              = tau.rawPNetVSmu
     self.out.rawPNetVSjet_2[0]             = tau.rawPNetVSjet
-    self.out.decayModePNet_2[0]            = tau.decayModePNet
-
-    self.out.probDM0PNet_2[0]              = tau.probDM0PNet
-    self.out.probDM1PNet_2[0]              = tau.probDM1PNet
-    self.out.probDM2PNet_2[0]              = tau.probDM2PNet
-    self.out.probDM10PNet_2[0]              = tau.probDM10PNet
-    self.out.probDM11PNet_2[0]              = tau.probDM11PNet
 
     
     # GENERATOR

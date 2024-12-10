@@ -10,11 +10,11 @@ from TauFW.PicoProducer.corrections.MuonSFs import *
 from TauPOG.TauIDSFs.TauIDSFTool import TauIDSFTool, TauESTool
 
 
-class ModuleMuTau(ModuleTauPair):
+class ModuleMuTauDeepTau_PNetDM(ModuleTauPair):
   
   def __init__(self, fname, **kwargs):
     kwargs['channel'] = 'mutau'
-    super(ModuleMuTau,self).__init__(fname,**kwargs)
+    super(ModuleMuTauDeepTau_PNetDM,self).__init__(fname,**kwargs)
     self.out = TreeProducerMuTau(fname,self)
     print("=====> ERA: ", self.era)
     print("=====> YEAR: ", self.year) 
@@ -65,7 +65,7 @@ class ModuleMuTau(ModuleTauPair):
   
   def beginJob(self):
     """Before processing any events or files."""
-    super(ModuleMuTau,self).beginJob()
+    super(ModuleMuTauDeepTau_PNetDM,self).beginJob()
     print(">>> %-12s = %s"%('tauwp',      self.tauwp))
     print(">>> %-12s = %s"%('muonCutPt',  self.muonCutPt))
     print(">>> %-12s = %s"%('muonCutEta', self.muonCutEta))
@@ -111,12 +111,15 @@ class ModuleMuTau(ModuleTauPair):
     for tau in Collection(event,'Tau'):
       if abs(tau.eta)>self.tauCutEta: continue
       if abs(tau.dz)>0.2: continue
-      if tau.decayMode not in [0,1,10,11]: continue
+      if tau.decayModePNet not in [0,1,2,10,11]: continue
       if abs(tau.charge)!=1: continue
       #id cuts v2p5
       if tau.idDeepTau2018v2p5VSe<1: continue # VVVLoose
       if tau.idDeepTau2018v2p5VSmu<1: continue # VLoose
       if tau.idDeepTau2018v2p5VSjet<1: continue # VVVLoose
+      # if tau.rawPNetVSe < 0.148: continue # VVVLoose
+      # if tau.rawPNetVSjet < 0.114: continue #VVVLoose
+      # if tau.rawPNetVSmu < 0.9: continue # Tight
       if self.ismc:
         tau.es   = 1 # store energy scale for propagating to MET
         genmatch = tau.genPartFlav
@@ -226,14 +229,14 @@ class ModuleMuTau(ModuleTauPair):
     self.out.rawPNetVSmu_2[0]              = tau.rawPNetVSmu
     self.out.rawPNetVSjet_2[0]             = tau.rawPNetVSjet
     self.out.decayModePNet_2[0]            = tau.decayModePNet
-
+    
     self.out.probDM0PNet_2[0]              = tau.probDM0PNet
     self.out.probDM1PNet_2[0]              = tau.probDM1PNet
     self.out.probDM2PNet_2[0]              = tau.probDM2PNet
     self.out.probDM10PNet_2[0]              = tau.probDM10PNet
     self.out.probDM11PNet_2[0]              = tau.probDM11PNet
-
     
+
     # GENERATOR
     if self.ismc:
       self.out.genmatch_1[0]     = muon.genPartFlav

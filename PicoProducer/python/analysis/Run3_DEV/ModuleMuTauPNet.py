@@ -10,11 +10,11 @@ from TauFW.PicoProducer.corrections.MuonSFs import *
 from TauPOG.TauIDSFs.TauIDSFTool import TauIDSFTool, TauESTool
 
 
-class ModuleMuTau(ModuleTauPair):
+class ModuleMuTauPNet(ModuleTauPair):
   
   def __init__(self, fname, **kwargs):
     kwargs['channel'] = 'mutau'
-    super(ModuleMuTau,self).__init__(fname,**kwargs)
+    super(ModuleMuTauPNet,self).__init__(fname,**kwargs)
     self.out = TreeProducerMuTau(fname,self)
     print("=====> ERA: ", self.era)
     print("=====> YEAR: ", self.year) 
@@ -65,7 +65,7 @@ class ModuleMuTau(ModuleTauPair):
   
   def beginJob(self):
     """Before processing any events or files."""
-    super(ModuleMuTau,self).beginJob()
+    super(ModuleMuTauPNet,self).beginJob()
     print(">>> %-12s = %s"%('tauwp',      self.tauwp))
     print(">>> %-12s = %s"%('muonCutPt',  self.muonCutPt))
     print(">>> %-12s = %s"%('muonCutEta', self.muonCutEta))
@@ -114,9 +114,12 @@ class ModuleMuTau(ModuleTauPair):
       if tau.decayMode not in [0,1,10,11]: continue
       if abs(tau.charge)!=1: continue
       #id cuts v2p5
-      if tau.idDeepTau2018v2p5VSe<1: continue # VVVLoose
-      if tau.idDeepTau2018v2p5VSmu<1: continue # VLoose
-      if tau.idDeepTau2018v2p5VSjet<1: continue # VVVLoose
+      # if tau.idDeepTau2018v2p5VSe<1: continue # VVVLoose
+      # if tau.idDeepTau2018v2p5VSmu<1: continue # VLoose
+      # if tau.idDeepTau2018v2p5VSjet<1: continue # VVVLoose
+      if tau.rawPNetVSe < 0.148: continue # VVVLoose
+      if tau.rawPNetVSjet < 0.114: continue #VVVLoose
+      if tau.rawPNetVSmu < 0.9: continue # Tight
       if self.ismc:
         tau.es   = 1 # store energy scale for propagating to MET
         genmatch = tau.genPartFlav
@@ -149,7 +152,7 @@ class ModuleMuTau(ModuleTauPair):
     for muon in muons:
       for tau in taus:
         if tau.DeltaR(muon)<0.5: continue
-        ltau = LeptonTauPair(muon,muon.pfRelIso04_all,tau,tau.rawDeepTau2018v2p5VSjet)
+        ltau = LeptonTauPair(muon,muon.pfRelIso04_all,tau,tau.rawPNetVSjet)
         ltaus.append(ltau)
     if len(ltaus)==0:
       return False
@@ -226,14 +229,14 @@ class ModuleMuTau(ModuleTauPair):
     self.out.rawPNetVSmu_2[0]              = tau.rawPNetVSmu
     self.out.rawPNetVSjet_2[0]             = tau.rawPNetVSjet
     self.out.decayModePNet_2[0]            = tau.decayModePNet
-
+    
     self.out.probDM0PNet_2[0]              = tau.probDM0PNet
     self.out.probDM1PNet_2[0]              = tau.probDM1PNet
     self.out.probDM2PNet_2[0]              = tau.probDM2PNet
     self.out.probDM10PNet_2[0]              = tau.probDM10PNet
     self.out.probDM11PNet_2[0]              = tau.probDM11PNet
-
     
+
     # GENERATOR
     if self.ismc:
       self.out.genmatch_1[0]     = muon.genPartFlav
@@ -257,7 +260,7 @@ class ModuleMuTau(ModuleTauPair):
     # WEIGHTS
     if self.ismc:
       self.fillCommonCorrBranches(event,jets,met,njets_vars,met_vars)
-      if muon.pfRelIso04_all<0.50 and tau.idDeepTau2018v2p5VSjet>=2:
+      if muon.pfRelIso04_all<0.50 and tau.rawPNetVSjet>=0.259: #replace with the VVLoose PNet
          self.btagTool.fillEffMaps(jets,usejec=self.dojec)
       
       # MUON WEIGHTS
