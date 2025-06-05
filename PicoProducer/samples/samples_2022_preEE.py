@@ -110,11 +110,11 @@ samples  = [
   
   # SINGLE MUON
   D('Data','Muon_Run2022C',"/Muon_Run2022C",
-   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu','emu']),
+   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu*','emu']),
   D('Data','Muon_Run2022D',"/Muon_Run2022D",
-   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu','emu']),
+   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu*','emu']),
   D('Data','SingleMuon_Run2022C',"/SingleMuon_Run2022C",
-   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu','emu']),
+   store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'mutau*','mumu*','emu']),
   # SINGLE ELECTRON
   D('Data','EGamma_Run2022C',"/EGamma_Run2022C",
    store=storage,url=url,files=filelist,opts="useT1=False",channels=["skim*",'etau*','ee']),
