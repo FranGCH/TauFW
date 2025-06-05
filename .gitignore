@@ -5,7 +5,7 @@
 *.pcm
 *~
 *.root
-*.zip
+# *.zip
 core.*
 __init__.py
 */compare
