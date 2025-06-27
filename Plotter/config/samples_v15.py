@@ -18,7 +18,7 @@ def getsampleset(channel,era,**kwargs):
   rmsfs    = ensurelist(kwargs.get('rmsf', [ ])) # remove the tau ID SF, e.g. rmsf=['idweight_2','ltfweight_2']
   addsfs   = ensurelist(kwargs.get('addsf', [ ])) # add extra weight to all samples
   weight   = kwargs.get('weight',   None         ) # weight for all MC samples
-  dyweight = kwargs.get('dyweight', 'zptweight_lo'  ) # weight for DY samples: zptweight, zptweight_lo, zptweight_nlo, zptweight_nnlo
+  dyweight = kwargs.get('dyweight', 'zptweight_nlo'  ) # weight for DY samples: zptweight, zptweight_lo, zptweight_nlo, zptweight_nnlo
   ttweight = kwargs.get('ttweight', 'ttptweight' ) # weight for ttbar samples
   filter   = kwargs.get('filter',   None         ) # only include these MC samples
   vetoes   = kwargs.get('vetoes',   None         ) # veto these MC samples
@@ -34,6 +34,7 @@ def getsampleset(channel,era,**kwargs):
     # for now nevts is set to 1 so it isn't taken into account in the scaling of the samples as this will be done elsewhere
     
     kfactor_dy=6282.6/5455.0 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
+    kfactor_dy_powheg = 6282.6/6731.99  # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
     kfactor_wj= 0.93 if '2024' in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
     kfactor_ttbar=923.6/762.1 # NLO->NNLO k-factor computed for 13.6 TeV
     kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
@@ -50,10 +51,41 @@ def getsampleset(channel,era,**kwargs):
         # ( 'DY', "DYto2Mu-4Jets_MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
         # ( 'DY', "DYto2E-4Jets_MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
 
-        ( 'DY', "DYto2Tau-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
-        ( 'DY', "DYto2Mu-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
-        ( 'DY', "DYto2E-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
+        # ( 'DY', "DYto2Tau-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
+        ( 'DY', "DYto2Mu-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy),# {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
+        ( 'DY', "DYto2E-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy),# {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
+        ( 'DY', "DYto2Tau_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744.0*1.0),# {'extraweight': dyweight }), # , 'nevts': 1459245, 'sumw':1338709.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 2967285, 'sumw':2907117.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 1498536, 'sumw':1483110.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 876608, 'sumw': 872968.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 898556, 'sumw':897512.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 581254, 'sumw':581124.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 600000, 'sumw':599982.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 300000, 'sumw':299996.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 300000, 'sumw':299998.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-6000_powheg",      "Drell-Yan 6000",          3.519e-8*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 146995, 'sumw':146995.0} ), # LO times kfactor
 
+        # ( 'DY', "DYto2Mu_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744*1.0, {'extraweight': dyweight }), # , 'nevts': 1418050, 'sumw':1301142} ), # LO times kfactor
+        # # ( 'DY', "DYto2Mu_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 2820937, 'sumw':2763691.0} ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 1453748, 'sumw':1438952.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 853443, 'sumw':849855.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 874240, 'sumw':873292.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 579560, 'sumw': 579456.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 590523, 'sumw':590493.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 299278, 'sumw':299274.0} ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 289200, 'sumw':289198.0}  ), # LO times kfactor
+        # ( 'DY', "DYto2Mu_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy, {'extraweight': dyweight}), # ,'nevts': 145002, 'sumw':145002.0}  ), # LO times kfactor
+
+        # ( 'DY', "DYto2E_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744*1.0, {'extraweight': dyweight }), # , 'nevts': 1477950, 'sumw':1356076.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 2918148, 'sumw':2859284.0} ), # LO times kfactor  
+        # ( 'DY', "DYto2E_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 1497870, 'sumw':1482424.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 867524, 'sumw':864092.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 891121, 'sumw':890161.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 600000, 'sumw':599902.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 586690, 'sumw':586670.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 290480, 'sumw':290470.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 298948, 'sumw':298946.0} ), # LO times kfactor
+        # ( 'DY', "DYto2E_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy, {'extraweight': dyweight }), # , 'nevts': 145094, 'sumw':145094.0} ), # LO times kfactor
         # ( 'DY', "DYto2L-4Jets_MLL-50_ext1",   "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight } ), # LO times kfactor
         # ( 'DY', "DYto2L-4Jets_MLL-50_ext2",  "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight } ), # LO times kfactor
         # ( 'DY', "DYto2L-4Jets_MLL-50_1J",      "Drell-Yan 1J 50",      978.3*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor currently not available
