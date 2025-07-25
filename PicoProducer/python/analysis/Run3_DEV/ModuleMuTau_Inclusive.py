@@ -115,20 +115,16 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
 
       # cuts to reduce storage size
       # DeepTau2p5 cuts
-      if tau.rawDeepTau2018v2p5VSe>=0.099: continue # DeepTau2p5 VLoose
-      if tau.rawDeepTau2018v2p5VSmu>=0.2949: continue # DeepTau2p5 VLoose
-      if tau.rawDeepTau2018v2p5VSjet>=0.4083: continue # DeepTau2p5 VLoose
-
+      if tau.rawDeepTau2018v2p5VSe>=0.099 and tau.rawDeepTau2018v2p5VSmu>=0.2949 and tau.rawDeepTau2018v2p5VSjet>=0.4083: 
+        pass 
       # PNet cuts
-      if tau.rawPNetVSe>=0.148: continue # PNet VLoose
-      if tau.rawPNetVSmu>=0.8: continue # PNet VLoose
-      if tau.rawPNetVSjet>=0.114: continue # PNet VVLoose
-
+      elif tau.rawPNetVSe>=0.148 and tau.rawPNetVSmu>=0.8 and tau.rawPNetVSjet>=0.114: 
+        pass 
       # UParT cuts
-      if tau.rawUParTVSe>=0.078: continue # UParT VLoose
-      if tau.rawUParTVSmu>=0.7: continue # UParT VLoose
-      if tau.rawUParTVSjet>=0.05: continue # UParT VVLoose
-
+      elif tau.rawUParTVSe>=0.078 and tau.rawUParTVSmu>=0.7 and tau.rawUParTVSjet>=0.05:
+        pass 
+      else:
+        continue
       if self.ismc:
         tau.es   = 1 # store energy scale for propagating to MET
         genmatch = tau.genPartFlav
