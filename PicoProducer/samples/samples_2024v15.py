@@ -37,6 +37,9 @@ samples  = [
   M('DY','DYto2E_Bin-MLL-4000to6000',
     "/DYto2E_Bin-MLL-4000to6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
     store=storage,url=url,files=filelist,opts=opts_dy),
+  M('DY','DYto2E_Bin-MLL-6000',
+    "/DYto2E_Bin-MLL-6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
+    store=storage,url=url,files=filelist,opts=opts_dy),
 
 
   # add others if needed from: https://cmsweb.cern.ch/das/request?view=list&limit=100&instance=prod%2Fglobal&input=dataset+status%3D*+dataset%3D%2FDY*powheg*%2FRun*24*NanoAODv15*%2FNANOAODSIM
@@ -69,6 +72,9 @@ samples  = [
   M('DY','DYto2Mu_Bin-MLL-4000to6000',
     "/DYto2Mu_Bin-MLL-4000to6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
     store=storage,url=url,files=filelist,opts=opts_dy),
+  M('DY','DYto2Mu_Bin-MLL-6000',
+    "/DYto2Mu_Bin-MLL-6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
+    store=storage,url=url,files=filelist,opts=opts_dy),
   
   # # # DRELL-YAN Tau
   M('DY','DYto2Tau_Bin-MLL-10to50',
@@ -97,6 +103,9 @@ samples  = [
     store=storage,url=url,files=filelist,opts=opts_dy),
   M('DY','DYto2Tau_Bin-MLL-4000to6000',
     "/DYto2Tau_Bin-MLL-4000to6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
+    store=storage,url=url,files=filelist,opts=opts_dy),
+  M('DY','DYto2Tau_Bin-MLL-6000',
+    "/DYto2Tau_Bin-MLL-6000_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
     store=storage,url=url,files=filelist,opts=opts_dy),
 
 
