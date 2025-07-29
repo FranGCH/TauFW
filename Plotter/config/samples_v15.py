@@ -50,24 +50,38 @@ def getsampleset(channel,era,**kwargs):
         # ( 'DY', "DYto2Tau-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
         # ( 'DY', "DYto2Mu-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
         # ( 'DY', "DYto2E-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below
-        ( 'DY', "DYto2Mu_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Mu_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ), #alias
         ( 'DY', "DYto2Mu_Bin-MLL-50to120",  "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Mu_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Mu_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Mu_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
+
         ( 'DY', "DYto2Tau_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Tau_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Tau_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2Tau_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        
         ( 'DY', "DYto2E_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2E_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2E_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        ( 'DY', "DYto2E_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
 
         ( 'WJ', "WtoMuNu-2Jets",            "Wmu + jets",           22666.*kfactor_wj ), # LO times kfactor
         # ( 'WJ', "WtoMuNu-2Jets_0J",            "Wmu + jets",           22666.*kfactor_wj ), # LO times kfactor
