@@ -15,6 +15,7 @@ from TauFW.Plotter.plot.utils import LOG as PLOG
 from TauFW.Plotter.plot.Plot import Plot, deletehist
 import yaml
 import socket
+import time
 
 def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era="",
          varfilter=None,selfilter=None,fraction=False,pdf=False):
@@ -67,36 +68,37 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     loadmacro("python/macros/mapDecayModes.C") # for mapRecoDM
     dmlabels  = ["h^{#pm}","h^{#pm}h^{0}","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}h^{0}","Other"]
     variables += [
-      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},ymax=210000,logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
+      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3,ymax = 270*1e3),
+      # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
       Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
       Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
       Var("m_2",            30,  0,   3, title="m_tau",veto=["njet","nbtag","dm_2==0"]),
       Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed HPS tau_h decay mode",veto=["rawUParTVS","rawPNetVS"],position="TMC",ymargin=1.5),
       Var("decayModePNet_2",           14,  0,  14, fname="decayModePNet_2",title="Reconstructed tau_h PNet decay mode",position="TMC",ymargin=1.7, veto=["rawUParTVS","DeepTau2018v2p5"]),
       
-      Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",50, 0, 1.05,cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', logy=True, veto=["rawUParTVS","DeepTau2018v2p5"]),
-      Var("rawPNetVSe_2",  "Score_{PNetVSe}",30, 0, 1.05, logy=True,cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
-      Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",50, 0, 1.05,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', logy=True, veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, logy=True,cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML'), #veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
 
-      Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",50, 0, 1.05, fname="rawPNetVSjet_2_linear",cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
-      Var("rawPNetVSe_2",  "Score_{PNetVSe}",30,  0, 1.05, fname="rawPNetVSe_2_linear",cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
-      Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",50,  0, 1.05,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', fname="rawPNetVSmu_2_linear", veto=["rawUParTVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSjet_2_linear",cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
+      # Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSe_2_linear",cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
+      # Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', fname="rawPNetVSmu_2_linear", veto=["rawUParTVS","DeepTau2018v2p5"],ymargin=1.3),
 
-      Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",50, 0.4, 1.05,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",50, 0.0, 1.05,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='ML',ncols=3 ,logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",50, 0.4, 1.05,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='ML',ncols=3 ,logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
 
-      Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",50, 0.4, 1.05,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",50, 0.0, 1.05,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='M' ,fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",50, 0.4, 1.05,cbins={"DeepTau2018":(50, 0.8,1.05)}, fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      # Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      # Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='M' ,fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      # Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)}, fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
 
-      Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1.0, 1.05,cbins={"rawUParTVS":(50, 0.1,1.05)},pos='C', fname="rawUParTVSe_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1.0, 1.05,cbins={"rawUParTVS":(50, 0.6,1.05)},pos='ML', fname="rawUParTVSmu_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1.0, 1.05, fname="rawUParTVSjet_2_linear",pos="ML",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.1,1.05)},pos='C', fname="rawUParTVSe_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.6,1.05)},pos='ML', fname="rawUParTVSmu_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1, 1.05,ymin = 1e3, fname="rawUParTVSjet_2_linear",pos="ML",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
 
-      Var("rawUParTVSe_2",  "Score_{rParTVSe}",100, -1.0, 1.05,cbins={"rawUParTVS":(50, 0.1,1.05)}, logy=True,fname="rawUParTVSe_2_log",pos="L",ncols=2,veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1.0, 1.05,cbins={"rawUParTVS":(50, 0.6,1.05)},pos='ML', logy=True,fname="rawUParTVSmu_2_log",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1.0, 1.05, logy=True,fname="rawUParTVSjet_2_log",pos="ML",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawUParTVS":(75, 0.05,1.05)}, logy=True,fname="rawUParTVSe_2_log",pos="L",ncols=2,ymargin=1.3),
+      Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1.0, 1.05,ymin = 1e2,cbins={"rawUParTVS":(50, 0.75,1.05)},pos='ML', logy=True,fname="rawUParTVSmu_2_log",ncols=2,ymargin=1.3),
+      Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1.0, 1.05,ymin = 1e3, cbins={"rawUParTVS":(75, 0.25,1.05)},logy=True,fname="rawUParTVSjet_2_log",pos="TR",ncols=2,ymargin=1.3),
 
 
       Var("probDM0UParT_2", "Prob of DM_{UParT}=0", 21, 0, 1.05, fname="probDM0UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
@@ -123,6 +125,7 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
         Var('gendm_2',16, 0, 16, fname='gendm_2', title='True DM of tau', data=False, logy=True),
         Var('genmatch_1',16,0,16, fname='genmatch_1', title='l1 GenMatch Flav', data=False, logy=True, veto=["dm_2=="]),
         Var('genmatch_2',7,0,7, fname='genmatch_2', title='tau_h GenMatch Flav', data=False, logy=True, veto=["dm_2=="],pos="C"),
+        # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",data=False,ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
         ]
     # for sample in sampleset.expsamples:
     #   print("Samples name: {}".format(str(sample)))
@@ -155,13 +158,13 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     else:
       stacks = sampleset.getstack(variables,selection,method='QCD_OSSS',scale=1, parallel=parallel)
     fname  = "%s/$VAR_%s-%s-%s$TAG"%(outdir,channel.replace('mu','m').replace('tau','t'),selection.filename,era)
-    text   = "%s: %s"%(channel.replace('mu',"#mu").replace('tau',"#tau_{h}").replace('_pnet_pnetdm',"PNet_{DMs}").replace('_pnet',"_{PNet}").replace('_deept',"_{DeepTau}").replace('_inclusive_2024Summer',''),selection.title)
+    text   = "%s: %s"%(channel.replace('mu',"#mu").replace('tau',"#tau_{h}").replace('_inclusive',''),selection.title)
     if extratext:
       text += ("" if '\n' in extratext[:3] else ", ") + extratext
     #for stack, variable in stacks.iteritems():
     for stack, variable in stacks.items(): # python 3
       #position = "" #variable.position or 'topright'
-      stack.draw(fraction=fraction)
+      stack.draw(fraction=fraction) #, drawdata=False,staterr=False,ratio=False)
       stack.drawlegend() #position)
       stack.drawtext(text)
       stack.saveas(fname,ext=exts,tag=tag)
@@ -320,6 +323,8 @@ def main(args):
     with open(config, 'r') as file:
       setup = yaml.safe_load(file)
     tag = setup.get('tag',"")+args.tag
+
+    print(">>>>> Parallel mode: %s"%parallel)
     
     for era in eras:
       setera(era) # set era for plot style and lumi-xsec normalization
@@ -334,6 +339,7 @@ def main(args):
 
 if __name__ == "__main__":
   from argparse import ArgumentParser, RawTextHelpFormatter
+  start = time.time()
   eras = ['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','2022_preEE','2022_postEE', '2023C', '2023D', '2024','2024_v15']
   description = """Simple plotting script for pico analysis tuples"""
   parser = ArgumentParser(prog="plot",description=description,epilog="Good luck!")
@@ -362,5 +368,17 @@ if __name__ == "__main__":
   LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity
   main(args)
+  end = time.time()
+  runtime = end - start
+
+  if runtime < 60:
+      print(f'Runtime: {runtime:.2f} seconds')
+  elif runtime < 3600:  # Less than one hour
+      minutes = runtime / 60
+      print(f'Runtime: {minutes:.2f} minutes')
+  else:
+      hours = runtime / 3600
+      print(f'Runtime: {hours:.2f} hours')
+
   print("\n>>> Done.")
   
