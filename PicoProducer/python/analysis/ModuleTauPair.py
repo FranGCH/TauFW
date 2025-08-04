@@ -75,6 +75,8 @@ class ModuleTauPair(Module):
     self.metUncLabels = [ ]
     if self.ismc:
       self.puTool      = PileupWeightTool(era=self.era,sample=self.filename,verb=self.verbosity)
+      self.puTool_up   = PileupWeightTool(era=self.era,sample=self.filename,sigma='up',verb=self.verbosity)
+      self.puTool_down = PileupWeightTool(era=self.era,sample=self.filename,sigma='down',verb=self.verbosity)
       self.btagTool    = BTagWeightTool('DeepJet','medium',era=self.era,channel=self.channel,maxeta=self.bjetCutEta) #,loadsys=not self.dotight
       if self.dozpt:
         self.zptTool  = ZptCorrectionTool(era=self.era)
@@ -347,7 +349,11 @@ class ModuleTauPair(Module):
       if abs(jet.eta)>4.7: continue
       if jet.DeltaR(tau1)<0.5: continue
       if jet.DeltaR(tau2)<0.5: continue
-      if jet.jetId<2: continue # Tight
+      try: 
+        if jet.jetId<2: continue # Tight
+      except(IndexError,AttributeError):
+        # If jetId is not available or out of bounds, assume it passes (jetId=6 means tight)
+        pass
       
       # SAVE JEC VARIATIONS
       if self.dojec:
@@ -483,6 +489,8 @@ class ModuleTauPair(Module):
     
     self.out.genweight[0]     = event.genWeight
     self.out.puweight[0]      = self.puTool.getWeight(event.Pileup_nTrueInt)
+    self.out.puweightUp[0]   = self.puTool_up.getWeight(event.Pileup_nTrueInt)    # up (72.3832 mb)
+    self.out.puweightDown[0] = self.puTool_down.getWeight(event.Pileup_nTrueInt)  # down (66.0168 mb)
     self.out.btagweight[0]    = self.btagTool.getWeight(jets)
     if self.dosys:
       if self.dopdf:
