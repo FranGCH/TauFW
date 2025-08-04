@@ -28,6 +28,7 @@ def QCD_OSSS(self, variables, selections, **kwargs):
   parallel      = kwargs.get('parallel',        False          )
   negthres      = kwargs.get('negthres',        0.25           ) # threshold for warning about negative QCD bins
   
+  print(">>>> QCD_OSS Parallel: %s"%(parallel))
   # INVERT OS -> SS CHARGE SELECTIONS
   scale_dict = { }
   selections_SS = [ ]
