@@ -146,22 +146,22 @@ class ModuleTauPair(Module):
     
     # for v10
     branchesV10 = [
-      ('Jet_jetId',                     [6]*200       ), # Jet ID flag: bit2 is tight, bit3 is tightLepVeto (increased from 32 to 200 to handle more jets)
-      ('Muon_isTracker',                  [True]*200    ), # Increased from 32 to 200 to handle more muons
+      ('Jet_jetId',                     [6]*32       ), 
+      ('Muon_isTracker',                  [True]*32    ), 
       #('Electron_mvaFall17V217Iso',      [-1.]*32       ), #not available anymore
-      ('Electron_lostHits',               [0]*200       ), # Increased from 32 to 200 to handle more electrons
+      ('Electron_lostHits',               [0]*32       ), 
       ('Electron_mvaFall17V2Iso_WPL',    'Electron_mvaIso_WPL'    ),
       ('Electron_mvaFall17V2Iso_WP80',   'Electron_mvaIso_WP80'   ),
       ('Electron_mvaFall17V2Iso_WP90',   'Electron_mvaIso_WP90'   ),
       ('Electron_mvaFall17V2noIso_WPL',  'Electron_mvaNoIso_WPL'  ),
       ('Electron_mvaFall17V2noIso_WP80', 'Electron_mvaNoIso_WP80' ),
       ('Electron_mvaFall17V2noIso_WP90', 'Electron_mvaNoIso_WP90' ),
-      ('Tau_idDecayMode',                [True]*200              ), # Increased from 32 to 200 to handle more taus
-      ('Tau_idDecayModeNewDMs',          [True]*200              ), # Increased from 32 to 200 to handle more taus
+      ('Tau_idDecayMode',                [True]*32              ), 
+      ('Tau_idDecayModeNewDMs',          [True]*32              ), 
 
-      ('Tau_idDeepTau2017v2p1VSe', [-1.]*200), # Increased from 32 to 200 to handle more taus
-      ('Tau_idDeepTau2017v2p1VSmu', [-1.]*200), # Increased from 32 to 200 to handle more taus
-      ('Tau_idDeepTau2017v2p1VSjet', [-1.]*200), # Increased from 32 to 200 to handle more taus
+      ('Tau_idDeepTau2017v2p1VSe', [-1.]*32), 
+      ('Tau_idDeepTau2017v2p1VSmu', [-1.]*32), 
+      ('Tau_idDeepTau2017v2p1VSjet', [-1.]*32), 
 
       ('Tau_idDeepTau2018v2p5VSe','Tau_idDeepTau2017v2p1VSe'), 
       ('Tau_idDeepTau2018v2p5VSmu','Tau_idDeepTau2017v2p1VSmu'),  
@@ -356,8 +356,9 @@ class ModuleTauPair(Module):
       # if "v15" not in self.era: #NanoAODv15 doesn't have the jetID branch
       try:
         if jet.jetId<2: continue # Tight
+        print(">>>Jet ID: %s"%jet.jetId)
       except (IndexError, AttributeError):
-        # If jetId is not available or out of bounds, assume it passes (jetId=6 means tight)
+        # If jetId is not available or out of bounds, assume it passes #### Might be wrong####
         pass
       
       # SAVE JEC VARIATIONS
