@@ -174,6 +174,10 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
     self.out.lepton_vetoes_notau[0] = extramuon_veto or extraelec_veto or dilepton_veto
     
 
+    if self.dotight: # do not save all events to reduce disk space
+      if (self.tes not in [1,None] or self.tessys!=None) and (tau.genPartFlav!=5):
+        return False
+    
     #cutflow on veto
     if self.out.lepton_vetoes[0] and self.out.lepton_vetoes_notau[0]: return False
     self.out.cutflow.fill('lepvetoes')
