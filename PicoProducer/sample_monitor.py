@@ -68,9 +68,10 @@ class SampleMonitor:
         }
         
         # Parse TES values from 0.97 to 1.03 with 0.002 step
-        self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(31)]
-        self.ltf_values = [0.97, 1.03]
-        self.jtf_values = [0.90, 1.10]
+        #self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(31)]
+        self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(16)]  # 0.97 to 1.00 inclusive
+        self.ltf_values = []
+        self.jtf_values = []
         
         self.variations = {
             "tes": self.tes_values,
@@ -191,9 +192,9 @@ class SampleMonitor:
         
         try:
             if self.verbose:
-                print(f"[VERBOSE] Starting subprocess with timeout=3600s...")
-            
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=3600)
+                print(f"[VERBOSE] Starting subprocess with timeout=36000s...")
+
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=36000)
             
             if self.verbose:
                 print(f"[VERBOSE] Command completed with return code: {result.returncode}")
@@ -242,57 +243,61 @@ class SampleMonitor:
         
         return status
     
-    def check_status(self, var_types=None, auto_resubmit=False):
-        """Check status of all or specific variation types"""
+    def check_status(self, var_types=None, auto_resubmit=False, auto_hadd=False):
+        """Check status of all or specific variation types, and immediately resubmit/hadd and update config as soon as a single file is failed/completed."""
         if var_types is None:
             var_types = list(self.variations.keys())
-        
+
         config = self.load_config()
-        
+
         print("=== CHECKING STATUS ===")
         if auto_resubmit:
             print("(Auto-resubmit enabled - will resubmit failed jobs immediately)")
-        
+        if auto_hadd:
+            print("(Auto-hadd enabled - will hadd completed variations immediately)")
+
         if self.verbose:
             print(f"[VERBOSE] Checking variation types: {var_types}")
             print(f"[VERBOSE] Config file: {self.config_file}")
             print(f"[VERBOSE] Year: {self.year}, Channel: {self.channel}")
             print(f"[VERBOSE] Auto-resubmit: {auto_resubmit}")
-        
-        summary = {"completed": 0, "failed": 0, "pending": 0, "unknown": 0}
+            print(f"[VERBOSE] Auto-hadd: {auto_hadd}")
+
+        summary = {"completed": 0, "failed": 0, "pending": 0, "unknown": 0, "hadded": 0}
         total_resubmitted = 0
         total_checked = 0
         total_skipped = 0
-        
+        total_hadded = 0
+
         for var_type in var_types:
             if var_type not in self.variations:
                 if self.verbose:
                     print(f"[VERBOSE] Skipping unknown variation type: {var_type}")
                 continue
-                
+
             print(f"\n--- {var_type.upper()} Variations ---")
             if self.verbose:
                 print(f"[VERBOSE] Processing {len(self.variations[var_type])} values for {var_type}")
-            
+
             for value in self.variations[var_type]:
                 value_key = f"{value:.3f}"
                 print(f"\n{var_type.upper()}={value:.3f}:")
-                
+
                 samples = self.get_all_samples(var_type)
                 if self.verbose:
                     print(f"[VERBOSE] Checking {len(samples)} samples for {var_type}={value:.3f}")
-                
+
                 for i, sample in enumerate(samples):
                     if self.verbose:
                         print(f"[VERBOSE] [{i+1}/{len(samples)}] Checking sample: {sample}")
-                    
+
                     # Check if sample is already completed/hadded - skip status check if so
                     current_status = None
                     if (var_type in config["variations"] and 
                         value_key in config["variations"][var_type] and 
                         sample in config["variations"][var_type][value_key]):
                         current_status = config["variations"][var_type][value_key][sample]
-                    
+
                     # Skip checking if already in final state
                     if current_status in ["completed", "hadded"]:
                         status = current_status
@@ -304,7 +309,7 @@ class SampleMonitor:
                         # Perform actual status check
                         result, error = self.run_pico_command("status", var_type, value, sample)
                         total_checked += 1
-                        
+
                         if error:
                             status = "unknown"
                             print(f"  {sample}: ERROR - {error}")
@@ -315,15 +320,25 @@ class SampleMonitor:
                             print(f"  {sample}: {status.upper()}", end="")
                             if self.verbose:
                                 print(f" [return_code={result.returncode}]", end="")
-                        
+
+                        # Update config with current status immediately
+                        if var_type in config["variations"] and value_key in config["variations"][var_type]:
+                            old_status = config["variations"][var_type][value_key].get(sample, "unknown")
+                            config["variations"][var_type][value_key][sample] = status
+                            if self.verbose and old_status != status:
+                                print(f"[VERBOSE] Status changed for {sample}: {old_status} → {status}")
+                            self.save_config(config)
+
+                        summary[status] += 1
+
                         # IMMEDIATE AUTO-RESUBMIT if failed and auto_resubmit is enabled
                         if status == "failed" and auto_resubmit:
                             print(" → Resubmitting...", end="", flush=True)
                             if self.verbose:
                                 print(f"\n[VERBOSE] Auto-resubmitting failed job: {sample}")
-                            
+
                             resubmit_result, resubmit_error = self.run_pico_command("resubmit", var_type, value, sample)
-                            
+
                             if resubmit_error:
                                 print(f" FAILED ({resubmit_error})")
                                 status = "failed"  # Keep as failed
@@ -340,56 +355,64 @@ class SampleMonitor:
                                 status = "failed"  # Keep as failed
                                 if self.verbose:
                                     print(f"[VERBOSE] Resubmit failed with return code: {resubmit_result.returncode}")
+                            # Update config after resubmit
+                            if var_type in config["variations"] and value_key in config["variations"][var_type]:
+                                config["variations"][var_type][value_key][sample] = status
+                                self.save_config(config)
                         elif status == "failed":
                             print()  # Just newline if not auto-resubmitting
                         else:
                             print()  # Newline for other statuses
-                    
-                    # Update config with current status (including any changes from resubmit)
-                    if var_type in config["variations"] and value_key in config["variations"][var_type]:
-                        old_status = config["variations"][var_type][value_key].get(sample, "unknown")
-                        config["variations"][var_type][value_key][sample] = status
-                        if self.verbose and old_status != status:
-                            print(f"[VERBOSE] Status changed for {sample}: {old_status} → {status}")
-                    
-                    summary[status] += 1
-        
-        # Update summary in config
-        config["summary"].update(summary)
-        config["summary"]["total_jobs"] = sum(summary.values())
-        
-        if self.verbose:
-            print(f"[VERBOSE] Saving config to {self.config_file}")
-            print(f"[VERBOSE] Total jobs checked: {total_checked}")
-            print(f"[VERBOSE] Total jobs skipped (cached): {total_skipped}")
-            print(f"[VERBOSE] Updated summary: {summary}")
-        
-        self.save_config(config)
-        
-        # Print auto-resubmit summary if any jobs were resubmitted
-        if auto_resubmit and total_resubmitted > 0:
-            print(f"\nAuto-resubmitted: {total_resubmitted} failed jobs")
-            if self.verbose:
-                print(f"[VERBOSE] Auto-resubmit efficiency: {total_resubmitted}/{summary['failed'] + total_resubmitted} failed jobs")
-        
+
+                        # IMMEDIATE AUTO-HADD if completed and auto_hadd is enabled
+                        if status == "completed" and auto_hadd:
+                            print(" → HADDING...", end="", flush=True)
+                            if self.verbose:
+                                print(f"\n[VERBOSE] Auto-hadding for {var_type}={value:.3f} after {sample} completed")
+                            # Only hadd for this variation (all samples)
+                            result_hadd, error_hadd = self.run_pico_command("hadd", var_type, value, "")
+                            if error_hadd:
+                                print(f" FAILED ({error_hadd})")
+                                if self.verbose:
+                                    print(f"[VERBOSE] Hadd failed: {error_hadd}")
+                            elif result_hadd.returncode == 0:
+                                print(" SUCCESS")
+                                total_hadded += 1
+                                # Update all samples for this variation to "hadded"
+                                all_samples = self.get_all_samples(var_type)
+                                for s in all_samples:
+                                    old_status = config["variations"][var_type][value_key].get(s, "unknown")
+                                    config["variations"][var_type][value_key][s] = "hadded"
+                                    if self.verbose:
+                                        print(f"[VERBOSE] Status updated for {s}: {old_status} → hadded")
+                                self.save_config(config)
+                            else:
+                                print(f" FAILED (return code: {result_hadd.returncode})")
+                                if self.verbose:
+                                    print(f"[VERBOSE] Hadd failed with return code: {result_hadd.returncode}")
+                                    if result_hadd.stderr:
+                                        print(f"[VERBOSE] Hadd stderr: {result_hadd.stderr[:200]}{'...' if len(result_hadd.stderr) > 200 else ''}")
+
         # Print summary
         print(f"\n=== SUMMARY ===")
-        print(f"Total jobs: {summary['completed'] + summary['failed'] + summary['pending'] + summary['unknown']}")
+        total_jobs = sum(summary.values())
+        print(f"Total jobs: {total_jobs}")
         print(f"Completed: {summary['completed']}")
         print(f"Failed: {summary['failed']}")
         print(f"Pending: {summary['pending']}")
         print(f"Unknown: {summary['unknown']}")
+        print(f"Hadded: {summary['hadded']}")
         print(f"Checked: {total_checked}, Cached: {total_skipped}")
-        
+
         if self.verbose:
-            completion_rate = summary['completed'] / sum(summary.values()) * 100 if sum(summary.values()) > 0 else 0
-            failure_rate = summary['failed'] / sum(summary.values()) * 100 if sum(summary.values()) > 0 else 0
+            completion_rate = (summary['completed'] + summary['hadded']) / total_jobs * 100 if total_jobs > 0 else 0
+            failure_rate = summary['failed'] / total_jobs * 100 if total_jobs > 0 else 0
             cache_efficiency = total_skipped / (total_checked + total_skipped) * 100 if (total_checked + total_skipped) > 0 else 0
-            print(f"[VERBOSE] Completion rate: {completion_rate:.1f}%")
+            print(f"[VERBOSE] Total completion rate (completed+hadded): {completion_rate:.1f}%")
             print(f"[VERBOSE] Failure rate: {failure_rate:.1f}%")
             print(f"[VERBOSE] Cache efficiency: {cache_efficiency:.1f}% (saved {total_skipped} status checks)")
             print(f"[VERBOSE] Config last updated: {config.get('last_updated', 'Unknown')}")
-        
+
         return config
     
     def submit_variations(self, var_types=None, value_filter=None):
@@ -556,6 +579,7 @@ class SampleMonitor:
         print(f"  Completed: {summary.get('completed', 0)}")
         print(f"  Failed: {summary.get('failed', 0)}")
         print(f"  Pending: {summary.get('pending', 0)}")
+        print(f"  Hadded: {summary.get('hadded', 0)}")
         
         for var_type, variations in config.get('variations', {}).items():
             print(f"\n--- {var_type.upper()} DETAILS ---")
@@ -580,6 +604,7 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--config", default="sample_status.json", help="JSON config file (default: sample_status.json)")
     parser.add_argument("--auto-resubmit", action="store_true", help="Automatically resubmit failed jobs during status check (default: False)")
+    parser.add_argument("--auto-hadd", action="store_true", help="Automatically hadd completed variations during status check (default: False)")
     
     # Actions
     parser.add_argument("action", choices=["status", "submit", "resubmit", "hadd", "report"], 
@@ -608,6 +633,7 @@ def main():
         print(f"[VERBOSE] Channel: {args.channel}")
         print(f"[VERBOSE] Config file: {args.config}")
         print(f"[VERBOSE] Auto-resubmit: {args.auto_resubmit}")
+        print(f"[VERBOSE] Auto-hadd: {args.auto_hadd}")
         print(f"[VERBOSE] Variation types filter: {args.var_types}")
         print(f"[VERBOSE] Values filter: {args.values}")
         print(f"[VERBOSE] Working directory: {os.getcwd()}")
@@ -625,7 +651,7 @@ def main():
     # Execute action
     try:
         if args.action == "status":
-            monitor.check_status(args.var_types, auto_resubmit=args.auto_resubmit)
+            monitor.check_status(args.var_types, auto_resubmit=args.auto_resubmit, auto_hadd=args.auto_hadd)
         elif args.action == "submit":
             monitor.submit_variations(args.var_types, args.values)
         elif args.action == "resubmit":
