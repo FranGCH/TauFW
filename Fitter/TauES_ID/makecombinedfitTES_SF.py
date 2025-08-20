@@ -21,12 +21,12 @@ from argparse import ArgumentParser
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):
     print(' >>>>>> Generating datacards for mutau channel')
-    os.system("./TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s"%(era,config,extratag,input_dir)) 
+    os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s"%(era,config,extratag,input_dir)) 
 
 # Generating the datacards for mumu channel
 def generate_datacards_mumu(era, config_mumu, extratag, output_dir):
     print(' >>>>>> Generating datacards for mumu channel')
-    os.system("TauES_ID/harvestDatacards_zmm.py -y %s -c %s -e %s -o %s"%(era,config_mumu,extratag,output_dir)) # Generating the datacards with one statistics uncertianties for all processes
+    os.system("python3 TauES_ID/harvestDatacards_zmm.py -y %s -c %s -e %s -o %s"%(era,config_mumu,extratag,output_dir)) # Generating the datacards with one statistics uncertianties for all processes
 
 # Merge the datacards between regions for combine fit and return the name of the combined datacard file
 def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag):
@@ -228,14 +228,14 @@ def plotScan(setup, setup_mumu, option, **kwargs):
 
     if option == '2' or option == '4'  :
         print(">>> Plot parabola")
-        os.system("./TauES_ID/plotParabola_POI_region.py -p tid_SF -y %s -e %s  -s -a -c %s -i %s"% (era, extratag, config, indir))
-        os.system("./TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y %s -e %s -r %s,%s -c %s -i %s" %(era,extratag,min(tid_SF_range),max(tid_SF_range), config, indir))
+        os.system(" python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y %s -e %s  -s -a -c %s -i %s"% (era, extratag, config, indir))
+        os.system(" python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y %s -e %s -r %s,%s -c %s -i %s" %(era,extratag,min(tid_SF_range),max(tid_SF_range), config, indir))
 
     elif option == '1' or option == '5' :
         print('indir: ', indir)
         print(">>> Plot parabola")
-        os.system("./TauES_ID/plotParabola_POI_region.py -p tes -y %s -e %s -r %s,%s -s -a -c %s -i %s" % (era, extratag, min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]), config, indir))
-        os.system("./TauES_ID/plotPostFitScan_POI.py --poi tes -y %s -e %s -r %s,%s -c %s -i %s" %(era,extratag,min(setup["TESvariations"]["values"]),max(setup["TESvariations"]["values"]), config, indir))
+        os.system(" python3 TauES_ID/plotParabola_POI_region.py -p tes -y %s -e %s -r %s,%s -s -a -c %s -i %s" % (era, extratag, min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]), config, indir))
+        os.system(" python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y %s -e %s -r %s,%s -c %s -i %s" %(era,extratag,min(setup["TESvariations"]["values"]),max(setup["TESvariations"]["values"]), config, indir))
 
     else:
         print(" No output plot...")
@@ -254,7 +254,8 @@ def main(args):
     option = args.option
     extratag     = "_DeepTau"
     input_dir = args.input_dir
-
+    output_dir = input_dir.replace('input', 'output')
+    output_dir = os.path.join(output_dir, era)
     print("Using configuration file: %s"%(args.config))
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)

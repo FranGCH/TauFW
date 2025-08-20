@@ -68,10 +68,12 @@ class SampleMonitor:
         }
         
         # Parse TES values from 0.97 to 1.03 with 0.002 step
-        #self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(31)]
-        self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(16)]  # 0.97 to 1.00 inclusive
-        self.ltf_values = []
-        self.jtf_values = []
+        self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(31)]
+        #self.tes_values = [round(0.992 + i * 0.002, 3) for i in range(int((1.030 - 0.992) / 0.002) + 1)]
+        # self.tes_values = [round(0.97 + i * 0.002, 3) for i in range(16)]  # 0.97 to 1.00 inclusive
+        # self.tes_values = [round(1.028 + i * 0.002, 3) for i in range(int((1.03 - 1.002) / 0.002) + 1)]  # 1.002 to 1.03 inclusive
+        self.ltf_values = [0.97, 1.03]
+        self.jtf_values = [0.900, 1.100]
         
         self.variations = {
             "tes": self.tes_values,
@@ -170,7 +172,6 @@ class SampleMonitor:
     def run_pico_command(self, action, var_type, value, sample):
         """Run pico.py command and return status"""
         tag = self.create_tag(var_type, value)
-        
         if action == "status":
             command = f"pico.py status -y {self.year} -c {self.channel} -t {tag} -s {sample} -E {var_type}={value:.3f}"
         elif action == "submit":
@@ -178,53 +179,29 @@ class SampleMonitor:
         elif action == "resubmit":
             command = f"pico.py resubmit -y {self.year} -c {self.channel} -t {tag} -s {sample} -E {var_type}={value:.3f}"
         elif action == "hadd":
-            # For hadd, we need all samples for this variation
             all_samples = self.get_all_samples(var_type)
             sample_str = " ".join(all_samples)
             command = f"pico.py hadd -y {self.year} -c {self.channel} -t {tag} -s {sample_str} -E {var_type}={value:.3f}"
+            print(f"Running: {command}")  # <--- Add this line for visibility
         else:
             return None, "Unknown action"
-        
-        if self.verbose:
-            print(f"[VERBOSE] Executing command: {command}")
-            print(f"[VERBOSE] Working directory: {os.getcwd()}")
-            print(f"[VERBOSE] Action: {action}, Sample: {sample}, Variation: {var_type}={value:.3f}")
-        
         try:
-            if self.verbose:
-                print(f"[VERBOSE] Starting subprocess with timeout=36000s...")
-
             result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=36000)
-            
-            if self.verbose:
-                print(f"[VERBOSE] Command completed with return code: {result.returncode}")
-                print(f"[VERBOSE] STDOUT length: {len(result.stdout)} chars")
-                print(f"[VERBOSE] STDERR length: {len(result.stderr)} chars")
-                if result.stdout:
-                    print(f"[VERBOSE] STDOUT: {result.stdout[:500]}{'...' if len(result.stdout) > 500 else ''}")
-                if result.stderr:
-                    print(f"[VERBOSE] STDERR: {result.stderr[:500]}{'...' if len(result.stderr) > 500 else ''}")
-            
+            if result.stdout:
+                print(result.stdout, end="")
+            if result.stderr:
+                print(result.stderr, end="", file=sys.stderr)
             return result, None
         except subprocess.TimeoutExpired:
-            if self.verbose:
-                print(f"[VERBOSE] Command timed out after 3600 seconds")
+            print("Command timed out", file=sys.stderr)
             return None, "Command timed out"
         except Exception as e:
-            if self.verbose:
-                print(f"[VERBOSE] Exception occurred: {type(e).__name__}: {str(e)}")
+            print(f"Exception occurred: {type(e).__name__}: {str(e)}", file=sys.stderr)
             return None, str(e)
     
     def parse_status(self, output):
         """Parse pico.py status output to determine job status"""
-        if self.verbose:
-            print(f"[VERBOSE] Parsing status from output (length: {len(output) if output else 0} chars)")
-            if output:
-                print(f"[VERBOSE] Raw output: '{output[:200]}{'...' if len(output) > 200 else ''}'")
-        
         if not output or not output.strip():
-            if self.verbose:
-                print(f"[VERBOSE] Output is empty or whitespace only -> returning 'unknown'")
             return "unknown"
         
         output = output.upper()
@@ -325,8 +302,6 @@ class SampleMonitor:
                         if var_type in config["variations"] and value_key in config["variations"][var_type]:
                             old_status = config["variations"][var_type][value_key].get(sample, "unknown")
                             config["variations"][var_type][value_key][sample] = status
-                            if self.verbose and old_status != status:
-                                print(f"[VERBOSE] Status changed for {sample}: {old_status} → {status}")
                             self.save_config(config)
 
                         summary[status] += 1
@@ -364,12 +339,12 @@ class SampleMonitor:
                         else:
                             print()  # Newline for other statuses
 
-                        # IMMEDIATE AUTO-HADD if completed and auto_hadd is enabled
+                        # IMMEDIATE AUTO-HADD after EACH SAMPLE if completed and auto_hadd is enabled
                         if status == "completed" and auto_hadd:
                             print(" → HADDING...", end="", flush=True)
                             if self.verbose:
-                                print(f"\n[VERBOSE] Auto-hadding for {var_type}={value:.3f} after {sample} completed")
-                            # Only hadd for this variation (all samples)
+                                print(f"\n[VERBOSE] Auto-hadding for {var_type}={value:.3f} after {sample} completed (per-sample hadd)")
+                            # Run hadd for this variation (all samples) after each completed sample
                             result_hadd, error_hadd = self.run_pico_command("hadd", var_type, value, "")
                             if error_hadd:
                                 print(f" FAILED ({error_hadd})")
@@ -626,27 +601,7 @@ def main():
         config_file=args.config
     )
     
-    if args.verbose:
-        print(f"[VERBOSE] ======= SAMPLE MONITOR STARTED =======")
-        print(f"[VERBOSE] Action: {args.action}")
-        print(f"[VERBOSE] Year: {args.year}")
-        print(f"[VERBOSE] Channel: {args.channel}")
-        print(f"[VERBOSE] Config file: {args.config}")
-        print(f"[VERBOSE] Auto-resubmit: {args.auto_resubmit}")
-        print(f"[VERBOSE] Auto-hadd: {args.auto_hadd}")
-        print(f"[VERBOSE] Variation types filter: {args.var_types}")
-        print(f"[VERBOSE] Values filter: {args.values}")
-        print(f"[VERBOSE] Working directory: {os.getcwd()}")
-        print(f"[VERBOSE] Python executable: {sys.executable}")
-        print(f"[VERBOSE] Script path: {__file__}")
-        
-        # Print variation summary
-        for var_type, values in monitor.variations.items():
-            samples = monitor.get_all_samples(var_type)
-            total_jobs = len(values) * len(samples)
-            print(f"[VERBOSE] {var_type.upper()}: {len(values)} values × {len(samples)} samples = {total_jobs} jobs")
-        
-        print(f"[VERBOSE] ========================================")
+    # No verbose startup info, just run the action
     
     # Execute action
     try:

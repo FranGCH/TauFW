@@ -65,7 +65,7 @@ def harvest(setup, year, obs, **kwargs):
         icat += 1
         cats.append((icat, region))
         # if not given, assume all defined regions should be fitted (be careful with potential overlap!)
-        print("region: %s") %(cats)
+        print("region: %s" % (cats))
 
         signals = [] # ZTT is the signal
         backgrounds = []
@@ -74,8 +74,8 @@ def harvest(setup, year, obs, **kwargs):
             signals.append(proc)
           elif not "data" in proc:
             backgrounds.append(proc)
-        print("Signals: %s"%signals)
-        print("Backgrounds: %s"%backgrounds)
+        print("Signals: %s" % signals)
+        print("Backgrounds: %s" % backgrounds)
 
         if("TESvariations" in setup):
           print("Take TESvariations as defined in the config file")
@@ -97,7 +97,7 @@ def harvest(setup, year, obs, **kwargs):
         # CAVEAT: Assume we always want to fit TES as POI; if running for mumu channel, everything will be bkg
         harvester.AddProcesses(tesshifts, [analysis], [era], [channel], signals, cats, True)
 
-        print green("\n>>> defining nuissance parameters ...")
+        print(green("\n>>> defining nuissance parameters ..."))
   
         if "systematics" in setup:
           for sys in setup["systematics"]:
@@ -133,7 +133,7 @@ def harvest(setup, year, obs, **kwargs):
           else: # Example : DM_pt
             tid_name = "tid_SF_%s"%(listbin[1]) # tid_SF_pt
         
-        print("tid : %s" %(tid_name))
+        print("tid : %s" % (tid_name))
         # Add SF
         harvester.cp().signals().AddSyst(harvester, tid_name,'rateParam', SystMap()(1.00))
 
@@ -143,7 +143,7 @@ def harvest(setup, year, obs, **kwargs):
           print("W+Jets SF as a free parameter ")
           sf_W = "sf_W_%s"%(region)
           harvester.cp().process(['W']).AddSyst(harvester, sf_W,'rateParam', SystMap()(1.00))
-          print(">>>Add sf_W : %s" %(sf_W))
+          print(">>>Add sf_W : %s" % (sf_W))
         
         # Add DY cross section as a free parameter. Don't forgot to add Zmm CR !
         if not "xsec_dy" in setup["systematics"]:
@@ -158,8 +158,8 @@ def harvest(setup, year, obs, **kwargs):
 
 
         # EXTRACT SHAPES
-        print green(">>> extracting shapes...")
-        print ">>>   file %s"%(filename)
+        print(green(">>> extracting shapes..."))
+        print(">>>   file %s" % (filename))
         ## For now assume that everything that is varied by TES is signal, and everything else is background
         ## Could be revised if wanting to leave the possibility to do other variations or fit normalisation (e.g. for combined TES & ID SF fit)
         harvester.cp().channel([channel]).backgrounds().ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
@@ -208,7 +208,7 @@ def harvest(setup, year, obs, **kwargs):
 
     
         # MORPHING
-        print green(">>> morphing...")
+        print(green(">>> morphing..."))
         BuildCMSHistFuncFactory(workspace, harvester, tes, "ZTT")
     
         #workspace.Print()
@@ -216,7 +216,7 @@ def harvest(setup, year, obs, **kwargs):
 
 
         # EXTRACT PDFs
-        print green(">>> add workspace and extract pdf...")
+        print(green(">>> add workspace and extract pdf..."))
         harvester.AddWorkspace(workspace, False)
         harvester.ExtractPdfs(harvester, "ztt", "$BIN_$PROCESS_morph", "")  # Extract all processes (signal and bkg are named the same way)
         
@@ -228,7 +228,7 @@ def harvest(setup, year, obs, **kwargs):
 
         # NUISANCE PARAMETER GROUPS
         # To do: export to config file
-        print green(">>> setting nuisance parameter groups...")
+        print(green(">>> setting nuisance parameter groups..."))
         harvester.SetGroup('all', [ ".*"           ])
         harvester.SetGroup('sys', [ "^((?!bin).)*$"]) # everything except bin-by-bin
         harvester.SetGroup( 'bin',      [ ".*_bin.*"        ])
@@ -245,18 +245,18 @@ def harvest(setup, year, obs, **kwargs):
 
         #PRINT
         if int(verbosity) > 0:
-            print green("\n>>> print observation...\n")
+            print(green("\n>>> print observation...\n"))
             harvester.PrintObs()
-            print green("\n>>> print processes...\n")
+            print(green("\n>>> print processes...\n"))
             harvester.PrintProcs()
-            print green("\n>>> print systematics...\n")
+            print(green("\n>>> print systematics...\n"))
             harvester.PrintSysts()
-            print green("\n>>> print parameters...\n")
+            print(green("\n>>> print parameters...\n"))
             harvester.PrintParams()
-            print "\n"
+            print("\n")
     
         # WRITER
-        print green(">>> writing datacards...")
+        print(green(">>> writing datacards..."))
         datacardtxt  = "$TAG/$ANALYSIS_$CHANNEL_%s-%s%s-$ERA.txt"%(obs,region,outtag)
         datacardroot = "$TAG/$ANALYSIS_$CHANNEL_%s-%s%s-inputs.$ERA.root"%(obs,region,outtag)
         writer = CardWriter(datacardtxt,datacardroot)
@@ -270,24 +270,24 @@ def harvest(setup, year, obs, **kwargs):
           newfilename = datacardtxt.replace('$TAG',outdir).replace('$ANALYSIS',analysis).replace('$CHANNEL',channel).replace('$BINID',DM).replace('$ERA',era)
           if os.path.exists(oldfilename):
             os.rename(oldfilename, newfilename)
-            print('>>> renaming "%s" -> "%s"'%(oldfilename,newfilename))
+            print('>>> renaming "%s" -> "%s"' % (oldfilename, newfilename))
           else:
-            print('>>> Warning! "%s" does not exist!'%(oldfilename))
+            print('>>> Warning! "%s" does not exist!' % (oldfilename))
         
 def scaleProcess(process,scale): 
   """Help function to scale a given process."""
   process.set_rate(process.rate()*scale)
   
 def setYield(process,file,dirname,scale=1.):
-  """Help function to get yield from file."""
-  histname = "%s/%s"%(dirname,process.process()) if dirname else process.process()
-  hist = file.Get(histname)
-  if not hist:
-    print('setYield: Warning! Did not find histogram "%s" in "%s"'%(histname,file.GetName()))
-  if hist.GetXaxis().GetNbins()>1:
-    print('setYield: Warning! Histogram "%s" has more than one bin!'%(histname))
-  rate = hist.GetBinContent(1)
-  process.set_rate(rate*scale)
+    """Help function to get yield from file."""
+    histname = "%s/%s"%(dirname,process.process()) if dirname else process.process()
+    hist = file.Get(histname)
+    if not hist:
+        print('setYield: Warning! Did not find histogram "%s" in "%s"' % (histname, file.GetName()))
+    if hist.GetXaxis().GetNbins()>1:
+        print('setYield: Warning! Histogram "%s" has more than one bin!' % (histname))
+    rate = hist.GetBinContent(1)
+    process.set_rate(rate*scale)
   
 def green(string,**kwargs):
     return kwargs.get('pre',"")+"\x1b[0;32;40m%s\033[0m"%string
@@ -295,8 +295,8 @@ def green(string,**kwargs):
 def ensureDirectory(dirname):
     """Make directory if it does not exist."""
     if not os.path.exists(dirname):
-      os.makedirs(dirname)
-      print(">>> made directory " + dirname)
+        os.makedirs(dirname)
+        print(">>> made directory " + dirname)
     return dirname
 
 
@@ -304,7 +304,7 @@ def ensureDirectory(dirname):
 def main(args):
 
     ## Open and import information from config file here to be publicly accessible in all functions
-    print("Using configuration file: %s"%args.config)
+    print("Using configuration file: %s" % args.config)
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 
@@ -318,9 +318,9 @@ def main(args):
         args.extratag += "_MDF"
 
     tag = setup["tag"] if "tag" in setup else ""
-    print("producing datacards for %s"%(args.year))
+    print("producing datacards for %s" % (args.year))
     for obs in observables:
-        print("producing datacards for %s"%(obs))
+        print("producing datacards for %s" % (obs))
         harvest(setup,args.year,obs,tag=tag,extratag=args.extratag,indir=indir,multiDimFit=args.multiDimFit,verbosity=verbosity)
     
 
@@ -342,5 +342,5 @@ if __name__ == '__main__':
 
   main(args)
   print(">>>\n>>> done harvesting\n")
-    
+
 

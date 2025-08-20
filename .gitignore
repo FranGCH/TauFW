@@ -3,9 +3,12 @@
 *.d
 *.so
 *.pcm
+*.txt
+*.pdf
 *~
 *.root
 *.png
+*.json
 core.*
 __init__.py
 */compare

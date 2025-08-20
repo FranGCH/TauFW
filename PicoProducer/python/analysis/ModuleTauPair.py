@@ -355,10 +355,10 @@ class ModuleTauPair(Module):
       if jet.DeltaR(tau2)<0.5: continue
       # if "v15" not in self.era: #NanoAODv15 doesn't have the jetID branch
       try:
-        if jet.jetId<2: continue # Tight
-        print(">>>Jet ID: %s"%jet.jetId)
+        if jet.jetId<2: continue 
       except (IndexError, AttributeError):
         # If jetId is not available or out of bounds, assume it passes #### Might be wrong####
+        # print(f">>>Jet ID: {jet.jetId}, {jet._index}")
         pass
       
       # SAVE JEC VARIATIONS
