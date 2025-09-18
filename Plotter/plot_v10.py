@@ -9,12 +9,13 @@
 #>>>>Run with --serial option if using py3:
 #   ./plot_v10.py -y 2018 -c mutau --serial
 
-from config.samples_v12 import *
+from config.samples_v15 import *
 from TauFW.Plotter.plot.string import filtervars
 from TauFW.Plotter.plot.utils import LOG as PLOG
 from TauFW.Plotter.plot.Plot import Plot, deletehist
 import yaml
-
+import socket
+import time
 
 def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era="",
          varfilter=None,selfilter=None,fraction=False,pdf=False):
@@ -22,6 +23,7 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
   LOG.header("plot")
   
   channel  = setup["channel"]
+  print("Variables: ",varfilter)
   
   if 'baselineCuts' in setup: # baseline pre-selections
     baseline = setup['baselineCuts']
@@ -41,7 +43,7 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
   
   # VARIABLES
   variables = [
-    Var('pt_1',  "Muon pt",    40,  0, 120, ctitle={'etau':"Electron pt",'tautau':"Leading tau_h pt",'mumu':"Leading muon pt",'emu':"Electron pt"},cbins={"nbtag\w*>":(40,0,200)}),
+    Var('pt_1',  "Muon pt",    40,  0, 120, ctitle={'etau_pnet':"Electron pt",'tautau':"Leading tau_h pt",'mumu':"Leading muon pt",'emu':"Electron pt"},cbins={"nbtag\w*>":(40,0,200)}),
     Var('pt_2',  "tau_h pt",   40,  0, 120, ctitle={'tautau':"Subleading tau_h pt",'mumu':"Subleading muon pt",'emu':"Muon pt"},cbins={"nbtag\w*>":(40,0,200)}),
     Var('eta_1', "Muon eta",   30, -3,   3, ctitle={'etau':"Electron eta",'tautau':"Leading tau_h eta",'mumu':"Leading muon eta",'emu':"Electron eta"},ymargin=1.7,pos='T',ncols=2),
     Var('eta_2', "tau_h eta",  30, -3,   3, ctitle={'etau':"Electron eta",'tautau':"Subleading tau_h eta",'mumu':"Subleading muon eta",'emu':"Muon eta"},ymargin=1.7,pos='T',ncols=2),
@@ -52,7 +54,7 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     Var("jpt_2",  29,   10,  300, veto=[r"njets\w*==0"]),
     Var("jeta_1", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
     Var("jeta_2", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
-    Var('npv',    40,  0,  80),
+    Var('npv',    40,  0,  80),#, ymargin=1.3),
     Var('njets',   8,  0,   8),
     Var('nbtag', "Number of b jets (Medium, pt > 30 GeV)", 8, 0, 8),
     Var('met',    50,  0, 150,cbins={"nbtag\w*>":(50,0,250)}),
@@ -66,17 +68,76 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     loadmacro("python/macros/mapDecayModes.C") # for mapRecoDM
     dmlabels  = ["h^{#pm}","h^{#pm}h^{0}","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}h^{0}","Other"]
     variables += [
-      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
-      Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
-      Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
+      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3,ymax = 200*1e3),
+      # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
+      # Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
+      # Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
       Var("m_2",            30,  0,   3, title="m_tau",veto=["njet","nbtag","dm_2==0"]),
-      Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed tau_h decay mode",veto="dm_2==",position="TMC",ymargin=1.2),
+      Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed HPS tau_h decay mode",veto=["rawUParTVS","rawPNetVS"],position="TMC",ymargin=1.5),
+      Var("decayModePNet_2",           14,  0,  14, fname="decayModePNet_2",title="Reconstructed tau_h PNet decay mode",position="TMC",ymargin=1.7, veto=["rawUParTVS","DeepTau2018v2p5"]),
+      
+      Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, logy=True,cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML'), #veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
 
+      # Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSjet_2_linear",cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
+      # Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSe_2_linear",cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
+      # Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', fname="rawPNetVSmu_2_linear", veto=["rawUParTVS","DeepTau2018v2p5"],ymargin=1.3),
+
+      Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='ML',ncols=3 ,logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+
+      # Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      # Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='M' ,fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+      # Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)}, fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
+
+      # Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.1,1.05)},pos='C', fname="rawUParTVSe_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.6,1.05)},pos='ML', fname="rawUParTVSmu_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+      # Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1, 1.05,ymin = 1e3, fname="rawUParTVSjet_2_linear",pos="ML",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
+
+      Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawUParTVS":(75, 0.05,1.05)}, logy=True,fname="rawUParTVSe_2_log",pos="L",ncols=2,ymargin=1.3),
+      Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1.0, 1.05,ymin = 1e2,cbins={"rawUParTVS":(50, 0.75,1.05)},pos='ML', logy=True,fname="rawUParTVSmu_2_log",ncols=2,ymargin=1.3),
+      Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1.0, 1.05,ymin = 1e3, cbins={"rawUParTVS":(75, 0.25,1.05)},logy=True,fname="rawUParTVSjet_2_log",pos="TR",ncols=2,ymargin=1.3),
+
+
+      Var("probDM0UParT_2", "Prob of DM_{UParT}=0", 21, 0, 1.05, fname="probDM0UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("probDM1UParT_2", "Prob of DM_{UParT}=1", 21, 0, 1.05, fname="probDM1UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("probDM2UParT_2", "Prob of DM_{UParT}=2", 21, 0, 1.05, fname="probDM2UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("probDM10UParT_2", "Prob of DM_{UParT}=10", 21, 0, 1.05, fname="probDM10UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("probDM11UParT_2", "Prob of DM_{UParT}=11", 21, 0, 1.05, fname="probDM11UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("decayModeUParT_2", 14,  0,  14, fname="decayModeUParT_2",title="Reconstructed tau_h UParT decay mode",position="TMC",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.7),
+
+      Var("probDM0PNet_2", "Prob of DM_{PNet}=0", 21, 0, 1.05, fname="probDM0PNet_2",logy=True, pos="R", veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("probDM1PNet_2", "Prob of DM_{PNet}=1", 21, 0, 1.05, fname="probDM1PNet_2",logy=True, pos="R", veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("probDM2PNet_2", "Prob of DM_{PNet}=2", 21, 0, 1.05, fname="probDM2PNet_2",logy=True, pos="R", veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("probDM10PNet_2", "Prob of DM_{PNet}=10", 21, 0, 1.05, fname="probDM10PNet_2",logy=True, pos="R", veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("probDM11PNet_2", "Prob of DM_{PNet}=11", 21, 0, 1.05, fname="probDM11PNet_2",logy=True, pos="R", veto=["rawUParTVS","DeepTau2018v2p5"]),
+
+      Var("ptCorrUParT_2",  "pt CorrUParT tau",40, 0, 120, fname="ptCorrUParT_2",title="pt CorrUParT tau", pos="L",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      Var("qConfUParT_2",  "q CorrUParT tau",4, -2, 2, fname="qConfUParT_2",title="q CorrUParT tau", pos="L",veto=["rawPNetVS","DeepTau2018v2p5"]),
+      
     ]
+    gen_variables_list=['gendm_2','genmatch_1','genmatch_2']
+    #gen_plots= any(i in gen_variables_list for i in varfilter)
+    if varfilter is not None and any(i in gen_variables_list for i in varfilter): #"gendm_2" in varfilter :
+      variables += [
+        Var('gendm_2',16, 0, 16, fname='gendm_2', title='True DM of tau', data=False, logy=True),
+        Var('genmatch_1',16,0,16, fname='genmatch_1', title='l1 GenMatch Flav', data=False, logy=True, veto=["dm_2=="]),
+        Var('genmatch_2',7,0,7, fname='genmatch_2', title='tau_h GenMatch Flav', data=False, logy=True, veto=["dm_2=="],pos="C"),
+        # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",data=False,ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
+        ]
+    # for sample in sampleset.expsamples:
+    #   print("Samples name: {}".format(str(sample)))
+    #   variables += [
+    #     Var('gendm_2',12, 0, 12, fname='gendm_2', title=' True DM of tau')
+    #   ]
+      
+
   elif 'mumu' in channel or 'ee' in channel:
     variables += [
-      Var('m_ll', "m_mumu", 40,  0,  200, fname="$VAR", cbins={"m_vis>200":(40,200,1000)}), # alias: m_ll alias of m_vis
-      Var('m_ll', "m_mumu", 40,  0,  200, fname="$VAR_log", logy=True, ymin=1e2, cbins={"m_vis>200":(40,200,1000)} ),
+      Var('m_vis', "m_mumu", 40,  0,  200, fname="$VAR", cbins={"m_vis>60":{40,50,130},"m_vis>200":(40,200,1000)},rmin=0.8,rmax=1.1), # alias: m_ll alias of m_vis
+      Var('m_vis', "m_mumu", 40,  0,  200, fname="$VAR_log", logy=True, ymin=1e2, cbins={"m_vis>200":(40,200,1000)} ),
       # Var('m_ll', "m_mumu", 40, 70,  110, fname="$VAR_Zmass", veto=["m_vis>200"] ),
       # Var('m_ll', "m_mumu",  1, 70,  110, fname="$VAR_1bin", veto=["m_vis>200"] ),
       Var('iso_1', 50, 0.,1., ymin = 1e2,logy=True),
@@ -84,20 +145,27 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     ]
   variables  = filtervars(variables,varfilter)  # filter variable list with -V/--var flag
   
+
+
+
   # PLOT
   outdir = ensuredir(repkey(outdir,CHANNEL=channel,ERA=era))
   exts   = ['png','pdf','root'] if pdf else ['root'] # extensions
   for selection in selections:
     print(">>> Selection %r: %r"%(selection.title,selection.selection))
-    stacks = sampleset.getstack(variables,selection,method='QCD_OSSS',scale=1, parallel=parallel)
+    if varfilter is not None and any(i in gen_variables_list for i in varfilter): #"gendm_2" in varfilter :
+      stacks = sampleset.getstack(variables,selection,method=None,scale=1, parallel=parallel)
+    else:
+      stacks = sampleset.getstack(variables,selection,method='QCD_OSSS',scale=1, parallel=parallel)
     fname  = "%s/$VAR_%s-%s-%s$TAG"%(outdir,channel.replace('mu','m').replace('tau','t'),selection.filename,era)
-    text   = "%s: %s"%(channel.replace('mu',"#mu").replace('tau',"#tau_{h}"),selection.title)
+    # text   = "%s: %s"%(channel.replace('mu',"#mu").replace('tau',"#tau_{h}").replace('_inclusive',''),selection.title)
+    text = ""
     if extratext:
       text += ("" if '\n' in extratext[:3] else ", ") + extratext
     #for stack, variable in stacks.iteritems():
     for stack, variable in stacks.items(): # python 3
       #position = "" #variable.position or 'topright'
-      stack.draw(fraction=fraction)
+      stack.draw(fraction=fraction) #, drawdata=False,staterr=False,ratio=False)
       stack.drawlegend() #position)
       stack.drawtext(text)
       stack.saveas(fname,ext=exts,tag=tag)
@@ -239,8 +307,29 @@ def main(args):
   extratext = args.text
   fraction  = args.fraction
   pdf       = args.pdf
-  outdir    = "plots/$ERA/$CHANNEL"
-  fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root"
+  dp        = args.DP
+  elv25     = args.Elv25
+  #default script
+  #outdir    = "plots/$ERA/$CHANNEL"
+  if 'ingrid' in socket.gethostname(): #this is the default
+    outdir    = "plots/$ERA/$CHANNEL"
+  if 'lxplus' in socket.gethostname():
+    if elv25:
+      if '2025' not in eras:
+        print("You asked for the 2025 samples, but you are not plotting for 2025. Exiting")
+        return
+      else:
+        dp = True
+        fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
+    else:
+      fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
+
+    if dp:
+      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/$ERA"
+    else:
+      outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
+    
+
   #fname     =  "/nfs/user/pmastra/DeepTau2p5/analysis/$ERA/$CHANNEL/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
    
   # LOOP over configs / channels
@@ -251,12 +340,15 @@ def main(args):
     with open(config, 'r') as file:
       setup = yaml.safe_load(file)
     tag = setup.get('tag',"")+args.tag
+
+    print(">>>>> Parallel mode: %s"%parallel)
     
     for era in eras:
       setera(era) # set era for plot style and lumi-xsec normalization
       addsfs = [ ] #"getTauIDSF(dm_2,genmatch_2)"]
       rmsfs  = [ ] if (setup['channel']=='mumu' or not notauidsf) else ['idweight_2','ltfweight_2'] # remove tau ID SFs
       split  = ['DY'] if 'tau' in setup['channel'] else [ ] # split these backgrounds into tau components
+      print(fname)
       sampleset = getsampleset(setup['channel'],era,fname=fname,rmsf=rmsfs,addsf=addsfs,split=split)
       plot(sampleset,setup,parallel=parallel,tag=tag,extratext=extratext,outdir=outdir,era=era,
            varfilter=varfilter,selfilter=selfilter,fraction=fraction,pdf=pdf)
@@ -265,7 +357,8 @@ def main(args):
 
 if __name__ == "__main__":
   from argparse import ArgumentParser, RawTextHelpFormatter
-  eras = ['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','2022_preEE','2022_postEE', '2023C', '2023D', '2024']
+  start = time.time()
+  eras = ['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','2022_preEE','2022_postEE', '2023C', '2023D', '2024','2024_v15','2025']
   description = """Simple plotting script for pico analysis tuples"""
   parser = ArgumentParser(prog="plot",description=description,epilog="Good luck!")
   parser.add_argument('-y', '--era',     dest='eras', nargs='*', choices=eras, default=['2017'],
@@ -281,7 +374,7 @@ if __name__ == "__main__":
                                          help="run Tree::MultiDraw serial instead of in parallel" )
   parser.add_argument('-F', '--fraction',dest='fraction', action='store_true',
                                          help="include fraction stack in ratio plot" )
-  parser.add_argument('-p', '--pdf',     dest='pdf', action='store_true',
+  parser.add_argument('-p', '--pdf',     dest='pdf', action='store_true', default=True,
                                          help="create pdf version of each plot" )
   parser.add_argument('-r', '--nosf',    dest='notauidsf', action='store_true',
                                          help="remove DeepTau ID SF" )
@@ -289,9 +382,23 @@ if __name__ == "__main__":
   parser.add_argument('-T', '--text',    default="", help="extra text on plot" )
   parser.add_argument('-v', '--verbose', dest='verbosity', type=int, nargs='?', const=1, default=0, action='store',
                                          help="set verbosity" )
+  parser.add_argument('--DP',           help="produce plots for the DP note", action='store_true')
+  parser.add_argument('--Elv25',        help="to use the 2025 samples that Elvira produced", action='store_true')
   args = parser.parse_args()
   LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity
   main(args)
+  end = time.time()
+  runtime = end - start
+
+  if runtime < 60:
+      print(f'Runtime: {runtime:.2f} seconds')
+  elif runtime < 3600:  # Less than one hour
+      minutes = runtime / 60
+      print(f'Runtime: {minutes:.2f} minutes')
+  else:
+      hours = runtime / 3600
+      print(f'Runtime: {hours:.2f} hours')
+
   print("\n>>> Done.")
   
