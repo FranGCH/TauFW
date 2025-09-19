@@ -26,7 +26,8 @@ def getsampleset(datasample,expsamples,sigsamples=[ ],**kwargs):
   """Create sample set from a table of data and MC samples."""
   channel    = kwargs.get('channel',    ""    )
   era        = kwargs.get('era',        ""    )
-  fpattern   = kwargs.get('file',       None  ) # file name pattern, e.g. $PICODIR/$SAMPLE_$CHANNEL$TAG.root
+  fpattern   = kwargs.get('fname',       None  ) # file name pattern, e.g. $PICODIR/$SAMPLE_$CHANNEL$TAG.root
+  fpattern   = kwargs.get('fpattern',   fpattern) # alias
   weight     = kwargs.pop('weight',     ""    ) # common weight for MC samples
   dataweight = kwargs.pop('dataweight', ""    ) # weight for data samples
   url        = kwargs.pop('url',        ""    ) # XRootD url
