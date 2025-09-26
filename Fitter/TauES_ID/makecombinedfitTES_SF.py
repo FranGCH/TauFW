@@ -21,7 +21,14 @@ from argparse import ArgumentParser
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):
     print(' >>>>>> Generating datacards for mutau channel')
-    os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s"%(era,config,extratag,input_dir)) 
+    # Accept input_file as an optional argument for the root file
+    input_file = None
+    if 'input_file' in locals() or 'input_file' in globals():
+        input_file = locals().get('input_file', None) or globals().get('input_file', None)
+    if input_file:
+        os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s --input_file %s" % (era, config, extratag, input_dir, input_file))
+    else:
+        os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s" % (era, config, extratag, input_dir))
 
 # Generating the datacards for mumu channel
 def generate_datacards_mumu(era, config_mumu, extratag, output_dir):
@@ -29,7 +36,7 @@ def generate_datacards_mumu(era, config_mumu, extratag, output_dir):
     os.system("python3 TauES_ID/harvestDatacards_zmm.py -y %s -c %s -e %s -o %s"%(era,config_mumu,extratag,output_dir)) # Generating the datacards with one statistics uncertianties for all processes
 
 # Merge the datacards between regions for combine fit and return the name of the combined datacard file
-def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag):
+def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag, output_dir):
     # Variable of the fit (usually mvis)
     variable = "m_vis"
     print("Observable : "+variable)
@@ -39,16 +46,27 @@ def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag):
     # Name of the combined datacard file
     outcombinedfile = "combinecards%s" %(setup["tag"])
     for region in setup["observables"]["m_vis"]["fitRegions"]:
-        filelist += region + "=output_"+era+"/ztt_mt_m_vis-"+region+LABEL+".txt "
-        os.system("combineCards.py %s >output_%s/%s.txt" % (filelist, era,outcombinedfile))
+        card_path = os.path.join(output_dir, f"ztt_mt_m_vis-{region}{LABEL}.txt")
+        if not os.path.isfile(card_path):
+            print(f"ERROR: Missing datacard {card_path}")
+        filelist += f"{region}={card_path} "
+    # Only merge once, after collecting all regions
+    os.system(f"combineCards.py {filelist} >{output_dir}/{outcombinedfile}.txt")
     #print("filelist : %s") %(filelist) 
     # Add the CR datacard file to the lsit of file to merge if there is CR option
-    if str(config_mumu) != 'None':
-        LABEL_mumu = setup_mumu["tag"]+extratag+"-"+era+"-13TeV"
-        filelist +=  "zmm=output_"+era+"/ztt_mm_m_vis-baseline"+LABEL_mumu+".txt "
+    # If mumu_datacard_file is provided, use it directly
+    if hasattr(setup, 'mumu_datacard_file') and setup.get('mumu_datacard_file'):
+        filelist += f"zmm={setup.get('mumu_datacard_file')} "
         outcombinedfile += "CR"
-        os.system("combineCards.py %s >output_%s/%s.txt" % (filelist, era,outcombinedfile))
+        os.system(f"combineCards.py {filelist} >output_{era}/{outcombinedfile}.txt")
         print(">>>>>>>>> merging datacards is done ")
+    # Otherwise, use the old logic (commented out)
+    # if str(config_mumu) != 'None':
+    #     LABEL_mumu = setup_mumu["tag"]+extratag+"-"+era+"-13TeV"
+    #     filelist +=  "zmm=output_"+era+"/ztt_mm_m_vis-baseline"+LABEL_mumu+".txt "
+    #     outcombinedfile += "CR"
+    #     os.system("combineCards.py %s >output_%s/%s.txt" % (filelist, era,outcombinedfile))
+    #     print(">>>>>>>>> merging datacards is done ")
     return outcombinedfile
 
 
@@ -69,7 +87,7 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir):
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     #tes_range    = kwargs.get('tes_range',    "1.000,1.000")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.6")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
     algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
     npts_fit     = kwargs.get('npts_fit',     "--points=96") ## 66
@@ -87,7 +105,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # Create the workspace for combined fit
     if int(option) > 3:
         # merge datacards regions
-        datacardfile = merge_datacards_regions(setup,setup_mumu, config_mumu, era, extratag)
+        datacardfile = merge_datacards_regions(setup,setup_mumu, config_mumu, era, extratag, output_dir)
         print("datacard file for combined fit = %s" %(datacardfile)) 
         # Create workspace 
         os.system(f"text2workspace.py {output_dir}/{datacardfile}.txt")
@@ -126,42 +144,22 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             POI = "tes_%s" % (r)
             NP = "rgx{.*tid.*}"
             print(">>>>>>> "+POI+" fit")
-            #POI_OPTS = "-P %s --setParameterRanges %s=%s:tid_SF_%s=%s --setParameters r=1,rgx{.*tes.*}=1,rgx{.*tid.*}=1 --freezeParameters r,tid_SF_%s  --redefineSignalPOIs tid_SF_%s" % (POI, POI, tes_range, r,tid_SF_range,r,r)  # tes_DM
             if POI == "tes_DM10":
                 tes_range = "0.950,1.030"
-            #tes_range = "0.850,1.030"
             POI_OPTS = "--saveWorkspace -P %s --setParameterRanges %s=%s:tid_SF_%s=%s:sf_W_%s=0.0,10.0 --setParameters r=1,rgx{.*tes.*}=1,rgx{.*tid.*}=1 --freezeParameters r  --redefineSignalPOIs tid_SF_%s --floatOtherPOIs=1" % (POI, POI, tes_range, r,tid_SF_range,r,r)  # tes_DM
             MultiDimFit_opts = " -m 90  %s %s %s -n .%s %s %s %s %s --trackParameters %s,rgx{.**.},rgx{.*sf_W_*.} --saveInactivePOI=1" %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts,NP)
-            #MutliFitout = "higgsCombine.%s.MultiDimFit.mH90.root" %(BINLABELoutput)
-            
-            # POI_OPTS_F = " --snapshotName %s --saveNLL --setParameterRanges %s=%s:tid_SF_%s=%s --setParameters r=1,rgx{.*tes.*}=1,rgx{.*tid.*}=1 --freezeParameters r  --redefineSignalPOIs tes_%s " % ( "MultiDimFit",POI, tes_range, r,tid_SF_range,r)  # tes_DM
-            # FitDiagnostics_opts = " -m 90  %s %s -n .%s %s %s " %(MutliFitout, POI_OPTS_F, BINLABELoutput, xrtd_opts, cmin_opts)
-            # Fit with combine
-            print("MultidimFit %s : " %(r), '\t', MultiDimFit_opts)
-            os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts))
-           
-            # print("MultidimFit %s : " %(r))
-            # MultiDimFit_opts = " -m 90  %s %s -n .%s %s %s %s %s --trackParameters %s,rgx{.**.},rgx{.*sf_W_*.} --saveInactivePOI=1" %(workspace, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts,NP)
-            # os.system("combine -M MultiDimFit %s " %(FitDiagnostics_opts))
 
-
-            # print("FitDiagnostics %s : " %(r))
-            # os.system("combine -M FitDiagnostics  %s --plots  " %(FitDiagnostics_opts))
-
-            # ##Impact plot
-            # POI_OPTS_I = "--redefineSignalPOIs %s --setParameterRanges %s=%s:tid_SF_%s=%s -m 90 --setParameters r=1,tes_%s=1,tid_SF_%s=1 --freezeParameters r " % (POI, POI, tes_range, r,tid_SF_range,r,r)
-            # os.system("combineTool.py -M Impacts -n %s -d %s %s  --doInitialFit"%(BINLABELoutput, workspace, POI_OPTS_I))
-            # os.system("combineTool.py -M Impacts -n %s -d %s %s  --doFits --parallel 4"%(BINLABELoutput, workspace, POI_OPTS_I))
-            # os.system("combineTool.py -M Impacts  -n %s -d %s  %s -o postfit/impacts_%s.json"%(BINLABELoutput, workspace, POI_OPTS_I, BINLABELoutput))
-            # os.system("plotImpacts.py -i postfit/impacts_%s.json -o postfit/impacts_%s.json"%(BINLABELoutput,BINLABELoutput))
-            # os.system("convert -density 160 -trim postfit/impacts_%s.json.pdf[0] -quality 100 postfit/impacts_%s.png"%(BINLABELoutput,BINLABELoutput))
-            # Postifit shape:
-            # outf_postfit = "PostFitShape_%s_%s_%s.root" %(era,setup["tag"],r)
-            # outf_fit = "fitDiagnostics.mt_m_vis-%s%s_DeepTau-%s-13TeV.root" %(r,setup["tag"],era)
-            # os.system("PostFitShapesFromWorkspace --output %s --workspace %s -f %s:fit_s --postfit "% (outf_postfit, workspace, outf_fit))
-            # outf_postfit = "PostFitShape_%s_%s_%s.root" %(era,setup["tag"],r)
-            # outf_fit = "higgsCombine.mt_m_vis-%s%s_DeepTau-%s-13TeV.MultiDimFit.mH90.root" %(r,setup["tag"],era)
-            # os.system("PostFitShapesFromWorkspace --output %s --workspace %s -f %s:w --postfit "% (outf_postfit, workspace, outf_fit))
+            # Run combine in output_dir
+            cwd = os.getcwd()
+            os.makedirs(output_dir, exist_ok=True)
+            os.chdir(output_dir)
+            # Use only the filename for workspace
+            workspace_filename = f"{datacardfile}.root"
+            # Replace workspace path in MultiDimFit_opts with just the filename
+            MultiDimFit_opts_local = MultiDimFit_opts.replace(workspace, workspace_filename)
+            print("MultidimFit %s : " %(r), '\t', MultiDimFit_opts_local)
+            os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
+            os.chdir(cwd)
         # Fit of tid_SF_DM by DM with tes as a nuisance parameter
         elif option == '2':
             POI = "tid_SF_%s" % (r)
@@ -219,7 +217,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.4,1.6")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -237,6 +235,17 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         os.system(" python3 TauES_ID/plotParabola_POI_region.py -p tes -y %s -e %s -r %s,%s -s -a -c %s -i %s" % (era, extratag, min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]), config, indir))
         os.system(" python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y %s -e %s -r %s,%s -c %s -i %s" %(era,extratag,min(setup["TESvariations"]["values"]),max(setup["TESvariations"]["values"]), config, indir))
 
+    elif option == '3':
+        print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
+        for r in setup["observables"]["m_vis"]["scanRegions"]:
+            # Plot TES
+            os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")
+            os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
+            # Plot TID SF
+            os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag} -s -a -c {config} -i {indir}")
+            os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
+
+    
     else:
         print(" No output plot...")
 
@@ -248,17 +257,20 @@ def plotScan(setup, setup_mumu, option, **kwargs):
 ### main function
 def main(args):
 
+
     era    = args.era
     config = args.config
     config_mumu = args.config_mumu 
     option = args.option
-    extratag     = "_DeepTau"
+    # Always set extratag to a non-empty default value
+    extratag = "_DeepTau"
     input_dir = args.input_dir
     output_dir = input_dir.replace('input', 'output')
     output_dir = os.path.join(output_dir, era)
     print("Using configuration file: %s"%(args.config))
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
+
 
     if config_mumu != 'None':
         print("Using configuration file for mumu: %s"%(args.config_mumu))
@@ -267,35 +279,41 @@ def main(args):
     else: 
         setup_mumu = 0
 
-    # # Generating the datacards for mutau channel
-    generate_datacards_mutau(era=era, config=config,extratag=extratag, input_dir=input_dir)
+    # Generating the datacards for mutau channel
+    generate_datacards_mutau(era=era, config=config, extratag=extratag, input_dir=input_dir)
 
-    # Generating the datacards for mumu channel
-    if str(config_mumu) != 'None':
-        output_dir=input_dir.replace('input', 'output')
-        output_dir = os.path.join(output_dir, era)
-        generate_datacards_mumu(era=era, config_mumu=config_mumu,extratag=extratag, output_dir=output_dir)
+    # Generating the datacards for mumu channel (commented out, use provided file instead)
+    # if str(config_mumu) != 'None':
+    #     output_dir = input_dir.replace('input', 'output')
+    #     output_dir = os.path.join(output_dir, era)
+    #     generate_datacards_mumu(era=era, config_mumu=config_mumu, extratag=extratag, output_dir=output_dir)
+
+    # Attach mumu_datacard_file to setup for use in merge_datacards_regions
+    setup['mumu_datacard_file'] = getattr(args, 'mumu_datacard_file', None)
 
     # Run the fit using combine with the different options 
-    run_combined_fit(setup,setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option)
+    run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag)
 
     # Plots
-    plotScan(setup,setup_mumu, era=era, config=config, config_mumu=config_mumu, option=option, indir=output_dir)
+    plotScan(setup, setup_mumu, era=era, config=config, config_mumu=config_mumu, option=option, indir=output_dir, extratag=extratag)
 
 
 ###
 if __name__ == '__main__':
 
     argv = sys.argv
+    extratag = ""
     parser = ArgumentParser(prog="makeTESfit", description="execute all steps to run TES fit")
-    parser.add_argument('-y', '--era', dest='era', default=['UL2018'], action='store', help="set era")
+    parser.add_argument('-y', '--era', dest='era', default=['2024'], action='store', help="set era")
     parser.add_argument('-c', '--config', dest='config', type=str, default='TauES_ID/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup")
     parser.add_argument('-o', '--option', dest='option', choices=['1', '2', '3', '4', '5','6'], default='1', action='store',
                         help="set option : Scan of tes and tid SF is profiled (-o 1) ;  Scan of tid SF and tes is profiled (-o 2) ; 2D scan of tes and tid SF (-o 3) \
                         ; Scan of tid SF, tid SF and tes of other regions are profiled POIs (-o 4); Scan of tes, tid SF and tes of other regions are profiled POIs(-o 5)\
                         ; 2D scan of tes and tid SF and tes of other regions are profiled POIs (-o 6) ")
     parser.add_argument('-cmm', '--config_mumu', dest='config_mumu', type=str, default='None', action='store', help="set config file containing sample & fit setup")
+    parser.add_argument('--mumu_datacard_file', dest='mumu_datacard_file', type=str, default=None, help="Path to the mumu datacard file to use (if not generating)")
     parser.add_argument('-i', '--input_dir', dest='input_dir', type=str, help="inputdir containing root files for datacard")
+    parser.add_argument('--input_file', dest='input_file', type=str, required=True, help="Path to the input root file")
     args = parser.parse_args()
 
     main(args)
