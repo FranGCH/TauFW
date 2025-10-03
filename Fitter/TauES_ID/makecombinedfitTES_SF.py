@@ -178,8 +178,80 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             POI2 = "tes_%s" % (r)
             POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=1,%s=1 --freezeParameters r " % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1)
             MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s --trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*}" %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts)
-            os.system("combine -M MultiDimFit  %s " %(MultiDimFit_opts))
-
+            
+            # Run combine in output_dir
+            cwd = os.getcwd()
+            os.makedirs(output_dir, exist_ok=True)
+            os.chdir(output_dir)
+            workspace_filename = f"{datacardfile}.root"
+            MultiDimFit_opts_local = MultiDimFit_opts.replace(workspace, workspace_filename)
+            
+            print("2D MultidimFit %s : " %(r), '\t', MultiDimFit_opts_local)
+            os.system("combine -M MultiDimFit  %s " %(MultiDimFit_opts_local))
+            
+            # Extract actual parameter values from the fit result
+            fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
+            param_file = f"FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt"
+            
+            print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
+            print(f"[DEBUG] Creating parameter file: {param_file}")
+            
+            if os.path.exists(fit_result_file):
+                # Extract parameter values using ROOT
+                import ROOT
+                
+                try:
+                    f = ROOT.TFile.Open(fit_result_file)
+                    if f and not f.IsZombie():
+                        tree = f.Get("limit")
+                        if tree:
+                            # Get the best fit values
+                            tree.GetEntry(0)  # First entry should be the best fit
+                            
+                            # Initialize default values
+                            tes_val = 1.000
+                            tid_val = 1.000
+                            sf_w_val = 1.000
+                            
+                            # Try to get parameter values from the tree
+                            try:
+                                tes_val = getattr(tree, f"tes_{r}", 1.000)
+                                tid_val = getattr(tree, f"tid_SF_{r}", 1.000)
+                                # sf_W might not be in the tree, keep default
+                            except AttributeError:
+                                print(f"[WARNING] Could not extract fitted values from {fit_result_file}, using defaults")
+                            
+                            # Create parameter file with extracted values
+                            with open(param_file, 'w') as pf:
+                                pf.write(f"tes_{r}: {tes_val:.6f}\n")
+                                pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
+                                pf.write(f"sf_W_{r}: {sf_w_val:.6f}\n")
+                            
+                            print(f"[DEBUG] Extracted fitted values: tes={tes_val:.6f}, tid_SF={tid_val:.6f}")
+                        
+                        f.Close()
+                    else:
+                        print(f"[WARNING] Could not open {fit_result_file}")
+                        raise Exception("File not readable")
+                        
+                except Exception as e:
+                    print(f"[ERROR] Failed to extract parameters from ROOT file: {e}")
+                    # Fallback: create default parameter file
+                    with open(param_file, 'w') as pf:
+                        pf.write(f"tes_{r}: 1.000\n")
+                        pf.write(f"tid_SF_{r}: 1.000\n")
+                        pf.write(f"sf_W_{r}: 1.000\n")
+                
+                print(f"[DEBUG] Created parameter file: {param_file}")
+            else:
+                print(f"[WARNING] 2D fit result file {fit_result_file} not found, creating default parameter file")
+                # Create default parameter file
+                with open(param_file, 'w') as pf:
+                    pf.write(f"tes_{r}: 1.000\n")
+                    pf.write(f"tid_SF_{r}: 1.000\n")
+                    pf.write(f"sf_W_{r}: 1.000\n")
+            
+            os.chdir(cwd)
         ### Fit with combined datacards  tes_DM0,tes_DM1,tes_DM10,tes_DM11 
         ## Fit of tid_SF in its regions with tes_region and other tid_SF_regions as nuisance parameters    tes_DM0,tes_DM1,tes_DM10,tes_DM11
         elif option == '4': 
@@ -237,13 +309,16 @@ def plotScan(setup, setup_mumu, option, **kwargs):
 
     elif option == '3':
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
+        # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
-            # Plot TES
-            os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")
-            os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
-            # Plot TID SF
-            os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag} -s -a -c {config} -i {indir}")
-            os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
+            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir}")
+        # for r in setup["observables"]["m_vis"]["scanRegions"]:
+        #     # Plot TES
+        #     os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")
+        #     os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
+        #     # Plot TID SF
+        #     os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag} -s -a -c {config} -i {indir}")
+        #     os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} -i {indir}")
 
     
     else:

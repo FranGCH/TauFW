@@ -11,6 +11,7 @@ from TauFW.Plotter.plot.utils import LOG as PLOG
 from TauFW.Fitter.plot.datacard import createinputs, plotinputs
 from TauFW.Fitter.plot.rebinning import rebinning
 import yaml
+import time
 
 #nano doc: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html
 
@@ -26,6 +27,7 @@ map_wp_to_int = OrderedDict([('againstjet',
                            ])
 
 def main(args):
+  start_time = time.time()  # Start timing
   eras      = args.eras
   parallel  = args.parallel
   verbosity = args.verbosity
@@ -207,6 +209,9 @@ def main(args):
                        ('Nom',      ['ZTT', 'data_obs_nonztt_subtratced'])])
         plotinputs(fname,varprocs,observables,bins,text=text,
                    pname=pname,tag=tag,group=groups, parallel=parallel, mean=True) 
+  end_time = time.time()    # End timing
+  elapsed = end_time - start_time
+  print(f"\n>>> Done. Total runtime: {elapsed:.2f} seconds.")
 
 if __name__ == "__main__":
   from argparse import ArgumentParser

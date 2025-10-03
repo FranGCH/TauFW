@@ -31,6 +31,11 @@ def ensureDirectory(dirname):
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
+def ensureDirectory(dirname):
+    """Make directory if it does not exist."""
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
 def ensureTFile(filename, option='READ'):
     """Open TFile and make sure it exists."""
     if not os.path.isfile(filename):
@@ -41,6 +46,54 @@ def ensureTFile(filename, option='READ'):
         print(f"ERROR: Could not open file {filename}")
         sys.exit(1)
     return file
+
+def format_region_label(region):
+    """Format region name to match CMS style (e.g., DM0, DM1_pt1 -> DM1, pt: 20-40)"""
+    if '_pt' in region:
+        dm_part, pt_part = region.split('_pt', 1)
+        pt_num = pt_part
+        # Map pt bins to actual pT ranges
+        pt_ranges = {
+            '1': '20-40',
+            '2': '40-60', 
+            '3': '60-200',
+            '4': '200+'
+        }
+        pt_range = pt_ranges.get(pt_num, pt_num)
+        
+        # Format decay mode 
+        if dm_part == 'DM0':
+            return f"{dm_part}, pt: {pt_range}"
+        elif dm_part == 'DM1':
+            return f"{dm_part}, pt: {pt_range}" 
+        elif dm_part == 'DM10':
+            return f"{dm_part}, pt: {pt_range}"
+        elif dm_part == 'DM11':
+            return f"{dm_part}, pt: {pt_range}"
+        else:
+            return f"{dm_part}, pt: {pt_range}"
+    else:
+        # Just DM labels
+        return region
+
+def format_region_for_sorting(region):
+    """Create sorting key for regions to match your plot order"""
+    # Define the desired order (reverse: DM11, DM10, DM1, DM0)
+    order_map = {
+        'DM11': 0,
+        'DM10': 1, 
+        'DM1': 2,
+        'DM0': 3
+    }
+    
+    if '_pt' in region:
+        dm_part, pt_part = region.split('_pt', 1)
+        base_order = order_map.get(dm_part, 999)
+        # pt bins in reverse order (pt4, pt3, pt2, pt1)
+        pt_order = 10 - int(pt_part) if pt_part.isdigit() else 0
+        return (base_order, pt_order)
+    else:
+        return (order_map.get(region, 999), 0)
 
 def interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=100):
     """Create a smoother 2D histogram by interpolating the scan data"""
@@ -535,8 +588,446 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     
     canvas.Close()
 
+def plot_measurement_summary(region_labels, measurements, **kwargs):
+    """Create a summary plot showing measurements with error bars"""
+    title = kwargs.get('title', "Measurements")
+    ylabel = kwargs.get('ylabel', "value")
+    outname = kwargs.get('outname', "measurements")
+    year = kwargs.get('year', "2024")
+    
+    n_regions = len(region_labels)
+    if n_regions == 0:
+        print("No measurements to plot")
+        return
+    
+    # Create canvas
+    canvas_height = max(600, 60 + 40*n_regions)
+    canvas_width = 800
+    canvas = ROOT.TCanvas('canvas_summary', 'canvas_summary', 100, 100, canvas_width, canvas_height)
+    canvas.SetFillColor(0)
+    canvas.SetBorderMode(0)
+    canvas.SetFrameFillStyle(0)
+    canvas.SetFrameBorderMode(0)
+    
+    # Set margins
+    top_margin = 0.08
+    bottom_margin = 0.12
+    left_margin = 0.25
+    right_margin = 0.05
+    
+    canvas.SetTopMargin(top_margin)
+    canvas.SetBottomMargin(bottom_margin) 
+    canvas.SetLeftMargin(left_margin)
+    canvas.SetRightMargin(right_margin)
+    canvas.SetGrid(1, 0)
+    canvas.cd()
+    
+    # Determine x-axis range
+    values = [m[0] for m in measurements]
+    errors_down = [m[1] for m in measurements] 
+    errors_up = [m[2] for m in measurements]
+    
+    x_min = min([v - e for v, e in zip(values, errors_down)])
+    x_max = max([v + e for v, e in zip(values, errors_up)])
+    x_range = x_max - x_min
+    x_margin = 0.15 * x_range
+    x_min -= x_margin
+    x_max += x_margin
+    
+    # Create frame
+    frame = canvas.DrawFrame(x_min, 0.0, x_max, float(n_regions))
+    frame.GetYaxis().SetLabelSize(0.0)
+    frame.GetXaxis().SetLabelSize(0.042)
+    frame.GetXaxis().SetTitleSize(0.050) 
+    frame.GetXaxis().SetTitleOffset(1.1)
+    frame.GetYaxis().SetNdivisions(n_regions, 0, 0, False)
+    frame.GetXaxis().SetTitle(ylabel)
+    frame.GetXaxis().SetNdivisions(510)
+    
+    # Create graph with error bars
+    graph = ROOT.TGraphAsymmErrors(n_regions)
+    
+    for i, (region, measurement) in enumerate(zip(region_labels, measurements)):
+        y_pos = n_regions - i - 0.5
+        val, err_down, err_up = measurement
+        graph.SetPoint(i, val, y_pos)
+        graph.SetPointError(i, err_down, err_up, 0.1, 0.1)
+    
+    # Style the graph
+    graph.SetMarkerStyle(20)
+    graph.SetMarkerSize(1.0)
+    graph.SetMarkerColor(ROOT.kBlack)
+    graph.SetLineColor(ROOT.kBlack)
+    graph.SetLineWidth(2)
+    
+    # Draw the graph
+    graph.Draw("PE SAME")
+    
+    # Add vertical line at 1.0 if appropriate
+    if min(values) < 1.0 < max(values):
+        line = ROOT.TLine(1.0, 0.0, 1.0, float(n_regions))
+        line.SetLineStyle(2)
+        line.SetLineColor(ROOT.kGray+2)
+        line.Draw("SAME")
+    
+    # Add region labels
+    latex = ROOT.TLatex()
+    latex.SetTextSize(0.035)
+    latex.SetTextFont(42)
+    latex.SetTextAlign(32)
+    latex.SetNDC(True)
+    
+    for i, region in enumerate(region_labels):
+        y_pos_ndc = 1.0 - top_margin - (i + 0.5) * (1.0 - top_margin - bottom_margin) / n_regions
+        latex.DrawLatex(left_margin - 0.02, y_pos_ndc, region)
+    
+    # Add CMS header
+    cms_latex = ROOT.TLatex()
+    cms_latex.SetTextSize(0.060)
+    cms_latex.SetTextFont(61)
+    cms_latex.SetTextAlign(11)
+    cms_latex.SetNDC(True)
+    cms_latex.DrawLatex(left_margin, 1.0 - top_margin + 0.01, "CMS")
+    
+    # Add "Internal" label
+    internal_latex = ROOT.TLatex()
+    internal_latex.SetTextSize(0.045)
+    internal_latex.SetTextFont(52)
+    internal_latex.SetTextAlign(11)
+    internal_latex.SetNDC(True) 
+    internal_latex.DrawLatex(left_margin + 0.12, 1.0 - top_margin + 0.01, "Internal")
+    
+    # Add year and energy
+    year_latex = ROOT.TLatex()
+    year_latex.SetTextSize(0.045)
+    year_latex.SetTextFont(42)
+    year_latex.SetTextAlign(31)
+    year_latex.SetNDC(True)
+    year_latex.DrawLatex(1.0 - right_margin, 1.0 - top_margin + 0.01, f"{year}, 109 fb^{{-1}} (13.6 TeV)")
+    
+    # Add title
+    if title:
+        title_latex = ROOT.TLatex()
+        title_latex.SetTextSize(0.045)
+        title_latex.SetTextFont(42)
+        title_latex.SetTextAlign(11)
+        title_latex.SetNDC(True)
+        title_latex.DrawLatex(left_margin, 1.0 - top_margin - 0.05, title)
+    
+    canvas.SetTicks(1, 1)
+    canvas.Modified()
+    canvas.Update()
+    
+    # Save
+    canvas.SaveAs(outname + ".png")
+    canvas.SaveAs(outname + ".pdf") 
+    canvas.SaveAs(outname + ".root")
+    print(f">>> Saved measurement summary: {outname}.png")
+    
+    canvas.Close()
+
+def plot_scan_correlations(scan_results_all_regions, **kwargs):
+    """Create a correlation plot using correlations from scan results"""
+    year = kwargs.get('year', '2024')
+    indir = kwargs.get('indir', f"output_{year}")
+    outdir = indir.replace('output', 'plots')
+    tag = kwargs.get('tag', "")
+    plottag = kwargs.get('plottag', "")
+    outname = f"{outdir}/scan_correlations_multidimfit{tag}{plottag}"
+    
+    ensureDirectory(outdir)
+    
+    # Extract correlations and region names directly from scan results
+    correlations = []
+    region_labels = []
+    
+    # Sort regions
+    sorted_regions = sorted(scan_results_all_regions.items(), key=lambda x: format_region_for_sorting(x[0]))
+    
+    for region, scan_data in sorted_regions:
+        if scan_data is None:
+            continue
+        correlation = scan_data.get('correlation', 0.0)
+        correlations.append(correlation)
+        region_labels.append(format_region_label(region))
+    
+    n_regions = len(region_labels)
+    if n_regions == 0:
+        print("No correlation data to plot")
+        return
+    
+    # Create canvas
+    canvas_height = max(600, 60 + 40*n_regions)
+    canvas_width = 800
+    canvas = ROOT.TCanvas('canvas_scan_corr', 'canvas_scan_corr', 100, 100, canvas_width, canvas_height)
+    canvas.SetFillColor(0)
+    canvas.SetBorderMode(0)
+    canvas.SetFrameFillStyle(0)
+    canvas.SetFrameBorderMode(0)
+    
+    # Set margins
+    top_margin = 0.08
+    bottom_margin = 0.12
+    left_margin = 0.25
+    right_margin = 0.05
+    
+    canvas.SetTopMargin(top_margin)
+    canvas.SetBottomMargin(bottom_margin) 
+    canvas.SetLeftMargin(left_margin)
+    canvas.SetRightMargin(right_margin)
+    canvas.SetGrid(1, 0)
+    canvas.cd()
+    
+    # Determine x-axis range for correlations (-1 to +1)
+    x_min = -1.2
+    x_max = 1.2
+    
+    # Create frame
+    frame = canvas.DrawFrame(x_min, 0.0, x_max, float(n_regions))
+    frame.GetYaxis().SetLabelSize(0.0)
+    frame.GetXaxis().SetLabelSize(0.042)
+    frame.GetXaxis().SetTitleSize(0.050) 
+    frame.GetXaxis().SetTitleOffset(1.1)
+    frame.GetYaxis().SetNdivisions(n_regions, 0, 0, False)
+    frame.GetXaxis().SetTitle("TES-TauID Correlation from 2D Scans")
+    frame.GetXaxis().SetNdivisions(510)
+    
+    # Create individual markers for each correlation
+    markers = []
+    
+    for i, (region, correlation) in enumerate(zip(region_labels, correlations)):
+        y_pos = n_regions - i - 0.5
+        
+        # Simple color scheme: blue for all correlations
+        color = ROOT.kBlue + 2
+        
+        # Create marker
+        marker = ROOT.TMarker(correlation, y_pos, 20)
+        marker.SetMarkerSize(1.2)
+        marker.SetMarkerColor(color)
+        markers.append(marker)
+        marker.Draw("SAME")
+    
+    # Add vertical line at 0.0 (no correlation)
+    line_zero = ROOT.TLine(0.0, 0.0, 0.0, float(n_regions))
+    line_zero.SetLineStyle(2)
+    line_zero.SetLineColor(ROOT.kGray+2)
+    line_zero.SetLineWidth(2)
+    line_zero.Draw("SAME")
+    
+    # Add region labels
+    latex = ROOT.TLatex()
+    latex.SetTextSize(0.035)
+    latex.SetTextFont(42)
+    latex.SetTextAlign(32)
+    latex.SetNDC(True)
+    
+    for i, region in enumerate(region_labels):
+        y_pos_ndc = 1.0 - top_margin - (i + 0.5) * (1.0 - top_margin - bottom_margin) / n_regions
+        latex.DrawLatex(left_margin - 0.02, y_pos_ndc, region)
+    
+    # Add correlation values next to points
+    corr_latex = ROOT.TLatex()
+    corr_latex.SetTextSize(0.030)
+    corr_latex.SetTextFont(42)
+    corr_latex.SetTextAlign(11)
+    
+    for i, correlation in enumerate(correlations):
+        y_pos = n_regions - i - 0.5
+        x_pos = correlation + 0.05 if correlation >= 0 else correlation - 0.05
+        corr_latex.DrawLatex(x_pos, y_pos, f"{correlation:.3f}")
+    
+    # Add CMS header
+    cms_latex = ROOT.TLatex()
+    cms_latex.SetTextSize(0.060)
+    cms_latex.SetTextFont(61)
+    cms_latex.SetTextAlign(11)
+    cms_latex.SetNDC(True)
+    cms_latex.DrawLatex(left_margin, 1.0 - top_margin + 0.01, "CMS")
+    
+    # Add "Internal" label
+    internal_latex = ROOT.TLatex()
+    internal_latex.SetTextSize(0.045)
+    internal_latex.SetTextFont(52)
+    internal_latex.SetTextAlign(11)
+    internal_latex.SetNDC(True) 
+    internal_latex.DrawLatex(left_margin + 0.12, 1.0 - top_margin + 0.01, "Internal")
+    
+    # Add year and energy
+    year_latex = ROOT.TLatex()
+    year_latex.SetTextSize(0.045)
+    year_latex.SetTextFont(42)
+    year_latex.SetTextAlign(31)
+    year_latex.SetNDC(True)
+    year_latex.DrawLatex(1.0 - right_margin, 1.0 - top_margin + 0.01, f"{year}, 109 fb^{{-1}} (13.6 TeV)")
+    
+    # Add title
+    title_latex = ROOT.TLatex()
+    title_latex.SetTextSize(0.045)
+    title_latex.SetTextFont(42)
+    title_latex.SetTextAlign(11)
+    title_latex.SetNDC(True)
+    title_latex.DrawLatex(left_margin, 1.0 - top_margin - 0.05, "TES-TauID Correlations from MultiDimFit Scans")
+    
+    canvas.SetTicks(1, 1)
+    canvas.Modified()
+    canvas.Update()
+    
+    # Save
+    canvas.SaveAs(outname + ".png")
+    canvas.SaveAs(outname + ".pdf") 
+    canvas.SaveAs(outname + ".root")
+    print(f">>> Saved scan correlation plot: {outname}.png")
+    
+    canvas.Close()
+
+def plot_summary_from_multiple_regions(setup, scan_results_all_regions, **kwargs):
+    """Create summary plots showing TES and TauID measurements with uncertainties"""
+    print(">>> Creating summary plots from MultiDimFit results")
+    
+    year = kwargs.get('year', '2024')
+    indir = kwargs.get('indir', f"output_{year}")
+    outdir = indir.replace('output', 'plots')
+    tag = kwargs.get('tag', "")
+    plottag = kwargs.get('plottag', "")
+    
+    ensureDirectory(outdir)
+    
+    # Extract measurements
+    tes_measurements = []
+    tid_measurements = []
+    region_labels = []
+    
+    # Sort regions
+    sorted_regions = sorted(scan_results_all_regions.items(), key=lambda x: format_region_for_sorting(x[0]))
+    
+    for region, scan_data in sorted_regions:
+        if scan_data is None:
+            continue
+            
+        region_label = format_region_label(region)
+        region_labels.append(region_label)
+        
+        poi1_name = scan_data['poi1_name']
+        poi2_name = scan_data['poi2_name']
+        
+        if 'tes' in poi1_name.lower():
+            tes_val = scan_data['best_poi1']
+            tes_err = scan_data['poi1_err']
+            tid_val = scan_data['best_poi2'] 
+            tid_err = scan_data['poi2_err']
+        else:
+            tes_val = scan_data['best_poi2']
+            tes_err = scan_data['poi2_err']
+            tid_val = scan_data['best_poi1']
+            tid_err = scan_data['poi1_err']
+            
+        tes_measurements.append((tes_val, tes_err, tes_err))
+        tid_measurements.append((tid_val, tid_err, tid_err))
+    
+    # Create plots
+    plot_measurement_summary(
+        region_labels, tes_measurements,
+        title="Tau Energy Scale",
+        ylabel="tau energy scale", 
+        outname=f"{outdir}/tes_summary_multidimfit{tag}{plottag}",
+        year=year
+    )
+    
+    plot_measurement_summary(
+        region_labels, tid_measurements,
+        title="Tau ID Scale Factor", 
+        ylabel="tau ID scale factor",
+        outname=f"{outdir}/tid_summary_multidimfit{tag}{plottag}",
+        year=year
+    )
+    
+    # Create correlation plot
+    plot_scan_correlations(
+        scan_results_all_regions,
+        year=year, 
+        indir=indir, 
+        tag=tag, 
+        plottag=plottag
+    )
+    
+    print(f">>> Created TES summary plot: {outdir}/tes_summary_multidimfit{tag}{plottag}.png")
+    print(f">>> Created TauID summary plot: {outdir}/tid_summary_multidimfit{tag}{plottag}.png")
+    print(f">>> Created scan correlation plot: {outdir}/scan_correlations_multidimfit{tag}{plottag}.png")
+
+def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err_up, 
+                         poi2_val, poi2_err_down, poi2_err_up, correlation, region, **kwargs):
+    """Write 2D fit results to text file, similar to measurepoi() in plotParabola_POI_region.py"""
+    year = kwargs.get('year', '2024')
+    tag = kwargs.get('tag', '')
+    channel = kwargs.get('channel', 'mt')
+    outdir = kwargs.get('outdir', 'plots')
+    
+    ensureDirectory(outdir)
+    
+    # Create output filename similar to plotParabola_POI_region format
+    outfname = f"{outdir}/measurement_2D_{poi1_name}_{poi2_name}_{channel}_{region}{tag}.txt"
+    
+    print(f">>> Writing 2D fit results to {outfname}")
+    
+    # Write results to file in same format as plotParabola_POI_region
+    with open(outfname, 'w') as file:
+        file.write("# 2D Fit Results from MultiDimFit\n")
+        file.write(f"# Region: {region}\n")
+        file.write(f"# Year: {year}\n")
+        file.write(f"# Channel: {channel}\n")
+        file.write("# Format: parameter value error_down error_up\n")
+        file.write(f"{poi1_name} {poi1_val:.6f} {poi1_err_down:.6f} {poi1_err_up:.6f}\n")
+        file.write(f"{poi2_name} {poi2_val:.6f} {poi2_err_down:.6f} {poi2_err_up:.6f}\n")
+        file.write(f"correlation {correlation:.6f}\n")
+    
+    return outfname
+
+def write_summary_results(scan_results_all_regions, **kwargs):
+    """Write summary of all 2D fit results to a single file"""
+    year = kwargs.get('year', '2024')
+    tag = kwargs.get('tag', '')
+    channel = kwargs.get('channel', 'mt')
+    outdir = kwargs.get('outdir', 'plots')
+    
+    ensureDirectory(outdir)
+    
+    # Create summary output filename
+    outfname = f"{outdir}/summary_2D_results_{channel}{tag}_{year}.txt"
+    
+    print(f">>> Writing summary 2D fit results to {outfname}")
+    
+    with open(outfname, 'w') as file:
+        file.write("# Summary of 2D Fit Results from MultiDimFit\n")
+        file.write(f"# Year: {year}\n")
+        file.write(f"# Channel: {channel}\n")
+        file.write("# Format: region poi1_name poi1_val poi1_err poi2_name poi2_val poi2_err correlation\n")
+        
+        # Sort regions for consistent output
+        sorted_regions = sorted(scan_results_all_regions.items(), key=lambda x: format_region_for_sorting(x[0]))
+        
+        for region, scan_data in sorted_regions:
+            if scan_data is None:
+                continue
+                
+            # Get parameter info
+            poi1_name = scan_data['poi1_name']
+            poi2_name = scan_data['poi2_name']
+            poi1_val = scan_data['best_poi1']
+            poi2_val = scan_data['best_poi2']
+            poi1_err = scan_data['poi1_err']
+            poi2_err = scan_data['poi2_err']
+            correlation = scan_data.get('correlation', 0.0)
+            
+            # Write to file
+            file.write(f"{region} {poi1_name} {poi1_val:.6f} {poi1_err:.6f} ")
+            file.write(f"{poi2_name} {poi2_val:.6f} {poi2_err:.6f} ")
+            file.write(f"{correlation:.6f}\n")
+    
+    return outfname
+
 def main(args):
-    """Main function"""
+    """Main function - handle multiple regions and create summary plots"""
     
     print("Using configuration file: %s" % args.config)
     with open(args.config, 'r') as file:
@@ -556,39 +1047,97 @@ def main(args):
     else:
         indir = f"output_{era}"
     
-    # POI names
-    poi1_name = args.poi1  # e.g., "tes_DM0"
-    poi2_name = args.poi2  # e.g., "tid_SF_DM0"
+    # Process regions
+    scan_results_all_regions = {}
     
-    # Extract region from POI name (assuming format like "tes_DM0")
-    if '_' in poi1_name:
-        region = poi1_name.split('_', 1)[1]
+    if args.poi1 and args.poi2:
+        # Single region mode
+        poi1_name = args.poi1  # e.g., "tes_DM0"
+        poi2_name = args.poi2  # e.g., "tid_SF_DM0"
+        
+        # Extract region from POI name (assuming format like "tes_DM0")
+        if '_' in poi1_name:
+            region = poi1_name.split('_', 1)[1]
+        else:
+            region = args.region if args.region else "DM0"
+            
+        regions_to_process = [region]
     else:
-        region = args.region if args.region else "DM0"
-    
-    # Construct MultiDimFit filename
-    # This should match what your makecombinedfitTES_SF.py produces for option 3
-    multidimfit_filename = f"{indir}/higgsCombine.{channel}_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
-    
-    if not os.path.exists(multidimfit_filename):
-        print(f"ERROR: MultiDimFit file not found: {multidimfit_filename}")
-        # Try alternative naming
-        multidimfit_filename = f"{indir}/higgsCombine.mt_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
-        if not os.path.exists(multidimfit_filename):
-            print(f"ERROR: Alternative MultiDimFit file not found: {multidimfit_filename}")
+        # Multiple regions mode - get from config
+        try:
+            regions_to_process = setup["observables"]["m_vis"]["scanRegions"]
+            print(f">>> Processing {len(regions_to_process)} regions from config: {regions_to_process}")
+        except KeyError:
+            print("ERROR: No regions found in config file. Please specify --poi1 and --poi2 for single region mode.")
             sys.exit(1)
     
-    print(f">>> Using MultiDimFit file: {multidimfit_filename}")
+    # Process each region
+    for region in regions_to_process:
+        print(f"\n>>> Processing region: {region}")
+        
+        # Construct POI names if not provided
+        if not args.poi1 or not args.poi2:
+            poi1_name = f"tes_{region}"
+            poi2_name = f"tid_SF_{region}"
+        else:
+            poi1_name = args.poi1
+            poi2_name = args.poi2
+        
+        # Construct MultiDimFit filename
+        multidimfit_filename = f"{indir}/higgsCombine.{channel}_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
+        
+        if not os.path.exists(multidimfit_filename):
+            # Try alternative naming
+            multidimfit_filename = f"{indir}/higgsCombine.mt_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
+            if not os.path.exists(multidimfit_filename):
+                print(f"WARNING: MultiDimFit file not found for {region}")
+                scan_results_all_regions[region] = None
+                continue
+        
+        print(f">>> Using: {multidimfit_filename}")
+        
+        # Extract scan data
+        scan_data = extract_2d_scan_data(multidimfit_filename, poi1_name, poi2_name)
+        if scan_data is None:
+            print(f"ERROR: Could not extract scan data for {region}")
+            scan_results_all_regions[region] = None
+            continue
+            
+        scan_results_all_regions[region] = scan_data
+        
+        # Create individual 2D plot
+        plot_2d_scan(setup, region, era, scan_data, 
+                     indir=indir, tag=tag, plottag=args.plottag)
+        
+        # Write individual text results for this region
+        outdir = indir.replace('output', 'plots')
+        poi1_val = scan_data['best_poi1']
+        poi1_err = scan_data['poi1_err']
+        poi2_val = scan_data['best_poi2'] 
+        poi2_err = scan_data['poi2_err']
+        correlation = scan_data.get('correlation', 0.0)
+        
+        # Write individual region results
+        write_2d_fit_results(
+            poi1_name, poi2_name, poi1_val, poi1_err, poi1_err,  # symmetric errors
+            poi2_val, poi2_err, poi2_err, correlation, region,
+            year=era, tag=tag, channel=channel, outdir=outdir
+        )
     
-    # Extract scan data
-    scan_data = extract_2d_scan_data(multidimfit_filename, poi1_name, poi2_name)
-    if scan_data is None:
-        print("ERROR: Could not extract scan data")
-        sys.exit(1)
+    # Create summary plots and text files if we have multiple regions
+    if len([r for r in scan_results_all_regions.values() if r is not None]) > 1:
+        plot_summary_from_multiple_regions(setup, scan_results_all_regions,
+                                         year=era, indir=indir, tag=tag, 
+                                         plottag=args.plottag)
+        
+        # Write summary text results
+        outdir = indir.replace('output', 'plots')
+        write_summary_results(scan_results_all_regions,
+                             year=era, tag=tag, channel=channel, outdir=outdir)
+    elif len(scan_results_all_regions) == 1:
+        print(">>> Only one region processed, summary plots not created")
     
-    # Create 2D plot
-    plot_2d_scan(setup, region, era, scan_data, 
-                 indir=indir, tag=tag, plottag=args.plottag)
+    print(">>> All plots and text files completed successfully!")
 
 if __name__ == '__main__':
     description = '''Plot 2D parabolas from MultiDimFit scan output.'''
@@ -607,11 +1156,11 @@ if __name__ == '__main__':
                        action='store', 
                        help="set config file containing sample & fit setup")
     
-    parser.add_argument('--poi1', dest='poi1', type=str, required=True,
-                       help="first parameter of interest (e.g., tes_DM0)")
+    parser.add_argument('--poi1', dest='poi1', type=str, required=False,
+                       help="first parameter of interest (e.g., tes_DM0). If not provided, will process all regions from config.")
     
-    parser.add_argument('--poi2', dest='poi2', type=str, required=True,
-                       help="second parameter of interest (e.g., tid_SF_DM0)")
+    parser.add_argument('--poi2', dest='poi2', type=str, required=False,
+                       help="second parameter of interest (e.g., tid_SF_DM0). If not provided, will process all regions from config.")
     
     parser.add_argument('-r', '--region', dest='region', type=str,
                        help="region name (if not extractable from POI names)")

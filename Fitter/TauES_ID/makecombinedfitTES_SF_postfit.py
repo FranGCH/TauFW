@@ -3,7 +3,7 @@
 Date : Sept 2024
 Author : @oponcet 
 Description :
-This script is used to run a FITDiagnotic for TES and tid_S. It take as input the values of the parameter of the fit obtained wit h MultiDimFit in makecombinedfit_TES_SFt.py. The parameters are read from a text file and used in the fit. The fit is done for each region defined in the config file. The fit is done using the combine tool. The output of the fit is saved in a root file. The script also run the PostFitShapeFromWorkspace to get the postfit shape of the fit. 
+This script is used to run a FITDiagnotic for TES and tid_S. It take as input the values of the parameter of the fit obtained wit h MultiDimFit in makecombinedfit_TES_SF.py. The parameters are read from a text file and used in the fit. The fit is done for each region defined in the config file. The fit is done using the combine tool. The output of the fit is saved in a root file. The script also run the PostFitShapeFromWorkspace to get the postfit shape of the fit. 
 """
 
 from distutils import filelist
@@ -120,41 +120,128 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             workspace = f"{postfit_outdir}/{datacardfile}.root"
             print("Datacard workspace has been created")
 
-    if option == '1':
-            POI = f"tes_{r}"
-            NP = "rgx{.*tid.*}"
-            # Here you can adjsut the range of the TES to constrain it in the FITDAIGNOSTICS 
-            if r == "DM0" :
+        if option == '1':
+                POI = f"tes_{r}"
+                NP = "rgx{.*tid.*}"
+                # Here you can adjsut the range of the TES to constrain it in the FITDAIGNOSTICS 
+                if r == "DM0" :
+                    tes_range = "0.990,1.010"
+                elif r == "DM1" :
+                    tes_range = "0.990,1.010"
+                elif r == "DM10" :
+                    tes_range = "0.990,1.010"
+                elif r == "DM11":
+                    tes_range = "0.990,1.010"
+                elif r == "DM0_pt1" :
+                    tes_range = "0.995,1.020"
+                elif r == "DM0_pt2" :
+                    tes_range = "0.995,1.015"
+                elif r == "DM0_pt3" :
+                    tes_range = "0.990,1.010"
+                elif r == "DM0_pt4" :
+                    tes_range = "0.942,0.962"
+                elif r == "DM1_pt1" :
+                    tes_range = "0.995,1.005"
+                elif r == "DM1_pt2" :
+                    tes_range = "1.005,1.015"
+                elif r == "DM1_pt3" :
+                    tes_range = "1.010,1.020"
+                elif r == "DM1_pt4" :
+                    tes_range = "0.990,1.010"
+                elif r == "DM10_pt1" :
+                    tes_range = "0.985,1.000"
+                elif r == "DM10_pt2" :
+                    tes_range = "1.000,1.010"
+                elif r == "DM10_pt3" :
+                    tes_range = "1.010,1.020"
+                elif r == "DM10_pt4" :
+                    tes_range = "0.984,1.010"
+                elif r == "DM11_pt1":
+                    tes_range = "0.990,1.010"
+                elif r == "DM11_pt2":
+                    tes_range = "1.000,1.020"
+                elif r == "DM11_pt3":
+                    tes_range = "1.000,1.020"
+                elif r == "DM11_pt4":
+                    tes_range = "1.020,1.030"
+                else:
+                    tes_range = "0.900,1.300"
+
+                # Load the parameters from the text file (always from postfit_outdir)
+                param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt")
+                params = {}
+                with open(param_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and ':' in line:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = float(value.strip())
+                            if key.startswith('trackedParam_'):
+                                key = key[len('trackedParam_'):]
+                            params[key] = value
+                        else:
+                            print(f"Skipping invalid line: {line}")
+
+                param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
+                print("param_opts : %s" %(param_opts))
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:sf_W_{r}=0.0,10.0 --freezeParameters r"
+                MutliFitout = f"{fit_outdir}/higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
+                FitDiagnostics_opts = f" -m 90  {MutliFitout} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
+                print(f">>>>>>>>>>>>>>>>>>>>>>[DEBUG] FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r}  --plots")
+                
+                # os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}  --plots")
+                # Use the workspace file produced by text2workspace.py, using postfit_outdir from args.indir
+                workspace_file = f"{postfit_outdir}/{datacardfile}.root"
+                print(f"[DEBUG] Workspace file: {workspace_file}")
+                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
+                print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>[DEBUG] FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
+                os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
+
+                print(f"FitDiagnostics {r} : ")
+
+                # Postfit shape:
+                outf_postfit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/PostFitShape_{era}_{setup['tag']}_{r}.root" # {postfit_outdir}
+                outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_DeepTau-{era}-13TeV.root" # {postfit_outdir}
+                print(f"[DEBUG] PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
+                os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
+                print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
+        elif option == '3':
+            # Option 3: 2D scan - need to run FitDiagnostics first
+            POI = f"tes_{r},tid_SF_{r}"
+            tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+            # Set TES range based on region (same logic as option 1)
+            if r == "DM0":
                 tes_range = "0.990,1.010"
-            elif r == "DM1" :
+            elif r == "DM1":
                 tes_range = "0.990,1.010"
-            elif r == "DM10" :
+            elif r == "DM10":
                 tes_range = "0.990,1.010"
             elif r == "DM11":
                 tes_range = "0.990,1.010"
-            elif r == "DM0_pt1" :
+            elif r == "DM0_pt1":
                 tes_range = "0.995,1.020"
-            elif r == "DM0_pt2" :
+            elif r == "DM0_pt2":
                 tes_range = "0.995,1.015"
-            elif r == "DM0_pt3" :
+            elif r == "DM0_pt3":
                 tes_range = "0.990,1.010"
-            elif r == "DM0_pt4" :
+            elif r == "DM0_pt4":
                 tes_range = "0.942,0.962"
-            elif r == "DM1_pt1" :
+            elif r == "DM1_pt1":
                 tes_range = "0.995,1.005"
-            elif r == "DM1_pt2" :
+            elif r == "DM1_pt2":
                 tes_range = "1.005,1.015"
-            elif r == "DM1_pt3" :
+            elif r == "DM1_pt3":
                 tes_range = "1.010,1.020"
-            elif r == "DM1_pt4" :
+            elif r == "DM1_pt4":
                 tes_range = "0.990,1.010"
-            elif r == "DM10_pt1" :
+            elif r == "DM10_pt1":
                 tes_range = "0.985,1.000"
-            elif r == "DM10_pt2" :
+            elif r == "DM10_pt2":
                 tes_range = "1.000,1.010"
-            elif r == "DM10_pt3" :
+            elif r == "DM10_pt3":
                 tes_range = "1.010,1.020"
-            elif r == "DM10_pt4" :
+            elif r == "DM10_pt4":
                 tes_range = "0.984,1.010"
             elif r == "DM11_pt1":
                 tes_range = "0.990,1.010"
@@ -167,60 +254,55 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             else:
                 tes_range = "0.900,1.300"
 
-            # Load the parameters from the text file (always from postfit_outdir)
+            # Load parameters from file
             param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt")
-            params = {}
-            with open(param_file, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = float(value.strip())
-                        if key.startswith('trackedParam_'):
-                            key = key[len('trackedParam_'):]
-                        params[key] = value
-                    else:
-                        print(f"Skipping invalid line: {line}")
+            param_file = param_file.replace("postfit", "output")
+            if os.path.exists(param_file):
+                params = {}
+                with open(param_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and ':' in line:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = float(value.strip())
+                            if key.startswith('trackedParam_'):
+                                key = key[len('trackedParam_'):]
+                            params[key] = value
+                        else:
+                            print(f"Skipping invalid line: {line}")
 
-            param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
-            print("param_opts : %s" %(param_opts))
-            POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:sf_W_{r}=0.0,10.0 --freezeParameters r"
-            MutliFitout = f"{fit_outdir}/higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
-            FitDiagnostics_opts = f" -m 90  {MutliFitout} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
-            print(f">>>>>>>>>>>>>>>>>>>>>>[DEBUG] FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r}  --plots")
-            
-            # os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}  --plots")
-            # Use the workspace file produced by text2workspace.py, using postfit_outdir from args.indir
-            workspace_file = f"{postfit_outdir}/{datacardfile}.root"
-            print(f"[DEBUG] Workspace file: {workspace_file}")
-            FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
-            print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>[DEBUG] FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
-            os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
+                param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
+                print(f"Option 3 - param_opts: {param_opts}")
+                
+                # Set up FitDiagnostics options for 2D scan
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:sf_W_{r}=0.0,10.0 --freezeParameters r"
+                
+                # Use workspace file
+                workspace_file = f"{postfit_outdir}/{datacardfile}.root"
+                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
+                
+                print(f"[DEBUG] Option 3 - FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
+                os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
+                
+                print(f"FitDiagnostics for 2D scan {r} completed")
+                
+                # Now run PostFitShapesFromWorkspace
+                outf_postfit = f"{postfit_outdir}/PostFitShape_{era}_{setup['tag']}_{r}.root"
+                outf_fit = f"fitDiagnostics.{BINLABELoutput}.root"
+                
+                # Check if FitDiagnostics output exists
+                print(f"[DEBUG] Option 3 - PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace_file} -f {outf_fit}:fit_s --postfit")
+                os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace_file} -f {outf_fit}:fit_s --postfit ")
+                
+                # Move files to postfit directory
+                os.system(f"mv {outf_fit} {postfit_outdir}/")
+                print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
+            else:
+                print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+                print(f">>>>>>>>>>>>>>>>>[ERROR] Parameter file {param_file} does not exist. Skipping region {r}.")
 
-            print(f"FitDiagnostics {r} : ")
-
-            # Postfit shape:
-            outf_postfit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/PostFitShape_{era}_{setup['tag']}_{r}.root" # {postfit_outdir}
-            outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_DeepTau-{era}-13TeV.root" # {postfit_outdir}
-            print(f"[DEBUG] PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
-            os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
-            print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
-    # No action for other options in this loop
-
-    # Move all output files to the correct directory (optional, if needed)
-    # os.system(f"mv higgsCombine*root {base_outdir}")
-    # os.system(f"mv *.root {base_outdir}")
-    # os.system(f"mv *.png {base_outdir}")
-    if option == '3':
-        # After running FitDiagnostics for option 3, add:
-        outf_postfit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/PostFitShape_{era}_{setup['tag']}_{r}.root"
-        outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_DeepTau-{era}-13TeV.root"
-        print(f"[DEBUG] PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
-        os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
-        print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
-# ...existing code...
-
+                print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
     tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
@@ -244,14 +326,17 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} {indir_arg}") # -y %s -e %s -r %s,%s -c %s" %(era,extratag,min(setup["TESvariations"]["values"]),max(setup["TESvariations"]["values"]), config))
         # EXTRATAG NOT WORKING
     elif option == '3':
-        print(">>> Plot 2D scans....")
+        print(">>> Plot 2D scans and uncertainty summaries....")
+        
+        # Then create the individual region plots and parabolas
         for r in setup["observables"]["m_vis"]["scanRegions"]:
             os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")
-            os.system(f"python3 TauES_ID/plot2DParabola_FitDiagnostics.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")   
-        os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag}  -s -a -c {config} {indir_arg}") # -y %s -e %s  -s -a -c %s"% (era, extratag, config))
-        os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y {era} -e {extratag} -r {min(tid_SF_range)},{max(tid_SF_range)} -c {config} {indir_arg}") # -y %s -e %s -r %s,%s -c %s" %(era,extratag,min(tid_SF_range),max(tid_SF_range), config))
-        os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} {indir_arg}") # -y %s -e %s -r %s,%s -s -a -c %s " % (era, extratag, min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]), config)) # -b
-        os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} {indir_arg}")
+            
+        # Keep the existing parabola plots
+        # os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag}  -s -a -c {config} {indir_arg}") # -y %s -e %s  -s -a -c %s"% (era, extratag, config))
+        # os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tid_SF -y {era} -e {extratag} -r {min(tid_SF_range)},{max(tid_SF_range)} -c {config} {indir_arg}") # -y %s -e %s -r %s,%s -c %s" %(era,extratag,min(tid_SF_range),max(tid_SF_range), config))
+        # os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} {indir_arg}") # -y %s -e %s -r %s,%s -s -a -c %s " % (era, extratag, min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]), config)) # -b
+        # os.system(f"python3 TauES_ID/plotPostFitScan_POI.py --poi tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -c {config} {indir_arg}")
     else:
         print(" No output plot...")
 
@@ -334,4 +419,4 @@ if __name__ == '__main__':
 # python3 TauES_ID/makecombinedfitTES_SF_postfit.py -y 2024 -c TauES_ID/config/config_coarse_TT.yml  -cmm TauES/config/FitSetup_mumu.yml --mumu_input_file output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/ztt_mm_m_vis-baseline_mumu-2024-13TeV.txt --indir output_pt_less_region/againstjet_Medium/againstelectron_Tight/ -o 1
 
 
-#### python3 TauES_ID/makecombinedfitTES_SF.py -y 2024 -c TauES_ID/config/config_coarse_TT.yml -i input_pt_less_region/againstjet_Medium/againstelectron_Tight/ --input_file input_pt_less_region/againstjet_Medium/againstelectron_Tight/ztt_mt_tes_m_vis.inputs-2024-13TeV_mutau.root -o 1 && clear && python3 TauES_ID/makecombinedfitTES_SF_postfit.py -y 2024 -c TauES_ID/config/config_coarse_TT.yml --indir output_pt_less_region/againstjet_Medium/againstelectron_Tight/ -o 1 && python3 python/plot/runpostfit.py -c TauES_ID/config/config_coarse_TT.yml 
+#### python3 TauES_ID/makecombinedfitTES_SF.py -y 2024 -c TauES_ID/config/config_coarse_TT.yml -i input_pt_less_region/againstjet_Medium/againstelectron_Tight/ --input_file input_pt_less_region/againstjet_Medium/againstelectron_Tight/ztt_mt_tes_m_vis.inputs-2024-13TeV_mutau.root -o 1 && clear && python3 TauES_ID/makecombinedfitTES_SF_postfit.py -y 2024 -c TauES_ID/config/config_coarse_TT.yml --indir output_pt_less_region/againstjet_Medium/againstelectron_Tight/ -o 1 && python3 python/plot/runpostfit.py -c TauES_ID/config/config_coarse_TT.yml

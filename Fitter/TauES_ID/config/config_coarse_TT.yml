@@ -77,8 +77,9 @@ regions:
         title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-200"
 
 plottingOrder: &region_list 
-          [ "DM0", 
-              "DM1", 
+          [ 
+            "DM0", 
+               "DM1", 
              "DM10", 
              "DM11",
             "DM0_pt1", 
@@ -102,7 +103,7 @@ plottingOrder: &region_list
 
 observables:
     m_vis:
-        binning: [20, 50, 150] #binning=5GeV
+        binning: [20, 50, 150] #binning=10GeV
         title: "m_{vis}"
         extra:
             cut: "50<m_vis && m_vis<150"

@@ -19,13 +19,13 @@ def main(args):
   method      = args.method # 'jtf' or 'MC'
   verbosity   = args.verbosity
   if verbosity>=1:
-    print ">>> filename_mt = %r"%(filename_mt)
-    print ">>> filename_mm = %r"%(filename_mm)
-    print ">>> wp          = %r"%(wp)
-    print ">>> era         = %r"%(era)
-    print ">>> tag         = %r"%(tag)
-    print ">>> method      = %r"%(method)
-    print ">>> doshapes    = %r"%(doshapes)
+    print(">>> filename_mt = %r" % (filename_mt))
+    print(">>> filename_mm = %r" % (filename_mm))
+    print(">>> wp          = %r" % (wp))
+    print(">>> era         = %r" % (era))
+    print(">>> tag         = %r" % (tag))
+    print(">>> method      = %r" % (method))
+    print(">>> doshapes    = %r" % (doshapes))
   
   # PROCESSES
   procs = {
@@ -43,8 +43,8 @@ def main(args):
   else: # j -> tau fake rate method
     procs['bkg']['mt'].append('JTF')
   if verbosity>=1:
-    print ">>> procs['sig'] = %r"%(procs['sig'])
-    print ">>> procs['bkg'] = %r"%(procs['bkg'])
+    print(">>> procs['sig'] = %r" % (procs['sig']))
+    print(">>> procs['bkg'] = %r" % (procs['bkg']))
   
   # CATEGORIES
   channels = ['mt', 'mm']
@@ -70,7 +70,7 @@ def main(args):
     if chn=='mm':
       cb.AddProcesses(['*'], ana,eras,[chn],procs['bkg'][chn],categories[chn], False)
       cb.AddProcesses(['90'],ana,eras,[chn],procs['sig'][chn],categories[chn], False)
-  print '>> Add systematics...'
+  print('>> Add systematics...')
   # template
   #cb.cp().AddSyst(
   #  cb, 'CMS_lumi', 'lnN', ch.SystMap('channel','process')
@@ -180,7 +180,7 @@ def main(args):
         (['mt'], ['ZL', 'TTL'], 1.0))
   
   # EXTRACT SHAPES
-  print '>> Extracting histograms from input root files...'
+  print('>> Extracting histograms from input root files...')
   #file = aux_shapes
   #file = aux_shapes + 'datacard_combine_1p.root'
   for chn in channels:
@@ -201,14 +201,14 @@ def main(args):
   #bbb.AddBinByBin(cb.cp().process(procs['sig'] + procs['bkg']['mt'] + procs['bkg']['mm'] + ['ZLL']), cb)
   
   # STANDARDIZED BIN NAMES
-  print ">>> Setting standardised bin names..."
+  print(">>> Setting standardised bin names...")
   #ch.SetStandardBinNames(cb)
   ch.SetStandardBinNames(cb,"$CHANNEL") #$CHANNEL_$BIN_$ERA
   if verbosity>=1:
     cb.PrintAll()
   
   # WRITE DATACARDS
-  print ">>> Writing datacards..."
+  print(">>> Writing datacards...")
   writer = ch.CardWriter(
     "$TAG/$ANALYSIS_%s_$ERA%s.card.txt"%(wp,tag), #$ERA_$MASS
     "$TAG/$ANALYSIS_%s_$ERA%s.input.root"%(wp,tag)
@@ -236,7 +236,7 @@ def main(args):
   #for chn in channels:  # plus a subdir per channel
   #    writer.WriteCards('%s/%s' % (args.output, chn), cb.cp().channel([chn]))
   
-  print '>> Done!'
+  print('>> Done!')
   
 
 if __name__ == '__main__':
@@ -258,4 +258,4 @@ if __name__ == '__main__':
                                           help="set verbosity level" )
   args = parser.parse_args()
   main(args)
-  
+
