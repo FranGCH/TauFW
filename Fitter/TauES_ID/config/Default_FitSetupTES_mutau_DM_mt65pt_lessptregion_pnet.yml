@@ -45,87 +45,57 @@ regions:
       definition: "decayModePNet_2==11"
       title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}"    
     DM0_pt1: 
-        definition: "decayModePNet_2==0 && pt_2>20 && pt_2<30"
-        title: "h^{#pm}, pt: 20-30"
+        definition: "decayModePNet_2==0 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}, pt: 20-40"
     DM0_pt2:
-        definition: "decayModePNet_2==0 && pt_2>=30 && pt_2<40"
-        title: "h^{#pm}, pt: 30-40"
-    DM0_pt3:
         definition: "decayModePNet_2==0 && pt_2>=40 && pt_2<60"
         title: "h^{#pm}, pt: 40-60"
-    DM0_pt4:
-        definition: "decayModePNet_2==0 && pt_2>=60 && pt_2<80"
-        title: "h^{#pm}, pt: 60-80"
-    DM0_pt5:
-        definition: "decayModePNet_2==0 && pt_2>=80 && pt_2<200"
-        title: "h^{#pm}, pt: 80-200"
+    DM0_pt3:
+        definition: "decayModePNet_2==0 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}, pt: 60-200"
     DM1_pt1: 
-        definition: "decayModePNet_2==1 && pt_2>20 && pt_2<30"
-        title: "h^{#pm}#pi^{0}, pt: 20-30"
+        definition: "decayModePNet_2==1 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}#pi^{0}, pt: 20-40"
     DM1_pt2:
-        definition: "decayModePNet_2==1 && pt_2>=30 && pt_2<40"
-        title: "h^{#pm}#pi^{0}, pt: 30-40"
-    DM1_pt3:
         definition: "decayModePNet_2==1 && pt_2>=40 && pt_2<60"
         title: "h^{#pm}#pi^{0}, pt: 40-60"
-    DM1_pt4:
-        definition: "decayModePNet_2==1 && pt_2>=60 && pt_2<80"
-        title: "h^{#pm}#pi^{0}, pt: 60-80"
-    DM1_pt5:
-        definition: "decayModePNet_2==1 && pt_2>=80 && pt_2<200"
-        title: "h^{#pm}#pi^{0}, pt: 80-200"
+    DM1_pt3:
+        definition: "decayModePNet_2==1 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}#pi^{0}, pt: 60-200"
     DM2_pt1:
-        definition: "decayModePNet_2==2 && pt_2>20 && pt_2<30"
-        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 20-30"
+        definition: "decayModePNet_2==2 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 20-40"
     DM2_pt2:
-        definition: "decayModePNet_2==2 && pt_2>=30 && pt_2<40"
-        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 30-40"
-    DM2_pt3:
         definition: "decayModePNet_2==2 && pt_2>=40 && pt_2<60"
         title: "h^{#pm}#pi^{0}#pi^{0}, pt: 40-60"
-    DM2_pt4:
-        definition: "decayModePNet_2==2 && pt_2>=60 && pt_2<80"
-        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 60-80"
-    DM2_pt5:
-        definition: "decayModePNet_2==2 && pt_2>=80 && pt_2<200"
-        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 80-200"
+    DM2_pt3:
+        definition: "decayModePNet_2==2 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}#pi^{0}#pi^{0}, pt: 60-200"
     DM10_pt1: 
-        definition: "decayModePNet_2==10 && pt_2>20 && pt_2<30"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 20-30"
+        definition: "decayModePNet_2==10 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 20-40"
     DM10_pt2:
-        definition: "decayModePNet_2==10 && pt_2>=30 && pt_2<40"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 30-40"
-    DM10_pt3:
         definition: "decayModePNet_2==10 && pt_2>=40 && pt_2<60"
         title: "h^{#pm}h^{#mp}h^{#pm}, pt: 40-60"
-    DM10_pt4:
-        definition: "decayModePNet_2==10 && pt_2>=60 && pt_2<80"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 60-80"
-    DM10_pt5:
-        definition: "decayModePNet_2==10 && pt_2>=80 && pt_2<200"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 80-200"
+    DM10_pt3:
+        definition: "decayModePNet_2==10 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 60-200"
     DM11_pt1: 
-        definition: "decayModePNet_2==11 && pt_2>20 && pt_2<30"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 20-30"
+        definition: "decayModePNet_2==11 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 20-40"
     DM11_pt2:
-        definition: "decayModePNet_2==11 && pt_2>=30 && pt_2<40"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 30-40"
+        definition: "decayModePNet_2==11 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 40-60"
     DM11_pt3:
         definition: "decayModePNet_2==11 && pt_2>40 && pt_2<60"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 40-60"
-    DM11_pt4:
-        definition: "decayModePNet_2==11 && pt_2>=60 && pt_2<80"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-80"
-    DM11_pt5:
-        definition: "decayModePNet_2==11 && pt_2>=80 && pt_2<200"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 80-200"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-200"
 
-plottingOrder: ["DM0", "DM1", "DM2","DM10", "DM11",
-                "DM0_pt1", "DM0_pt2", "DM0_pt3", "DM0_pt4", "DM0_pt5",
-                "DM1_pt1", "DM1_pt2", "DM1_pt3", "DM1_pt4", "DM1_pt5",
-                "DM2_pt1", "DM2_pt2", "DM2_pt3", "DM2_pt4", "DM2_pt5",
-                "DM10_pt1", "DM10_pt2", "DM10_pt3", "DM10_pt4", "DM10_pt5",
-                "DM11_pt1", "DM11_pt2", "DM11_pt3", "DM11_pt4", "DM11_pt5"
+plottingOrder: &plotOrder ["DM0", "DM1", "DM2","DM10", "DM11",
+                "DM0_pt1", "DM0_pt2", "DM0_pt3",
+                "DM1_pt1", "DM1_pt2", "DM1_pt3",
+                "DM2_pt1", "DM2_pt2", "DM2_pt3",
+                "DM10_pt1", "DM10_pt2", "DM10_pt3",
+                "DM11_pt1", "DM11_pt2", "DM11_pt3"
                ]
 
 
@@ -139,14 +109,8 @@ observables:
         title: "m_{vis}"
         extra:
             cut: "50<m_vis && m_vis<150"
-        fitRegions: ["DM0", "DM1", "DM2", "DM10", "DM11",
-                     "DM0_pt1", "DM0_pt2", "DM0_pt3", "DM0_pt4", "DM0_pt5", "DM1_pt1", "DM1_pt2", "DM1_pt3", "DM1_pt4", "DM1_pt5",
-                     "DM2_pt1", "DM2_pt2", "DM2_pt3", "DM2_pt4", "DM2_pt5",
-                     "DM10_pt1", "DM10_pt2", "DM10_pt3", "DM10_pt4", "DM10_pt5", "DM11_pt1", "DM11_pt2", "DM11_pt3","DM11_pt4","DM11_pt5"] 
-        scanRegions: ["DM0", "DM1", "DM10", "DM11",
-                      "DM0_pt1", "DM0_pt2", "DM0_pt3", "DM0_pt4", "DM0_pt5", "DM1_pt1", "DM1_pt2", "DM1_pt3", "DM1_pt4", "DM1_pt5", 
-                      "DM2_pt1", "DM2_pt2", "DM2_pt3", "DM2_pt4", "DM2_pt5",
-                      "DM10_pt1", "DM10_pt2", "DM10_pt3", "DM10_pt4", "DM10_pt5", "DM11_pt1", "DM11_pt2", "DM11_pt3","DM11_pt4","DM11_pt5"] 
+        fitRegions: *plotOrder
+        scanRegions: *plotOrder
 # Assume that this code is meant to fit TES variations; more options could be added when adding other POIs
 
 TESvariations:
@@ -190,55 +154,55 @@ tesRegions:
     DM11:
        title: "DM11"
     DM0_pt1: 
-        title: "DM0 20<p_{t_{#tau}}<30"
+        title: "DM0 20<p_{t_{#tau}}<40"
     DM0_pt2: 
-        title: "DM0 30<=p_{t_{#tau}}<40"
-    DM0_pt3:
         title: "DM0 40<=p_{t_{#tau}}<60"
-    DM0_pt4:
-        title: "DM0 60<=p_{t_{#tau}}<80"
-    DM0_pt5:
-        title: "DM0 80<=p_{t_{#tau}}<200"
+    DM0_pt3:
+        title: "DM0 60<=p_{t_{#tau}}<200"
+    # DM0_pt4:
+    #     title: "DM0 60<=p_{t_{#tau}}<80"
+    # DM0_pt5:
+    #     title: "DM0 80<=p_{t_{#tau}}<200"
     DM1_pt1: 
-        title: "DM1 20<p_{t_{#tau}}<30"
+        title: "DM1 20<p_{t_{#tau}}<40"
     DM1_pt2: 
-        title: "DM1 30<=p_{t_{#tau}}<40"
-    DM1_pt3:
         title: "DM1 40<=p_{t_{#tau}}<60"
-    DM1_pt4:
-        title: "DM1 60<=p_{t_{#tau}}<80"
-    DM1_pt5:
-        title: "DM1 80<=p_{t_{#tau}}<200"
+    DM1_pt3:
+        title: "DM1 60<=p_{t_{#tau}}<200"
+    # DM1_pt4:
+    #     title: "DM1 60<=p_{t_{#tau}}<80"
+    # DM1_pt5:
+    #     title: "DM1 80<=p_{t_{#tau}}<200"
     DM2_pt1:
-        title: "DM2 20<p_{t_{#tau}}<30"
+        title: "DM2 20<p_{t_{#tau}}<40"
     DM2_pt2:
-        title: "DM2 30<=p_{t_{#tau}}<40"
-    DM2_pt3:
         title: "DM2 40<=p_{t_{#tau}}<60"
-    DM2_pt4:
-        title: "DM2 60<=p_{t_{#tau}}<80"
-    DM2_pt5:
-        title: "DM2 80<=p_{t_{#tau}}<200"
+    DM2_pt3:
+        title: "DM2 60<=p_{t_{#tau}}<200"
+    # DM2_pt4:
+    #     title: "DM2 60<=p_{t_{#tau}}<80"
+    # DM2_pt5:
+    #     title: "DM2 80<=p_{t_{#tau}}<200"
     DM10_pt1: 
-        title: "DM10 20<p_{t_{#tau}}<30"
+        title: "DM10 20<p_{t_{#tau}}<40"
     DM10_pt2: 
-        title: "DM10 30<=p_{t_{#tau}}<40"
-    DM10_pt3:
         title: "DM10 40<=p_{t_{#tau}}<60"
-    DM10_pt4:
-        title: "DM10 60<=p_{t_{#tau}}<80"
-    DM10_pt5:
-        title: "DM10 80<=p_{t_{#tau}}<200"
+    DM10_pt3:
+        title: "DM10 60<=p_{t_{#tau}}<200"
+    # DM10_pt4:
+    #     title: "DM10 60<=p_{t_{#tau}}<80"
+    # DM10_pt5:
+    #     title: "DM10 80<=p_{t_{#tau}}<200"
     DM11_pt1: 
-        title: "DM11 20<p_{t_{#tau}}<30"
+        title: "DM11 20<p_{t_{#tau}}<40"
     DM11_pt2: 
-        title: "DM11 30<=p_{t_{#tau}}<40"
-    DM11_pt3:
         title: "DM11 40<=p_{t_{#tau}}<60"
-    DM11_pt4:
-        title: "DM11 60<=p_{t_{#tau}}<80"
-    DM11_pt5:
-        title: "DM11 80<=p_{t_{#tau}}<200"
+    DM11_pt3:
+        title: "DM11 60<=p_{t_{#tau}}<200"
+    # DM11_pt4:
+    #     title: "DM11 60<=p_{t_{#tau}}<80"
+    # DM11_pt5:
+    #     title: "DM11 80<=p_{t_{#tau}}<200"
 tid_SFRegions:
     DM0:
        title: "DM0"
@@ -251,55 +215,55 @@ tid_SFRegions:
     DM11:
        title: "DM11"
     DM0_pt1: 
-        title: "DM0 20<p_{t_{#tau}}<30"
+        title: "DM0 20<p_{t_{#tau}}<40"
     DM0_pt2: 
-        title: "DM0 30<=p_{t_{#tau}}<40"
-    DM0_pt3:
         title: "DM0 40<=p_{t_{#tau}}<60"
-    DM0_pt4:
-        title: "DM0 60<=p_{t_{#tau}}<80"
-    DM0_pt5:
-        title: "DM0 80<=p_{t_{#tau}}<200"
+    DM0_pt3:
+        title: "DM0 60<=p_{t_{#tau}}<200"
+    # DM0_pt4:
+    #     title: "DM0 60<=p_{t_{#tau}}<80"
+    # DM0_pt5:
+    #     title: "DM0 80<=p_{t_{#tau}}<200"
     DM1_pt1: 
-        title: "DM1 20<p_{t_{#tau}}<30"
+        title: "DM1 20<p_{t_{#tau}}<40"
     DM1_pt2: 
-        title: "DM1 30<=p_{t_{#tau}}<40"
-    DM1_pt3:
         title: "DM1 40<=p_{t_{#tau}}<60"
-    DM1_pt4:
-        title: "DM1 60<=p_{t_{#tau}}<80"
-    DM1_pt5:
-        title: "DM1 80<=p_{t_{#tau}}<200"
+    DM1_pt3:
+        title: "DM1 60<=p_{t_{#tau}}<200"
+    # DM1_pt4:
+    #     title: "DM1 60<=p_{t_{#tau}}<80"
+    # DM1_pt5:
+    #     title: "DM1 80<=p_{t_{#tau}}<200"
     DM2_pt1:
-        title: "DM2 20<p_{t_{#tau}}<30"
+        title: "DM2 20<p_{t_{#tau}}<40"
     DM2_pt2:
-        title: "DM2 30<=p_{t_{#tau}}<40"
-    DM2_pt3:
         title: "DM2 40<=p_{t_{#tau}}<60"
-    DM2_pt4:
-        title: "DM2 60<=p_{t_{#tau}}<80"
-    DM2_pt5:
-        title: "DM2 80<=p_{t_{#tau}}<200"
+    DM2_pt3:
+        title: "DM2 60<=p_{t_{#tau}}<200"
+    # DM2_pt4:
+    #     title: "DM2 60<=p_{t_{#tau}}<80"
+    # DM2_pt5:
+    #     title: "DM2 80<=p_{t_{#tau}}<200"
     DM10_pt1: 
-        title: "DM10 20<p_{t_{#tau}}<30"
+        title: "DM10 20<p_{t_{#tau}}<40"
     DM10_pt2: 
-        title: "DM10 30<=p_{t_{#tau}}<40"
-    DM10_pt3:
         title: "DM10 40<=p_{t_{#tau}}<60"
-    DM10_pt4:
-        title: "DM10 60<=p_{t_{#tau}}<80"
-    DM10_pt5:
-        title: "DM10 80<=p_{t_{#tau}}<200"
+    DM10_pt3:
+        title: "DM10 60<=p_{t_{#tau}}<200"
+    # DM10_pt4:
+    #     title: "DM10 60<=p_{t_{#tau}}<80"
+    # DM10_pt5:
+    #     title: "DM10 80<=p_{t_{#tau}}<200"
     DM11_pt1: 
-        title: "DM11 20<p_{t_{#tau}}<30"
+        title: "DM11 20<p_{t_{#tau}}<40"
     DM11_pt2: 
-        title: "DM11 30<=p_{t_{#tau}}<40"
-    DM11_pt3:
         title: "DM11 40<=p_{t_{#tau}}<60"
-    DM11_pt4:
-        title: "DM11 60<=p_{t_{#tau}}<80"
-    DM11_pt5:
-        title: "DM11 80<=p_{t_{#tau}}<200"
+    DM11_pt3:
+        title: "DM11 60<=p_{t_{#tau}}<200"
+    # DM11_pt4:
+    #     title: "DM11 60<=p_{t_{#tau}}<80"
+    # DM11_pt5:
+    #     title: "DM11 80<=p_{t_{#tau}}<200"
 
 
 # Processes taken into account in analysis

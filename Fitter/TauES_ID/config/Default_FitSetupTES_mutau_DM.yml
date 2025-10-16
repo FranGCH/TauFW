@@ -15,7 +15,8 @@ channel: mutau
 
 tag: "_mutau_mt65_DM_Dt2p5_VSJetMedium_puppimet"
 
-baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && ^&& !lepton_vetoes_notau && metfilter "
+baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.835 && rawPNetVSmu_2>=0.956"
+#"q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && ^&& !lepton_vetoes_notau && metfilter "
 # idDeepTau2018v2p5VSjet_2>=5 = Medium WP
 # idDeepTau2018v2p5VSe_2>=2 = VVLoose WP
 # idDeepTau2018v2p5VSmu_2>=4 = Tight WP
@@ -31,16 +32,16 @@ regions:
         definition: "q_1*q_2<0"
         title: "baseline"
     DM0: 
-        definition: "dm_2==0"
+        definition: "decayModePNet_2==0"
         title: "h^{#pm}"
     DM1: 
-        definition: "dm_2==1"
+        definition: "decayModePNet_2==1"
         title: "h^{#pm}#pi^{0}"
     DM10: 
-        definition: "dm_2==10"
+        definition: "decayModePNet_2==10"
         title: "h^{#pm}h^{#mp}h^{#pm}"
     DM11: 
-        definition: " dm_2==11"
+        definition: " decayModePNet_2==11"
         title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}"
 
 plottingOrder: ["DM11", "DM10","DM1", "DM0"]
@@ -123,30 +124,30 @@ systematics:
         name: "shape_mTauFake_$BIN"
         title: "+/- 3% LTF shape"
         variations: ["Up", "Down"]
-        sampleAppend: ["_LTFUp","_LTFDown"]
+        sampleAppend: ["_LTF1p030","_LTF0p970"]
     JTF:
         effect: "shape"
         processes: ["ZJ", "TTJ", "W"]
         name: "shape_jTauFake_$BIN"
         title: "+/- 10% JTF"
         variations: ["Up", "Down"]
-        sampleAppend: ["_JTFUp","_JTFDown"]
-    # shape_mTauFake: # Not defined for 2022
-    #     effect: "shape"
-    #     processes: ["ZL", "TTL"]
-    #     name: "shape_mTauFakeSF"
-    #     title: "LTF rate syst"
-    #     variations: ["Up", "Down"]
-    #     nomWeight: "ltfweight_2"
-    #     altWeights: ["ltfweightUp_2", "ltfweightDown_2"]
+        sampleAppend: ["_JTF1p100","_JTF0p900"]
+    shape_mTauFake: # Not defined for 2022
+        effect: "shape"
+        processes: ["ZL", "TTL"]
+        name: "shape_mTauFakeSF"
+        title: "LTF rate syst"
+        variations: ["Up", "Down"]
+        nomWeight: "ltfweight_2"
+        altWeights: ["ltfweightUp_2", "ltfweightDown_2"]
     shape_dy:
         effect: "shape"
         processes: ["ZTT", "ZL", "ZJ"]
         name: "shape_dy"
-        title: "+/- 10% Zptweight"
+        title: "+/- 10% zptweight_nnlo"
         variations: ["Up", "Down"]
-        nomWeight: "zptweight"
-        altWeights: ["(zptweight+0.1*(zptweight-1))", "(zptweight-0.1*(zptweight-1))"]
+        nomWeight: "zptweight_nnlo"
+        altWeights: ["(zptweight_nnlo+0.1*(zptweight_nnlo-1))", "(zptweight_nnlo-0.1*(zptweight_nnlo-1))"]
     muonFakerate:
         effect: "lnN"
         processes: ["ZL", "TTL"]
@@ -159,10 +160,10 @@ systematics:
         effect: "lnN"
         processes: ["ZTT", "ZL", "ZJ", "TTT", "TTL", "TTJ", "W", "ST", "VV"]
         scaleFactor: 1.02
-    # xsec_dy:
-    #     effect: "lnN"
-    #     processes: ["ZTT", "ZL", "ZJ"]
-    #     scaleFactor: 1.02
+    xsec_dy:
+        effect: "lnN"
+        processes: ["ZTT", "ZL", "ZJ"]
+        scaleFactor: 1.02
     xsec_tt:
         effect: "lnN"
         processes: ["TTT", "TTL", "TTJ"]
@@ -175,10 +176,10 @@ systematics:
         effect: "lnN"
         processes: ["VV"]
         scaleFactor: 1.05
-    # norm_wj:
-    #     effect: "lnN"
-    #     processes: ["W"]
-    #     scaleFactor: 1.08
+    norm_wj:
+        effect: "lnN"
+        processes: ["W"]
+        scaleFactor: 1.08
     norm_qcd:
         effect: "lnN"
         processes: ["QCD"]

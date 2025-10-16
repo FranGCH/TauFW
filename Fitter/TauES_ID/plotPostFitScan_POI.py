@@ -37,7 +37,7 @@ PLOTS_DIR   = "postfit"
 
 def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     """Calculate and plot correlation between parameters."""
-    print green("\n>>> plotCorrelation %s, %s"%(region, var))
+    print(green("\n>>> plotCorrelation %s, %s"%(region, var)))
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
     parameters  = [p.replace('$CAT',region).replace('$CHANNEL',channel) for p in list(parameters)]
     
@@ -52,7 +52,7 @@ def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     era         = "%s-13TeV"%year
     filename    = '%s/higgsCombine.%s_%s-%s%s-%s.MultiDimFit.mH90.root'%(indir,channel,var,region,tag,era)
     ensureDirectory(outdir)
-    print '>>>Plotcorelation   file "%s"'%(filename)
+    print('>>>Plotcorelation   file "%s"'%(filename))
 
     tes         = measurepoi(filename,poi, region=region)
     tes_name = "%s_%s"%(poi,region) #combine DM
@@ -165,7 +165,7 @@ def getParameters(filename,*parameters,**kwargs):
 
 def writeParametersFitVal(channel,var,region,year,*parameters,**kwargs):
     """Write the value of the parameter after the fit in a txt file"""
-    print green("\n>>> Write parameter %s, %s"%(region, var))
+    print(green("\n>>> Write parameter %s, %s"%(region, var)))
 
     # define the parameter
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
@@ -266,7 +266,7 @@ class Parameter(object):
 
 def plotPostFitValues(channel,var,region,year,paramfull_list,*parameters,**kwargs):
     """Draw post-fit values for parameter using MultiDimFit and FitDiagnostics output."""
-    print green("\n>>> plotPostFitValues %s, %s"%(region, var))
+    print(green("\n>>> plotPostFitValues %s, %s"%(region, var)))
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
     
     parameters  = [p.replace('$CAT',region).replace('$CHANNEL',channel) for p in list(parameters)]
@@ -290,7 +290,7 @@ def plotPostFitValues(channel,var,region,year,paramfull_list,*parameters,**kwarg
     if len(parameters)>1:
       name = "comparison_%s"%(name) #re.sub(r"bin_\d+","bin",name)
     canvasname = "%s/postfit-%s_%s_%s%s%s"%(outdir,name,var,region,tag,plotlabel)
-    print '>>>   file "%s"'%(filename)
+    print('>>>   file "%s"'%(filename))
 
     
     graphs      = [ ]
@@ -483,7 +483,7 @@ def getTGraphOfParameter_FD(filepattern,ybranch,**kwargs):
     N         = len(filenames)
     graph     = TGraph(N)
     if N<3:
-      print 'Error! getTGraphOfParameter_FD: Did not get more than two "%s" files (%d)'%(filepattern,N)
+      print('Error! getTGraphOfParameter_FD: Did not get more than two "%s" files (%d)'%(filepattern,N))
       return None
     for i, filename in enumerate(filenames):
       tes  = getTES(filename)
@@ -509,7 +509,7 @@ def formatParameter(param):
 def getTES(string):
     matches = re.findall("_TES(\dp\d*)",string)
     if not matches:
-      print 'Error! getTES: Did not find valid patttern to extract TES from "%s"'%(string)
+      print('Error! getTES: Did not find valid patttern to extract TES from "%s"'%(string))
       return None
     return float(matches[0].replace('p','.'))
     
@@ -544,13 +544,13 @@ def green(string,**kwargs):
   return kwargs.get('pre',"")+"\x1b[0;32;40m%s\033[0m"%string
   
 def warning(string,**kwargs):
-  print ">>> \033[1m\033[93m%sWarning!\033[0m\033[93m %s\033[0m"%(kwargs.get('pre',""),string)
+  print(">>> \033[1m\033[93m%sWarning!\033[0m\033[93m %s\033[0m"%(kwargs.get('pre',""),string))
   
 def ensureDirectory(dirname):
   """Make directory if it does not exist."""
   if not os.path.exists(dirname):
       os.makedirs(dirname)
-      print ">>> made directory %s"%dirname
+      print(">>> made directory %s"%dirname)
 
 convert  = lambda t: int(t) if t.isdigit() else t
 alphanum = lambda k: [convert(c) for c in re.split('([0-9]+)',k)]
@@ -615,7 +615,7 @@ def getChunkifiedBBBLists(channel,var,region,year,process,**kwargs):
 
 def main(args):
     
-    print "Using configuration file: %s"%args.config
+    print("Using configuration file: %s"%args.config)
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 
@@ -727,7 +727,7 @@ if __name__ == '__main__':
 
 
     main(args)
-    print ">>>\n>>> done\n"
+    print(">>>\n>>> done\n")
     
 
 

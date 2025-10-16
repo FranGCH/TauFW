@@ -12,6 +12,7 @@ from TauFW.Fitter.plot.datacard import createinputs, plotinputs
 from TauFW.Fitter.plot.rebinning import rebinning
 import yaml
 import time
+import os
 
 #nano doc: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html
 
@@ -27,14 +28,15 @@ map_wp_to_int = OrderedDict([('againstjet',
                            ])
 
 map_PNetscores_to_wp = OrderedDict([('againstjet',
-          OrderedDict([('Loose',0.691),
-                       ('Medium', 0.835),
-                       ('Tight', 0.906),
-                       ('VTight', 0.949)])),
+          OrderedDict([('Loose',0.6857),
+                       ('Medium', 0.8347),
+                       ('Tight', 0.9059),
+                       ('VTight', 0.9494)])),
                        ('againstelectron',
-          OrderedDict([('VVLoose',0.387),
-                       ('Loose',0.949),
-                       ('Tight',0.991)]))
+          OrderedDict([('VVLoose',0.1266),
+                       ('Loose',0.9354),
+                       ('Medium',0.9791),
+                       ('Tight',0.9897)]))
                        ])
 
 
@@ -47,9 +49,10 @@ def main(args):
   againstelectron = args.againstelectron
   setupConfFile = args.config
   DM = args.DM
+  print('DM: ', DM)
   inclusive = args.inclusive
   plot      = True
-  outdir    = ensuredir(f"input_pt_less_region/againstjet_{againstjet}/againstelectron_{againstelectron}")
+  outdir    = ensuredir(f"/eos/user/f/fcasalin/TauFW_230425/Fitter_out/input_pt_less_region/againstjet_{againstjet}/againstelectron_{againstelectron}")
   plotdir   = ensuredir(outdir,"plots")
   analysis  = 'ztt'
 
@@ -211,7 +214,13 @@ def main(args):
         plotinputs(fname,varprocs,observables,bins,text=text,
                    pname=pname,tag=tag,group=groups, paralel=parallel)
         rebinning(fname, obs=observables[0].filename, tag=tag) 
-        fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
+
+        # fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
+
+        original_dir = os.path.dirname(fname)
+        original_basename = os.path.basename(fname)
+        fname = os.path.join(original_dir, "rebinning", original_basename)
+
         plotdir   = ensuredir(plotdir,"rebinning")
         pname  = "%s/%s_$OBS_%s-$BIN-%s$TAG%s.png"%(plotdir,analysis,chshort,era,tag)
         plotinputs(fname,varprocs,observables,bins,text=text,

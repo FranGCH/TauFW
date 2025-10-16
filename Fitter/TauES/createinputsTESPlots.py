@@ -146,13 +146,13 @@ def main(args):
         #    also, each pt/DM bin will be a separate file
         dmbins = [0,1,10,11]
         #ptbins = [20,25,30,35,40,50,70,2000] #500,1000]
-        print ">>> DM cuts:"
+        print(">>> DM cuts:")
         for dm in dmbins:
           dmcut = "dm_2==%d"%(dm)
           fname = "$VAR_dm%s"%(dm)
           mvis_cut = mvis.clone(fname=fname,cut=dmcut) # create observable with extra cut for dm bin
           m2_cut   = m2.clone(fname=fname,cut=dmcut) # create observable with extra cut for dm bin
-          print ">>>   %r (%r)"%(dmcut,fname)
+          print(">>>   %r (%r)"%(dmcut,fname))
           observables.append(mvis_cut)
           observables.append(m2_cut)
         #print ">>> pt cuts:"
@@ -255,5 +255,5 @@ if __name__ == "__main__":
   LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity
   main(args)
-  print "\n>>> Done."
+  print ("\n>>> Done.")
   

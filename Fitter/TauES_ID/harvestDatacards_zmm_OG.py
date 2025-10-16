@@ -29,14 +29,12 @@ def harvest(setup, year, obs, **kwargs):
     era         = kwargs.get('era',        '%s-13TeV'%year  )
     analysis    = kwargs.get('analysis',   'ztt'            )
     indir       = kwargs.get('indir',      'input_%s'%year  )
-    outdir      = kwargs.get('outdir',     'output_pt_less_region/%s'%year )
+    outdir      = kwargs.get('outdir',     'output_%s'%year )
     multiDimFit = kwargs.get('multiDimFit')
     verbosity   = kwargs.get('verbosity')
     outtag      = tag+extratag
     TIDWP       = 'Medium' if 'Medium' in outtag else 'Tight'
     
-    print("Harbest: Using input directory: %s"%(indir))
-
     # For each region = DM 
     # each variable can have a subset of regions in which it is fitted defined in config file under this variable entry
     if "fitRegions" in setup["observables"][obs]:
@@ -46,7 +44,7 @@ def harvest(setup, year, obs, **kwargs):
         icat += 1
         cats.append((icat, region))
         # if not given, assume all defined regions should be fitted (be careful with potential overlap!)
-        print(f"region: {cats}")
+        print("region: %s") %(cats)
 
         signals = []
         backgrounds = []
@@ -55,7 +53,7 @@ def harvest(setup, year, obs, **kwargs):
             signals.append(proc)
           elif not "data" in proc:
             backgrounds.append(proc)
-        print ("Backgrounds: %s"%backgrounds)
+        print "Backgrounds: %s"%backgrounds
 
    
         harvester = CombineHarvester()
@@ -68,8 +66,8 @@ def harvest(setup, year, obs, **kwargs):
         harvester.AddProcesses(['*'], [analysis], [era], [channel], signals, cats, True)
 
 
-        print(green("\n>>> defining nuissance parameters ..."))
-
+        print green("\n>>> defining nuissance parameters ...")
+  
         if "systematics" in setup:
           for sys in setup["systematics"]:
             sysDef = setup["systematics"][sys]
@@ -84,9 +82,9 @@ def harvest(setup, year, obs, **kwargs):
 
 
         # EXTRACT SHAPES
-        print(green(">>> extracting shapes..."))
+        print green(">>> extracting shapes...")
         filename = "%s/%s_%s_tes_%s.inputs-%s%s.root"%(indir,analysis,channel,obs,era,tag)
-        print(">>>   file %s"%(filename))
+        print ">>>   file %s"%(filename)
         ## For now assume that everything that is varied by TES is signal, and everything else is background
         ## Could be revised if wanting to leave the possibility to do other variations or fit normalisation (e.g. for combined TES & ID SF fit)
         harvester.cp().channel([channel]).backgrounds().ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
@@ -98,7 +96,7 @@ def harvest(setup, year, obs, **kwargs):
    
         # ROOVAR
         workspace = RooWorkspace(analysis,analysis)
-        print(analysis)
+        print analysis
 
     
         #workspace.Print()
@@ -106,7 +104,7 @@ def harvest(setup, year, obs, **kwargs):
 
 
         # EXTRACT PDFs
-        print(green(">>> add workspace and extract pdf..."))
+        print green(">>> add workspace and extract pdf...")
         harvester.AddWorkspace(workspace, False)        
         harvester.SetAutoMCStats(harvester, 0, 1, 1) # Set the autoMCStats line (with -1 = no bbb uncertainties)
 
@@ -114,7 +112,7 @@ def harvest(setup, year, obs, **kwargs):
 
         # NUISANCE PARAMETER GROUPS
         # To do: export to config file
-        print(green(">>> setting nuisance parameter groups..."))
+        print green(">>> setting nuisance parameter groups...")
         harvester.SetGroup('all', [ ".*"           ])
         harvester.SetGroup('sys', [ "^((?!bin).)*$"]) # everything except bin-by-bin
         harvester.SetGroup( 'bin',      [ ".*_bin.*"        ])
@@ -131,18 +129,18 @@ def harvest(setup, year, obs, **kwargs):
 
         #PRINT
         if verbosity>0:
-            print(green("\n>>> print observation...\n"))
+            print green("\n>>> print observation...\n")
             harvester.PrintObs()
-            print(green("\n>>> print processes...\n"))
+            print green("\n>>> print processes...\n")
             harvester.PrintProcs()
-            print(green("\n>>> print systematics...\n"))
+            print green("\n>>> print systematics...\n")
             harvester.PrintSysts()
-            print(green("\n>>> print parameters...\n"))
+            print green("\n>>> print parameters...\n")
             harvester.PrintParams()
-            print("\n")
+            print "\n"
     
         # WRITER
-        print(green(">>> writing datacards..."))
+        print green(">>> writing datacards...")
         datacardtxt  = "$TAG/$ANALYSIS_$CHANNEL_%s-%s%s-$ERA.txt"%(obs,region,outtag)
         datacardroot = "$TAG/$ANALYSIS_$CHANNEL_%s-%s%s.input-$ERA.root"%(obs,region,outtag)
         writer = CardWriter(datacardtxt,datacardroot)
@@ -156,10 +154,10 @@ def harvest(setup, year, obs, **kwargs):
           newfilename = datacardtxt.replace('$TAG',outdir).replace('$ANALYSIS',analysis).replace('$CHANNEL',channel).replace('$BINID',DM).replace('$ERA',era)
           if os.path.exists(oldfilename):
             os.rename(oldfilename, newfilename)
-            print('>>> renaming "%s" -> "%s"'%(oldfilename,newfilename))
+            print '>>> renaming "%s" -> "%s"'%(oldfilename,newfilename)
           else:
-            print('>>> Warning! "%s" does not exist!'%(oldfilename))
-
+            print '>>> Warning! "%s" does not exist!'%(oldfilename)
+        
 def scaleProcess(process,scale): 
   """Help function to scale a given process."""
   process.set_rate(process.rate()*scale)
@@ -169,9 +167,9 @@ def setYield(process,file,dirname,scale=1.):
   histname = "%s/%s"%(dirname,process.process()) if dirname else process.process()
   hist = file.Get(histname)
   if not hist:
-    print('setYield: Warning! Did not find histogram "%s" in "%s"'%(histname,file.GetName()))
+    print 'setYield: Warning! Did not find histogram "%s" in "%s"'%(histname,file.GetName())
   if hist.GetXaxis().GetNbins()>1:
-    print('setYield: Warning! Histogram "%s" has more than one bin!'%(histname))
+    print 'setYield: Warning! Histogram "%s" has more than one bin!'%(histname)
   rate = hist.GetBinContent(1)
   process.set_rate(rate*scale)
   
@@ -182,14 +180,14 @@ def ensureDirectory(dirname):
     """Make directory if it does not exist."""
     if not os.path.exists(dirname):
       os.makedirs(dirname)
-      print(">>> made directory " + dirname)
+      print ">>> made directory " + dirname
 
 
 
 def main(args):
 
     ## Open and import information from config file here to be publicly accessible in all functions
-    print("Using configuration file: %s"%args.config)
+    print "Using configuration file: %s"%args.config
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 
@@ -198,16 +196,14 @@ def main(args):
     for obs in setup["observables"]:
         observables.append(obs)
     
-    # indir = "./input_pt_nbin6_moretes"
-    indir = args.input
-    print("Using input directory: %s"%(indir))
+    indir = "./input_pt_nbin6_moretes"
     if args.multiDimFit:
         args.extratag += "_MDF"
 
     tag = setup["tag"] if "tag" in setup else ""
-    print("producing datacards for %s"%(args.year))
+    print "producing datacards for %s"%(args.year)
     for obs in observables:
-        print("producing datacards for %s"%(obs))
+        print "producing datacards for %s"%(obs)
         harvest(setup,args.year,obs,tag=tag,extratag=args.extratag,indir=indir,outdir=args.output_dir,multiDimFit=args.multiDimFit,verbosity=verbosity)
     
 
@@ -219,14 +215,15 @@ if __name__ == '__main__':
   argv = sys.argv
   description = '''This script makes datacards with CombineHarvester.'''
   parser = ArgumentParser(prog="harvesterDatacards_TES",description=description,epilog="Succes!")
-  parser.add_argument('-y', '--year', dest='year', choices=['2024','2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','UL2018_v10','2022_postEE','2022_preEE', '2023C', '2023D','2024'], type=str, default=2018, action='store', help="select year")
+  parser.add_argument('-y', '--year', dest='year', choices=['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','UL2018_v10','2022_postEE','2022_preEE', '2023C', '2023D'], type=str, default=2018, action='store', help="select year")
   parser.add_argument('-c', '--config', dest='config', type=str, default='TauES/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup")
   parser.add_argument('-e', '--extra-tag', dest='extratag', type=str, default="", action='store', metavar='TAG', help="extra tag for output files")
   parser.add_argument('-M', '--multiDimFit', dest='multiDimFit', default=False, action='store_true', help="assume multidimensional fit with a POI for each DM")
   parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true', help="set verbose")
   parser.add_argument('-o', '--output_dir', dest='output_dir', help="outputdir")
-  parser.add_argument('-i', '--input', dest='input', help="input directory")
   args = parser.parse_args()
 
   main(args)
-  print(">>>\n>>> done harvesting\n")
+  print ">>>\n>>> done harvesting\n"
+    
+

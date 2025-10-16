@@ -26,26 +26,17 @@ import ROOT
 from ROOT import RooWorkspace, TFile, RooRealVar
 
 def check_integral(filename, procs, name, region):
-    from ROOT import TFile, TH1
-    file = TFile(filename)
-    ret = []
-    name = name.replace('$BIN', region)
-    for proc in procs:
-        histname = region + '/' + proc + '_' + name
-        print(histname, '\t', filename)
-        histup = file.Get(histname+'Up')
-        histdn = file.Get(histname+'Down')
-        # Check existence and type before using .Integral()
-        if not histup or not hasattr(histup, 'Integral'):
-            print(f"ERROR: Histogram '{histname}Up' not found or not a valid TH1 in file {filename}")
-            continue
-        if not histdn or not hasattr(histdn, 'Integral'):
-            print(f"ERROR: Histogram '{histname}Down' not found or not a valid TH1 in file {filename}")
-            continue
-        if histup and histdn:
-            ret.append(proc)
-    print('returning: ', name, '\t', ret)
-    return ret
+   file = TFile(filename)
+   ret = []
+   name = name.replace('$BIN', region)
+   for proc in procs:
+     histname = region + '/' + proc + '_' + name
+     print(histname, '\t', filename)
+     histup = file.Get(histname+'Up').Integral()
+     histdn = file.Get(histname+'Down').Integral()
+     if histup and histdn: ret.append(proc)
+   print('returning: ', name, '\t', ret)
+   return ret
 
 def harvest(setup, year, obs, **kwargs):
     """Harvest cards."""
@@ -351,4 +342,5 @@ if __name__ == '__main__':
 
   main(args)
   print(">>>\n>>> done harvesting\n")
+
 
