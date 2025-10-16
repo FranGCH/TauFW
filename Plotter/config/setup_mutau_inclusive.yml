@@ -13,7 +13,8 @@ channel: mutau # _inclusive
 # Tag can be used to differentiate between scenarios
 tag: ""
 
-baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter" # && rawPNetVSjet_2>=0.881 && rawPNetVSe_2>=0.4  && rawPNetVSmu_2>=0.99" # && !idDecayModeNewDMs_2" 
+#baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter " #  && rawPNetVSjet_2>=0.881 && rawPNetVSe_2>=0.4  && rawPNetVSmu_2>=0.99" # && !idDecayModeNewDMs_2" 
+baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && !lepton_vetoes_notau && metfilter && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4" #"q_1*q_2<0  && lepton_vetoes_notau==0 && metfilter==1 && mt_1<65 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=6 && idDeepTau2018v2p5VSmu_2>=4"
 # These regions will be defined when creating inputs or making plots
 # At this point, they do not need to be exclusive; 
 # PLEASE NOTE:
@@ -24,33 +25,27 @@ regions:
    signalRegion: 
       definition: "mt_1<65"
       title: "signal region"
-   upart_region:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.514 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT"
-   upart_region0p2:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.2 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   upart_region0p25:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.25 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   upart_region0p3:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.3 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   upart_region0p35:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.35 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   upart_region0p4:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.4 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   upart_region0p45:
-      definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.45 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-      title: "UParT Identification"
-   deepTau_region:
-      definition: "mt_1<65 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4 && (dm_2==0 || dm_2==1 || dm_2==10 || dm_2==11 )"
-      title: "DeepTau"
-   pnet_region:
-      definition: "mt_1<65 && rawPNetVSjet_2>=0.881 && rawPNetVSe_2>=0.4 && rawPNetVSmu_2>=0.99 && (decayModePNet_2==0 || decayModePNet_2==1 || decayModePNet_2==2 || decayModePNet_2==10 || decayModePNet_2==11)"
-      title: "PNet"
+   DM0: 
+        definition: "mt_1<65 && dm_2==0"
+        title: "h^{#pm}"
+   DM1: 
+        definition: "mt_1<65 && dm_2==1"
+        title: "h^{#pm}#pi^{0}"
+   DM10: 
+        definition: "mt_1<65 && dm_2==10"
+        title: "h^{#pm}h^{#mp}h^{#pm}"
+   DM11: 
+        definition: "mt_1<65 && dm_2==11"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}"
+   # upart_region:
+   #    definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.514 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
+   #    title: "UParT"
+   # deepTau_region:
+   #    definition: "mt_1<65 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4 && (dm_2==0 || dm_2==1 || dm_2==10 || dm_2==11 )"
+   #    title: "DeepTau"
+   # pnet_region:
+   #    definition: "mt_1<65 && rawPNetVSjet_2>=0.881 && rawPNetVSe_2>=0.4 && rawPNetVSmu_2>=0.99 && (decayModePNet_2==0 || decayModePNet_2==1 || decayModePNet_2==2 || decayModePNet_2==10 || decayModePNet_2==11)"
+   #    title: "PNet"
    # hps_region:
    #    definition: "mt_1<65 && idDecayModeNewDMs_2"
    #    title: "HPS #tau 's"

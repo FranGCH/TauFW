@@ -54,33 +54,33 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2Mu_Bin-MLL-50to120",  "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Mu_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
 
         ( 'DY', "DYto2Tau_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Tau_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
         
         ( 'DY', "DYto2E_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-2500to4000", "Drell-Yan 2500-4000",     0.00005949*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-4000to6000", "Drell-Yan 4000-6000",     0.000001558*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2E_Bin-MLL-6000", "Drell-Yan 6000",     3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight} ),
 
         ( 'WJ', "WtoMuNu-2Jets",            "Wmu + jets",           22666.*kfactor_wj ), # LO times kfactor
@@ -102,8 +102,8 @@ def getsampleset(channel,era,**kwargs):
         ( 'VV', "ZZto2Nu2Q",             "ZZ 2#nu2q",                    4.826*kfactor_zz ), # LO times kfactor
         ( 'VV', "ZZto4L",             "ZZ 4l",                    4.344*kfactor_zz), # LO times kfactor
         # ( 'VV', "WW",             "WW",                    80.23*kfactor_ww ), # LO times kfactor
-        # ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
-       #  ( 'VV', "ZZ",             "ZZ",                    12.75*kfactor_zz ), # LO times kfactor
+        ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
+        # ( 'VV', "ZZ",             "ZZ",                    12.75*kfactor_zz ), # LO times kfactor
         #WZ->2L2Q
         #WW->4Q
         ( 'TT', "TTto2L2Nu",             "ttbar 2l2#nu",          80.9*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
@@ -270,16 +270,16 @@ def getsampleset(channel,era,**kwargs):
   # Note: titles are set via STYLE.sample_titles
   #sampleset.stitch("W*LNu*",    incl='WJ',  name='WJ', cme=cme     ) # W + jets
   #sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYJ', name="DY_M50", cme=cme ) # Drell-Yan, M > 50 GeV
-  if '2024' in era:
-      sampleset.stitch("W*Nu*",    incl='Wto*Nu-2Jets',  name='WJ', cme=cme) # W + jets (NLO): stitch the Jet binned samples
-  elif '2022_postEE' in era or '2023' in era:
+  # if '2024' in era:
+  #     sampleset.stitch("W*Nu*",    incl='Wto*Nu-2Jets',  name='WJ', cme=cme) # W + jets (NLO): stitch the Jet binned samples
+  if '2022_postEE' in era or '2023' in era:
       sampleset.stitch("W*LNu*Jets*",    incl='WtoLNu-4Jets',  name='WJ', cme=cme) # W + jets
   elif '2022_preEE' in era:
       sampleset.stitch("W*LNu*Jets*",    incl='WJetsToLNu-4Jets',  name='WJ', cme=cme) # W + jets
-  if '2024' in era:
-      sampleset.stitch("DYto2*-4Jets_MLL-50*", incl='DYto2*-4Jets_MLL-50', name="DY", cme=cme)
-  else:
-      sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYto2L-4Jets_MLL-50', name="DY", cme=cme) 
+  # if '2024' in era:
+  #     sampleset.stitch("DYto2*-4Jets_MLL-50*", incl='DYto2*-4Jets_MLL-50', name="DY", cme=cme)
+  # else:
+  #     sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYto2L-4Jets_MLL-50', name="DY", cme=cme) 
   # elif '2024' in era:
   #     sampleset.stitch("W*LNu*Jets*",    incl='WtoLNu-4Jets',  name='WJ', cme=cme) # W + jets
   #     sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYto2L-4Jets_MLL-50_ext1', name="DY_M50", cme=cme) # Drell-Yan, M > 50 GeV
