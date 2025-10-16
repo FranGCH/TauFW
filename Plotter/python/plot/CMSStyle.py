@@ -34,8 +34,8 @@ cmsTextFont    = 61 # 60: Arial bold (helvetica-bold-r-normal)
 #   https://twiki.cern.ch/twiki/bin/view/CMS/Internal/FigGuidelines#Use_of_the_Preliminary_Simulatio
 #   https://twiki.cern.ch/twiki/bin/view/CMS/PhysicsApprovals#Student_presentations_of_unappro
 #   E.g. "Preliminary", "Simulation", "Simulation Preliminary", "Supplementary", "Work in progress", ...
-#extraText      = "Preliminary"
-extraText      = "Internal"
+extraText      = "Preliminary"
+# extraText      = "Internal"
 lumiText       = ""
 extraTextFont  = 52 # 50: Arial italics (helvetica-medium-o-normal)
 lumiTextSize   = 0.90
