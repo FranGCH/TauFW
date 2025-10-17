@@ -198,7 +198,7 @@ samples  = [
 
   D('Data','Muon0_Run2024E',
     "/Muon0/Run2024E-MINIv6NANOv15-v1/NANOAOD",
-    # "/Muon0/Run2024E-PromptReco-v2/NANOAOD",
+    "/Muon0/Run2024E-PromptReco-v2/NANOAOD",
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
   D('Data','Muon0_Run2024F',"/Muon0/Run2024F-MINIv6NANOv15-v1/NANOAOD",
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
@@ -210,7 +210,7 @@ samples  = [
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
 
   D('Data','Muon0_Run2024I',
-    # "/Muon0/Run2024I-MINIv6NANOv15-v1/NANOAOD",
+    "/Muon0/Run2024I-MINIv6NANOv15-v1/NANOAOD",
     "/Muon0/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD",
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
 
