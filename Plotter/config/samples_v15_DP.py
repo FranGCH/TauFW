@@ -37,7 +37,7 @@ def getsampleset(channel,era,**kwargs):
     kfactor_dy_powheg = 6282.6/6731.99  # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
     kfactor_wj= 0.93 if '2024' in era or '2025' in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
     kfactor_ttbar=923.6/762.1 # NLO->NNLO k-factor computed for 13.6 TeV
-    kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
+    kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV fedf
     kfactor_zz=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
     kfactor_wz=1.414 # LO->NNLO+NLO_EW computed for 13.6 TeV 
 
