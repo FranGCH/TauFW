@@ -24,3 +24,6 @@ Plotter/tutorial/plots
 Fitter/*/*plots*
 Fitter/*/log
 Fitter/Zpt/weights
+Plotter/openCanvas.py
+Plotter/table*.tex
+Plotter/OG_tables
