@@ -27,9 +27,9 @@ CMSStyle.setTDRStyle()
 red   = array('d',[ 0.80, 0.90, 1.00, 0.60, 0.02, ])
 green = array('d',[ 0.20, 0.80, 1.00, 0.80, 0.20, ])
 blue  = array('d',[ 0.10, 0.60, 1.00, 0.90, 0.65, ])
-stops = array('d',[i/(len(red)-1.) for i in xrange(0,len(red))])
+stops = array('d',[i/(len(red)-1.) for i in range(0,len(red))])
 FI    =  TColor.CreateGradientColorTable(len(red), stops, red, green, blue, 100)
-kMyTemperature = array('i',[ FI+i for i in xrange(100)])
+kMyTemperature = array('i',[ FI+i for i in range(100)])
 gStyle.SetPalette(100,kMyTemperature)
 
 DIR         = "output"
@@ -64,7 +64,7 @@ def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     hist    = TH2F("corr","corr",N,0,N,N,0,N)
     
     iPOI = -1 # save position of POI (here: TES)
-    for i in xrange(N): # diagonal
+    for i in range(N): # diagonal
       hist.SetBinContent(i+1,N-i,1.0)
       hist.GetXaxis().SetBinLabel(1+i,parlist[i].title)
       hist.GetYaxis().SetBinLabel(N-i,parlist[i].title)
@@ -580,7 +580,7 @@ def chunkify(list,nmax,overlap=0,complete=False):
   chunks    = [ ]
   ilast     = 0
   #print nchunks, nmax, nextra
-  for ichunk in xrange(nchunks):
+  for ichunk in range(nchunks):
     n = nentries+1 if ichunk<nextra else nentries
     ifirst = ilast
     ilast  = ilast + n
@@ -691,7 +691,7 @@ def main(args):
             tes_name = "%s_%s"%(poi,r)            
 
             # COMPARE nuisances
-            for name, parameters in compare.iteritems():
+            for name, parameters in compare.items():
                 plotPostFitValues(channel,var,r,year,fulllist,*parameters,name=name,tag=tag,compareFD=False,title=title,poi=poi)
             
             # BIN-BY-BIN
