@@ -16,9 +16,9 @@ def main(args):
 
         else:
             print(">>>   Region: %s"%(region))
-            era = "UL2018_v10" ## Hardcoded
+            era = "2024" ## Hardcoded
             # Define the parameters
-            fname = './output_%s/fitDiag/PostFitShape_%s_%s_%s.root' %(era,era,tag,region)
+            fname = './postfit_pt_less_region/againstjet_Medium/againstelectron_Tight/%s/PostFitShape_2024__mutau_%s.root' %(era,region)
             # bin = 'DM0'  # This should match the bin name in your ROOT file
             procs = setup["processes"]  # Replace with the actual processes in your file
             # procs = ["ZTT","ZL","ZJ","W","VV","ST","TTT","TTL","TTJ","QCD","data_obs"]  # Replace with the actual processes in your file
@@ -27,9 +27,15 @@ def main(args):
 
 
             # Call the function
-            drawpostfit(fname, region, procs, outdir='output_plots', pname='$FIT.png', ratio=True, era=era,text=text)
+            drawpostfit(fname, region, procs,
+                         outdir='output_plots', pname='$FIT.png', ratio=True, era=era, text=text)
+            if args.include_cr:
+                fname = './postfit_pt_less_region/againstjet_Medium/againstelectron_Tight/%s/PostFitShape_2024__mutau_%s.root' %(era,region)    
+                
+                procs = ['ZL', 'ZTT', 'ZJ', 'W','VV','ST', 'TT','QCD','data_obs']
 
-
+                drawpostfit(fname, args.cr_name, procs,
+                             outdir='output_plots', pname=f"$FIT'+'_CR_{region}.png", ratio=True, era=era, text="Z#rightarrow#mu#mu CR")
 if __name__ == "__main__":
     from argparse import ArgumentParser, RawTextHelpFormatter
     description = """Simple plotting script for postfit plots"""
@@ -39,8 +45,12 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--config', '--channel',
                                          dest='configs', type=str, nargs='+', default=['config/setup_mutau.yml'], action='store',
                                          help="config file(s) containing channel setup for samples and selections, default=%(default)r" )
-    
+    parser.add_argument('--include-cr', dest='include_cr', action='store_true', default=False,
+                                         help="also draw control-region (Zmm) prefit/postfit plots" )
+    parser.add_argument('--cr-name', dest='cr_name', type=str, default='Zmm',
+                                         help="control-region directory prefix in ROOT file (default='Zmm')" )
+     
     args = parser.parse_args()
- 
+  
     main(args)
     print("\n>>> Done.")
