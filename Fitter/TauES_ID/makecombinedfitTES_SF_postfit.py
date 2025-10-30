@@ -210,7 +210,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         elif option == '3':
             # Option 3: 2D scan - need to run FitDiagnostics first
             POI = f"tes_{r},tid_SF_{r}"
-            tid_SF_range = kwargs.get('tid_SF_range', "0.6,1.3")
+            tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
             # Set TES range based on region (same logic as option 1)
             if r == "DM0":
                 tes_range = "0.970,1.028"
@@ -277,7 +277,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 print(f"Option 3 - param_opts: {param_opts}")
                 
                 # Set up FitDiagnostics options for 2D scan
-                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}"  #--freezeParameters r" # :sf_W_{r}=0.0,10.0
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:r=0.95,1.05 --freezeParameters tes_{r},tid_SF_{r}"  #--freezeParameters r" # :sf_W_{r}=0.0,10.0
                 
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
