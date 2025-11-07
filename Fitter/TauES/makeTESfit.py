@@ -24,17 +24,17 @@ CMIN_OPTS="--cminFallbackAlgo Minuit2,Migrad,0:0.5 --cminFallbackAlgo Minuit2,Mi
 os.system("./TauES/harvestDatacards_TES.py -y %s -c %s -e %s"%(args.era,args.config,EXTRATAG))
 
 for v in setup["observables"]:
-    print v
+    print(v)
     variable = setup["observables"][v]
 
     for r in variable["fitRegions"]:
-        print r
+        print(r)
+    
+    BINLABEL="mt_"+v+"-"+r+setup["tag"]+EXTRATAG+"-"+args.era+"-13TeV"
+    os.system("text2workspace.py output_%s/ztt_%s.txt"%(args.era,BINLABEL))
 
-	BINLABEL="mt_"+v+"-"+r+setup["tag"]+EXTRATAG+"-"+args.era+"-13TeV"
-	os.system("text2workspace.py output_%s/ztt_%s.txt"%(args.era,BINLABEL))
-
-	WORKSPACE="output_"+args.era+"/ztt_"+BINLABEL+".root" 
-	os.system("combine -M MultiDimFit %s %s %s -n .%s %s %s %s --saveNLL --saveSpecifiedNuis all"%(WORKSPACE,ALGO,POI_OPTS,BINLABEL,FIT_OPTS,XRTD_OPTS,CMIN_OPTS))
+    WORKSPACE="output_"+args.era+"/ztt_"+BINLABEL+".root" 
+    os.system("combine -M MultiDimFit %s %s %s -n .%s %s %s %s --saveNLL --saveSpecifiedNuis all"%(WORKSPACE,ALGO,POI_OPTS,BINLABEL,FIT_OPTS,XRTD_OPTS,CMIN_OPTS))
 
 
 os.system("mv higgsCombine*root output_%s"%args.era)

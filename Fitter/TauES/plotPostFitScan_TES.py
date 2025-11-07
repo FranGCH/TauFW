@@ -27,9 +27,9 @@ CMSStyle.setTDRStyle()
 red   = array('d',[ 0.80, 0.90, 1.00, 0.60, 0.02, ])
 green = array('d',[ 0.20, 0.80, 1.00, 0.80, 0.20, ])
 blue  = array('d',[ 0.10, 0.60, 1.00, 0.90, 0.65, ])
-stops = array('d',[i/(len(red)-1.) for i in xrange(0,len(red))])
+stops = array('d',[i/(len(red)-1.) for i in range(0,len(red))])
 FI    =  TColor.CreateGradientColorTable(len(red), stops, red, green, blue, 100)
-kMyTemperature = array('i',[ FI+i for i in xrange(100)])
+kMyTemperature = array('i',[ FI+i for i in range(100)])
 gStyle.SetPalette(100,kMyTemperature)
 
 DIR         = "./output"
@@ -37,7 +37,7 @@ PLOTS_DIR   = "./postfit"
 
 def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     """Calculate and plot correlation between parameters."""
-    print green("\n>>> plotCorrelation %s, %s"%(region, var))
+    print(green("\n>>> plotCorrelation %s, %s"%(region, var)))
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
     parameters  = [p.replace('$CAT',region).replace('$CHANNEL',channel) for p in list(parameters)]
     
@@ -52,7 +52,7 @@ def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     name_red = channel.replace("_v10_2p5", "")
     filename    = '%s/higgsCombine.%s_%s-%s%s-%s.MultiDimFit.mH90.root'%(indir,name_red,var,region,tag,era)
     ensureDirectory(outdir)
-    print '>>>   file "%s"'%(filename)
+    print('>>>   file "%s"'%(filename))
     
     tes         = measureTES(filename)
 
@@ -64,7 +64,7 @@ def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     hist    = TH2F("corr","corr",N,0,N,N,0,N)
     
     iPOI = -1 # save position of POI (here: TES)
-    for i in xrange(N): # diagonal
+    for i in range(N): # diagonal
       hist.SetBinContent(i+1,N-i,1.0)
       hist.GetXaxis().SetBinLabel(1+i,parlist[i].title)
       hist.GetYaxis().SetBinLabel(N-i,parlist[i].title)
@@ -180,8 +180,8 @@ class Parameter(object):
         
     def set(self):
         self.N     = len(self.list)
-        self.mean  = sum(self.list) / float(self.N)
-        self.sigma = sqrt(sum((x-self.mean)**2 for x in self.list)/float(self.N-1))
+        self.mean  = sum(self.list) / self.N
+        self.sigma = sqrt(sum((x-self.mean)**2 for x in self.list)/(self.N-1))
         
     def corr(self,opar,poiBestFit,poi):
         """Correlation coefficient with another parameter."""
@@ -193,14 +193,14 @@ class Parameter(object):
             if abs(z-poiBestFit) < poi.sigma:
                 covariance += (x-self.mean)*(y-opar.mean)
                 N +=1
-        covariance /= float(N-1)
+        covariance /= (N-1)
         return covariance/(self.sigma*opar.sigma)
         
 
 
 def plotPostFitValues(channel,var,region,year,*parameters,**kwargs):
     """Draw post-fit values for parameter using MultiDimFit and FitDiagnostics output."""
-    print green("\n>>> plotPostFitValues %s, %s"%(region, var))
+    print(green("\n>>> plotPostFitValues TES %s, %s"%(region, var)))
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
     
     parameters  = [p.replace('$CAT',region).replace('$CHANNEL',channel) for p in list(parameters)]
@@ -222,7 +222,7 @@ def plotPostFitValues(channel,var,region,year,*parameters,**kwargs):
     if len(parameters)>1:
       name = "comparison_%s"%(name) #re.sub(r"bin_\d+","bin",name)
     canvasname = "%s/postfit-%s_%s_%s%s%s"%(outdir,name,var,region,tag,plotlabel)
-    print '>>>   file "%s"'%(filename)
+    print('>>>   file "%s"'%(filename))
     
     
     graphs      = [ ]
@@ -383,7 +383,7 @@ def getTGraphOfParameter_FD(filepattern,ybranch,**kwargs):
     N         = len(filenames)
     graph     = TGraph(N)
     if N<3:
-      print 'Error! getTGraphOfParameter_FD: Did not get more than two "%s" files (%d)'%(filepattern,N)
+      print('Error! getTGraphOfParameter_FD: Did not get more than two "%s" files (%d)'%(filepattern,N))
       return None
     for i, filename in enumerate(filenames):
       tes  = getTES(filename)
@@ -409,7 +409,7 @@ def formatParameter(param):
 def getTES(string):
     matches = re.findall("_TES(\dp\d*)",string)
     if not matches:
-      print 'Error! getTES: Did not find valid patttern to extract TES from "%s"'%(string)
+      print('Error! getTES: Did not find valid patttern to extract TES from "%s"'%(string))
       return None
     return float(matches[0].replace('p','.'))
     
@@ -444,13 +444,13 @@ def green(string,**kwargs):
   return kwargs.get('pre',"")+"\x1b[0;32;40m%s\033[0m"%string
   
 def warning(string,**kwargs):
-  print ">>> \033[1m\033[93m%sWarning!\033[0m\033[93m %s\033[0m"%(kwargs.get('pre',""),string)
+  print(">>> \033[1m\033[93m%sWarning!\033[0m\033[93m %s\033[0m"%(kwargs.get('pre',""),string))
   
 def ensureDirectory(dirname):
   """Make directory if it does not exist."""
   if not os.path.exists(dirname):
       os.makedirs(dirname)
-      print ">>> made directory %s"%dirname
+      print(">>> made directory %s"%dirname)
 
 convert  = lambda t: int(t) if t.isdigit() else t
 alphanum = lambda k: [convert(c) for c in re.split('([0-9]+)',k)]
@@ -480,7 +480,7 @@ def chunkify(list,nmax,overlap=0,complete=False):
   chunks    = [ ]
   ilast     = 0
   #print nchunks, nmax, nextra
-  for ichunk in xrange(nchunks):
+  for ichunk in range(nchunks):
     n = nentries+1 if ichunk<nextra else nentries
     ifirst = ilast
     ilast  = ilast + n
@@ -516,7 +516,7 @@ def getChunkifiedBBBLists(channel,var,region,year,process,**kwargs):
 
 def main(args):
     
-    print "Using configuration file: %s"%args.config
+    print("Using configuration file: %s"%args.config)
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 
@@ -568,7 +568,7 @@ def main(args):
                         
 
             # COMPARE nuisances
-            for name, parameters in compare.iteritems():
+            for name, parameters in compare.items():
                 plotPostFitValues(channel,var,r,year,*parameters,name=name,tag=tag,compareFD=False,title=title)
             
             # BIN-BY-BIN
@@ -582,14 +582,12 @@ def main(args):
             plotCorrelation(channel,var,r,year,correlate,tag=tag,title=title)
           
 
-
-
 if __name__ == '__main__':
 
     argv = sys.argv
     description = '''This script makes datacards with CombineHarvester.'''
     parser = ArgumentParser(prog="LowMassDiTau_Harvester",description=description,epilog="Succes!")
-    parser.add_argument('-y', '--year', dest='year', choices=['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018'], type=str, default='2017', action='store', help="select year")
+    parser.add_argument('-y', '--year', dest='year', choices=['2024','2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018'], type=str, default='2017', action='store', help="select year")
     parser.add_argument('-c', '--config', dest='config', type=str, default='TauES/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup" )
     parser.add_argument('-e', '--extra-tag', dest='extratag', type=str, default="", action='store', metavar="TAG", help="extra tag for output files")
     parser.add_argument('-r', '--shift-range', dest='shiftRange', type=str, default="0.940,1.060", action='store', metavar="RANGE", help="range of TES shifts")
@@ -599,7 +597,5 @@ if __name__ == '__main__':
 
 
     main(args)
-    print ">>>\n>>> done\n"
+    print(">>>\n>>> done\n")
     
-
-

@@ -23,7 +23,7 @@ CMSStyle.setTDRStyle()
 
 
 def plotParabola(setup,var,region,year,**kwargs):
-    print green("plot parabola for %s, %s"%(region, var),pre="\n>>> ")
+    print(green("plot parabola for %s, %s"%(region, var),pre="\n>>> "))
     
     indir        = kwargs.get('indir',       "output_%s"%year )
     outdir       = kwargs.get('outdir',      "plots_%s"%year  )
@@ -49,7 +49,7 @@ def plotParabola(setup,var,region,year,**kwargs):
     filename     = '%s/higgsCombine.%s_%s-%s%s-%s.MultiDimFit.mH90.root'%(indir,name_red,var,'MDF' if MDFslices else region,tag,era)
     for i, (bdtag,bdtitle) in enumerate(breakdown):
       breakdown[i] = (bdtag, bdtitle,filename.replace("higgsCombine.","higgsCombine.%s-"%bdtag))
-    print '>>>   file "%s"'%(filename)
+    print('>>>   file "%s"'%(filename))
     file = ensureTFile(filename)
     tree = file.Get('limit')
     
@@ -88,7 +88,7 @@ def plotParabola(setup,var,region,year,**kwargs):
     list_dnll_right = list_dnll[min_index:]
     list_tes_right  = list_tes[min_index:]
     if len(list_dnll_left)==0 or len(list_dnll_right)==0 : 
-      print "ERROR! Parabola does not have minimum within given range !!!"
+      print("ERROR! Parabola does not have minimum within given range !!!")
       exit(1)
     tmin_left = -1
     tmin_right = -1
@@ -116,7 +116,7 @@ def plotParabola(setup,var,region,year,**kwargs):
     colors_bd   = [kRed, kBlue, kGreen]
     tes_bbb, tes_stat = -1., -1.
     for i, (tag_bd, title_bd, filename_bd) in enumerate(breakdown):
-      print '>>>   file "%s" (breakdown)'%(filename_bd)
+      print('>>>   file "%s" (breakdown)'%(filename_bd))
       graph_bd, tes_bd = createParabola(filename_bd)
       graph_bd.SetMarkerColor(colors_bd[i])
       graph_bd.SetLineColor(colors_bd[i])
@@ -220,11 +220,11 @@ def plotParabola(setup,var,region,year,**kwargs):
     if ctext:
       ctext = writeText(ctext,position='topright',textsize=0.80*fontsize)
     
-    print ">>> tes SF %7.3f - %-5.3f + %-5.3f"%(tes,tes_errDown,tes_errUp)
-    print ">>> shift  %7.3f - %-5.3f + %-5.3f %%"%(shift,tes_errDown*100,tes_errUp*100)
+    print(">>> tes SF %7.3f - %-5.3f + %-5.3f"%(tes,tes_errDown,tes_errUp))
+    print(">>> shift  %7.3f - %-5.3f + %-5.3f %%"%(shift,tes_errDown*100,tes_errUp*100))
     if fit:
-      print ">>> tes SF %7.3f - %-5.3f + %-5.3f   (parabola)"%(tesf,tesf_errDown,tesf_errUp)
-      print ">>> shift  %7.3f - %-5.3f + %-5.3f %% (parabola)"%(tesf-1,tesf_errDown*100,tesf_errUp*100)
+      print(">>> tes SF %7.3f - %-5.3f + %-5.3f   (parabola)"%(tesf,tesf_errDown,tesf_errUp))
+      print(">>> shift  %7.3f - %-5.3f + %-5.3f %% (parabola)"%(tesf-1,tesf_errDown*100,tesf_errUp*100))
     
     text = TLatex()
     text.SetTextSize(fontsize)
@@ -258,7 +258,7 @@ def plotParabola(setup,var,region,year,**kwargs):
     
 def plotParabolaMDF(setup,var,year,**kwargs):
     """Plot multidimensional parabola."""
-    print green("plot multidimensional parabola for %s"%(var),pre="\n>>> ")
+    print(green("plot multidimensional parabola for %s"%(var),pre="\n>>> "))
     
     indir      = kwargs.get('indir',      "output_%s"%year )
     outdir     = kwargs.get('outdir',     "plots_%s"%year  )
@@ -384,13 +384,13 @@ def fitParabola(xmin,xmax,tes,list_tes_left,list_dnll_left,list_tes_right,list_d
     for i, val in enumerate(list_dnll_left):
       if val <= (ymax_left):
         xmin_fit = round(list_tes_left[i],4)
-        print ">>> xmin_fit = %.3f (%2d,%3.1f) is below NLL %.1f"%(xmin_fit,val,i,ymax_left)
+        print(">>> xmin_fit = %.3f (%2d,%3.1f) is below NLL %.1f"%(xmin_fit,val,i,ymax_left))
         break
     # |------|----min----|---<--|
     for i, val in reversed(list(enumerate(list_dnll_right))):
       if val <= (ymax_right):
         xmax_fit = round(list_tes_right[i],4)
-        print ">>> xmax_fit = %.3f (%2d,%3.1f) is below NLL %.1f"%(xmax_fit,val,i,ymax_right)
+        print(">>> xmax_fit = %.3f (%2d,%3.1f) is below NLL %.1f"%(xmax_fit,val,i,ymax_right))
         break
     
     # FIT MAX WIDTH
@@ -412,15 +412,15 @@ def fitParabola(xmin,xmax,tes,list_tes_left,list_dnll_left,list_tes_right,list_d
     cmin, cval, cmax = -0.0001, 0.0, 0.5 #max(min(ymax_fit,3),0.001)
     amin, aval, amax = -1000, 0.0, 1000
     
-    if bmin<xmin_fit: print ">>> Warning! setting bmin=%.3f -> %.3f=xmin_fit"%(bmin,xmin_fit); bmin = xmin_fit
-    if bmax>xmax_fit: print ">>> Warning! setting bmin=%.3f -> %.3f=xmin_fit"%(bmax,xmax_fit); bmax = xmax_fit
-    if bval<bmin or bmax<bval: print ">>> Warning! setting bval=%.3f -> %.3f=bmin+(bmin-bmax)/2"%(bval,(bmax+bmin)/2.); bval = (bmax+bmin)/2.
-    if cval<cmin or cmax<cval: print ">>> Warning! setting cval=%.3f -> %.3f=cmin+(cmin-cmax)/2"%(cval,(cmax+cmin)/2.); cval = (cmax+cmin)/2.
-    print ">>> width   = %5g [%5s, %5s]"%(wval,wmin,wmax)
-    print ">>> tes     = %5s [%5s, %5s]"%(bval,bmin,bmax)
-    print ">>> yoffset = %5s [%5s, %5s]"%(cval,cmin,cmax)
+    if bmin<xmin_fit: print(">>> Warning! setting bmin=%.3f -> %.3f=xmin_fit"%(bmin,xmin_fit)); bmin = xmin_fit
+    if bmax>xmax_fit: print(">>> Warning! setting bmin=%.3f -> %.3f=xmin_fit"%(bmax,xmax_fit)); bmax = xmax_fit
+    if bval<bmin or bmax<bval: print(">>> Warning! setting bval=%.3f -> %.3f=bmin+(bmin-bmax)/2"%(bval,(bmax+bmin)/2.)); bval = (bmax+bmin)/2.
+    if cval<cmin or cmax<cval: print(">>> Warning! setting cval=%.3f -> %.3f=cmin+(cmin-cmax)/2"%(cval,(cmax+cmin)/2.)); cval = (cmax+cmin)/2.
+    print(">>> width   = %5g [%5s, %5s]"%(wval,wmin,wmax))
+    print(">>> tes     = %5s [%5s, %5s]"%(bval,bmin,bmax))
+    print(">>> yoffset = %5s [%5s, %5s]"%(cval,cmin,cmax))
     if asymmetric:
-      print ">>> w_asymm = %5s [%5s, %5s]"%(aval, amin, amax)
+      print(">>> w_asymm = %5s [%5s, %5s]"%(aval, amin, amax))
     
     # FIT FUNCTION
     if asymmetric:
@@ -535,7 +535,7 @@ def measureTES(filename,unc=False,fit=False,asymmetric=True):
       nll_right = nll[imin:]
       tes_right = tes[imin:]
       if len(nll_left)==0 or len(nll_right)==0 : 
-        print "ERROR! measureTES: Parabola does not have a minimum within given range!"
+        print("ERROR! measureTES: Parabola does not have a minimum within given range!")
         exit(1)
       tmin_left = -1
       tmin_right = -1
@@ -588,7 +588,7 @@ def measureTES_fit(filename,asymmetric=True,unc=False):
     list_dnll_right = list_dnll[min_index:]
     list_tes_right  = list_tes[min_index:]
     if len(list_dnll_left)==0 or len(list_dnll_right)==0 : 
-      print "ERROR! Parabola does not have minimum within given range !!!"
+      print("ERROR! Parabola does not have minimum within given range !!!")
       exit(1)
     tmin_left = -1
     tmin_right = -1
@@ -835,7 +835,7 @@ def writeMeasurement(filename,categories,measurements,**kwargs):
     mformat = kwargs.get('format'," %10.4f %10.4f %10.4f") #" %10.6g %10.6g %10.6g"
     sformat = re.sub(r"%(\d*).?\d*[a-z]",r"%\1s",mformat)
     with open(filename,'w+') as file:
-      print ">>>   created txt file %s"%(filename)
+      print(">>>   created txt file %s"%(filename))
       startdate = time.strftime("%a %d/%m/%Y %H:%M:%S",time.gmtime())
       file.write("%s\n"%(startdate))
       for category, points in zip(categories,measurements):
@@ -852,7 +852,7 @@ def readMeasurement(filename,**kwargs):
     if ".txt" not in filename[-4]: filename += ".txt"
     measurements = dict()
     with open(filename,'r') as file:
-      print ">>>   reading txt file %s"%(filename)
+      print(">>>   reading txt file %s"%(filename))
       startdate = time.strftime("%a %d/%m/%Y %H:%M:%S",time.gmtime())
       file.next()
       for line in file:
@@ -942,17 +942,17 @@ def green(string,**kwargs):
   return kwargs.get('pre',"")+"\x1b[0;32;40m%s\033[0m"%(string)
   
 def warning(string,**kwargs):
-  print ">>> \x1b[1;33;40m%sWarning!\x1b[0;33;40m %s\033[0m"%(kwargs.get('pre',""),string)
+  print(">>> \x1b[1;33;40m%sWarning!\x1b[0;33;40m %s\033[0m"%(kwargs.get('pre',""),string))
     
 def error(string,**kwargs):
-  print ">>> \x1b[1;31;40m%sERROR!\x1b[0;31;40m %s\033[0m"%(kwargs.get('pre',""),string)
+  print(">>> \x1b[1;31;40m%sERROR!\x1b[0;31;40m %s\033[0m"%(kwargs.get('pre',""),string))
   exit(1)
   
 def ensureDirectory(dirname):
   """Make directory if it does not exist."""
   if not os.path.exists(dirname):
       os.makedirs(dirname)
-      print ">>> made directory %s"%dirname
+      print(">>> made directory %s"%dirname)
   
 def ensureTFile(filename,option='READ',**kwargs):
   """Open TFile and make sure if that it exists."""
@@ -980,7 +980,7 @@ def ensureList(arg):
 
 def main(args):
     
-    print "Using configuration file: %s"%args.config
+    print("Using configuration file: %s"%args.config)
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 
@@ -1007,7 +1007,7 @@ def main(args):
     tag += args.extratag
     
     # LOOP over tags, channels, variables
-    print "parabola %i"%parabola
+    print("parabola %i"%parabola)
     if parabola:
         points, points_fit = [ ], [ ]
 
@@ -1064,7 +1064,7 @@ def main(args):
                 points_fit[i].append((tesf,tesfDown,tesfUp))
           
             if len(points)>1 and not breakdown:
-                print green("write results to file",pre="\n>>> ")
+                print(green("write results to file",pre="\n>>> "))
                 filename = "%s/measurement_tes_%s%s"%(outdir,channel,tag)
                 writeMeasurement(filename,allRegions,points)
             if args.fit:
@@ -1072,7 +1072,7 @@ def main(args):
     
     # SUMMARY plot
     if summary:
-        print green("make summary plot for %s"%(tag),pre="\n>>> ")
+        print(green("make summary plot for %s"%(tag),pre="\n>>> "))
         ftags = [ tag, tag+fittag ] if args.fit else [ tag ]
         for ftag in ftags:
             canvas = "%s/measurement_tes_%s%s"%(outdir,channel,ftag)
@@ -1089,7 +1089,7 @@ if __name__ == '__main__':
     argv = sys.argv
     description = '''Plot parabolas.'''
     parser = ArgumentParser(prog="plotParabola",description=description,epilog="Succes!")
-    parser.add_argument('-y', '--year',        dest='year', choices=['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018'], type=str, default='2017', action='store', help="select year")
+    parser.add_argument('-y', '--year',        dest='year', choices=['2024','2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018'], type=str, default='2017', action='store', help="select year")
     parser.add_argument('-c', '--config', dest='config', type=str, default='TauES/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup" )
     parser.add_argument('-e', '--extra-tag',   dest='extratag', type=str, default="", action='store', metavar='TAG', help="extra tag for output files")
     parser.add_argument('-r', '--shift-range', dest='shiftRange', type=str, default="0.940,1.060", action='store', metavar='RANGE',       help="range of TES shifts")
@@ -1104,6 +1104,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     main(args)
-    print ">>>\n>>> done\n"
+    print(">>>\n>>> done\n")
     
 
