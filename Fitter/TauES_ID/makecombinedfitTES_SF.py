@@ -58,6 +58,15 @@ def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag, outpu
     if hasattr(setup, 'mumu_datacard_file') and setup.get('mumu_datacard_file'):
         filelist += f"zmm={setup.get('mumu_datacard_file')} "
         outcombinedfile += "CR"
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
         os.system(f"combineCards.py {filelist} >output_{era}/{outcombinedfile}.txt")
         print(">>>>>>>>> merging datacards is done ")
     # Otherwise, use the old logic (commented out)
@@ -92,16 +101,16 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir, mu
     return outCRfile
     
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
-    #tes_range    = kwargs.get('tes_range',    "1.000,1.000")
+    # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.5")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
-    algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
-    npts_fit     = kwargs.get('npts_fit',     "--points=66") ## 66  --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
-    fit_opts     = kwargs.get('fit_opts',     "--robustHesse=1 %s" %(npts_fit)) #--setRobustFitTolerance=0.001
-    xrtd_opts    = kwargs.get('xrtd_opts',    "") #--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NEW 
+    algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1") #--alignEdges=1 grid
+    npts_fit     = kwargs.get('npts_fit',     "--points=1000") ## 66  --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
+    fit_opts     = kwargs.get('fit_opts',     " --robustHesse=1  %s" %(npts_fit)) #--setRobustFitTolerance=0.001--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1  --X-rtd FITTER_NEW_CROSSING_ALGO
+    xrtd_opts    = kwargs.get('xrtd_opts',    "") 
     cmin_opts    = kwargs.get('cmin_opts',    "") # --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan
-    save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult"                                                                           )
+    save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult")   
     era          = kwargs.get('era',          "")
     config_mumu  = kwargs.get('config_mumu',  "")
     mumu_input_file = kwargs.get('mumu_input_file', None)  # Add this line
@@ -193,8 +202,8 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
-            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=1,%s=1 --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # --freezeParameters r 
-            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*}
+            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # %s=1,%s=1, ,POI2, POI1  --freezeParameters r  --freezeParameters r
+            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --cminFallbackAlgo Minuit2,Migrad,0:0.001
             
             # Run combine in output_dir
             cwd = os.getcwd()
@@ -312,7 +321,7 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
         # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
-            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir}")
+            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
         # for r in setup["observables"]["m_vis"]["scanRegions"]:
         #     # Plot TES
         #     os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")

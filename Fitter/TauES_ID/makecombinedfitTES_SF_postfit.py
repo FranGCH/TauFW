@@ -77,7 +77,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     extratag     = kwargs.get('extratag',     "_DeepTau")
     algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
     npts_fit     = kwargs.get('npts_fit',     "--points=61")
-    fit_opts     = kwargs.get('fit_opts',     "--robustHesse=1   %s" %(npts_fit)) # --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.00001
+    fit_opts     = kwargs.get('fit_opts',     "--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1 --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO   %s" %(npts_fit)) # --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.00001
     xrtd_opts    = kwargs.get('xrtd_opts',    "") #--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NE
     cmin_opts    = kwargs.get('cmin_opts',    "") #--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --cminDefaultMinimizerStrategy 0
     save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult")
@@ -210,7 +210,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         elif option == '3':
             # Option 3: 2D scan - need to run FitDiagnostics first
             POI = f"tes_{r},tid_SF_{r}"
-            tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+            tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.5")
             # Set TES range based on region (same logic as option 1)
             if r == "DM0":
                 tes_range = "0.970,1.028"
@@ -221,37 +221,37 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             elif r == "DM11":
                 tes_range = "0.970,1.028"
             elif r == "DM0_pt1":
-                tes_range = "0.980,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM0_pt2":
-                tes_range = "0.980,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM0_pt3":
-                tes_range = "0.980,1.020"
+                tes_range = "0.970,1.028"
             elif r == "DM0_pt4":
-                tes_range = "0.930,0.970"
+                tes_range = "0.970,1.028"
             elif r == "DM1_pt1":
-                tes_range = "0.980,1.020"
+                tes_range = "0.970,1.028"
             elif r == "DM1_pt2":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM1_pt3":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM1_pt4":
-                tes_range = "0.980,1.020"
+                tes_range = "0.970,1.028"
             elif r == "DM10_pt1":
-                tes_range = "0.970,1.020"
+                tes_range = "0.970,1.028"
             elif r == "DM10_pt2":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM10_pt3":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM10_pt4":
-                tes_range = "0.970,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM11_pt1":
-                tes_range = "0.980,1.020"
+                tes_range = "0.970,1.028"
             elif r == "DM11_pt2":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM11_pt3":
-                tes_range = "0.990,1.030"
+                tes_range = "0.970,1.028"
             elif r == "DM11_pt4":
-                tes_range = "1.000,1.040"
+                tes_range = "0.970,1.028"
             else:
                 tes_range = "0.900,1.300"
 
@@ -277,7 +277,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 print(f"Option 3 - param_opts: {param_opts}")
                 
                 # Set up FitDiagnostics options for 2D scan
-                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:r=0.95,1.05 --freezeParameters tes_{r},tid_SF_{r}"  #--freezeParameters r" # :sf_W_{r}=0.0,10.0
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --freezeParameters tes_{r},tid_SF_{r},r"  # --freezeParameters tes_{r},tid_SF_{r} --freezeParameters r" # :sf_W_{r}=0.0,10.0
                 
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
@@ -301,6 +301,21 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}")
                     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
                 print(f"FitDiagnostics for 2D scan {r} completed")
+                
+                #impact of the fit for tes:
+                # # Impact analysis for tes (3-step process)
+                # print(f"[INFO] Running impact analysis for tes_{r}...")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tes_{r} --setParameters {param_opts} --freezeParameters r --robustHesse=1 --doInitialFit -n .tes_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tes_{r} --setParameters {param_opts} --freezeParameters r --robustHesse=1--doFits -n .tes_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tes_{r} -o impacts_tes_{r}.json -n .tes_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"plotImpacts.py -i impacts_tes_{r}.json -o impacts_tes_{r}")
+
+                # # Impact analysis for tid_SF (3-step process)
+                # print(f"[INFO] Running impact analysis for tid_SF_{r}...")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tid_SF_{r} --setParameters {param_opts} --freezeParameters r --robustHesse=1 --doInitialFit -n .tid_SF_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tid_SF_{r} --setParameters {param_opts} --freezeParameters r --robustHesse=1 --doFits -n .tid_SF_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --redefineSignalPOIs tid_SF_{r} -o impacts_tid_SF_{r}.json -n .tid_SF_{r} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}")
+                # os.system(f"plotImpacts.py -i impacts_tid_SF_{r}.json -o impacts_tid_SF_{r}")
                 
                 # Now run PostFitShapesFromWorkspace
                 outf_postfit = f"{postfit_outdir}/PostFitShape_{era}_{setup['tag']}_{r}.root"
@@ -343,9 +358,9 @@ def plotScan(setup, setup_mumu, option, **kwargs):
     elif option == '3':
         print(">>> Plot 2D scans and uncertainty summaries....")
         
-        # Then create the individual region plots and parabolas
-        for r in setup["observables"]["m_vis"]["scanRegions"]:
-            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")
+        # # Then create the individual region plots and parabolas
+        # for r in setup["observables"]["m_vis"]["scanRegions"]:
+        #     os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")
             
         # # Keep the existing parabola plots
         # os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag}  -s -a -c {config} {indir_arg}") # -y %s -e %s  -s -a -c %s"% (era, extratag, config))
