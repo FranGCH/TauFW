@@ -156,6 +156,51 @@ def interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=200):
      
     return poi1_grid, poi2_grid, nll_interpolated
 
+def get_asymm_errors_from_grid(poi1_grid, poi2_grid, nll_grid, best_poi1, best_poi2, level=1.0, max_expand=5.0):
+    """Find asymmetric errors from a 2D interpolated grid (connected component projection).
+    Returns (p1_dn, p1_up, p2_dn, p2_up) or None."""
+    import numpy as _np
+    ix_best = int(_np.argmin(_np.abs(poi1_grid - best_poi1)))
+    iy_best = int(_np.argmin(_np.abs(poi2_grid - best_poi2)))
+    ny, nx = nll_grid.shape
+    if ny != len(poi2_grid) or nx != len(poi1_grid):
+        return None
+    levels_to_try = _np.linspace(level, level * max_expand, num=8)
+    for lvl in levels_to_try:
+        mask = _np.isfinite(nll_grid) & (nll_grid <= float(lvl))
+        if not _np.any(mask):
+            continue
+        true_idxs = _np.argwhere(mask)  # [iy, ix]
+        if mask[iy_best, ix_best]:
+            start = (iy_best, ix_best)
+        else:
+            d2 = (true_idxs[:,0] - iy_best)**2 + (true_idxs[:,1] - ix_best)**2
+            nearest = true_idxs[_np.argmin(d2)]
+            start = (int(nearest[0]), int(nearest[1]))
+        visited = _np.zeros_like(mask, dtype=bool)
+        stack = [start]
+        comp_iy, comp_ix = [], []
+        while stack:
+            iy, ix = stack.pop()
+            if iy < 0 or iy >= ny or ix < 0 or ix >= nx:
+                continue
+            if visited[iy, ix] or not mask[iy, ix]:
+                continue
+            visited[iy, ix] = True
+            comp_iy.append(iy); comp_ix.append(ix)
+            stack.extend([(iy-1, ix),(iy+1, ix),(iy, ix-1),(iy, ix+1)])
+        if len(comp_ix) == 0:
+            continue
+        comp_x = poi1_grid[_np.array(comp_ix, dtype=int)]
+        comp_y = poi2_grid[_np.array(comp_iy, dtype=int)]
+        min_x, max_x = float(_np.min(comp_x)), float(_np.max(comp_x))
+        min_y, max_y = float(_np.min(comp_y)), float(_np.max(comp_y))
+        p1_dn = max(0.0, best_poi1 - min_x); p1_up = max(0.0, max_x - best_poi1)
+        p2_dn = max(0.0, best_poi2 - min_y); p2_up = max(0.0, max_y - best_poi2)
+        if p1_dn + p1_up + p2_dn + p2_up > 0.0:
+            return p1_dn, p1_up, p2_dn, p2_up
+    return None
+
 def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
     """Calculate correlation and 1σ uncertainties by profiling each POI (2ΔlnL = 1 => ΔlnL = 0.5)."""
     poi1_vals = np.array(poi1_vals)
@@ -167,7 +212,7 @@ def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
     best_poi1 = float(poi1_vals[min_idx])
     best_poi2 = float(poi2_vals[min_idx])
     min_nll = float(nll_vals[min_idx])
-# ...existing code...
+
     def profile_and_crossings(fixed_vals, other_vals, nlls, best_val, threshold=1):
         """Robust profiling + flexible-crossing finder (quadratic fallback instead of nearest-point)."""
         unique_raw = np.unique(np.sort(fixed_vals))
@@ -284,9 +329,9 @@ def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
         err_down = np.nan if left_x is None else best_val - left_x
         err_up = np.nan if right_x is None else right_x - best_val
         return err_down, err_up, unique_x, prof_d
-# ...existing code...
+
     # def profile_and_crossings(fixed_vals, other_vals, nlls, best_val, threshold=1):
-    #     """Profile: for each unique fixed_val take min nll over other_vals.
+    #     """Profile: for each unique fixed_val take min nll over otherVals.
     #        Then find left/right crossings where profile - min_nll = threshold.
     #        Returns (err_down, err_up, profile_x, profile_y). If crossing not found, return (np.nan,np.nan,...)."""
     #     unique_x = np.unique(np.sort(fixed_vals))
@@ -348,16 +393,61 @@ def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
     poi1_err = symmetric(poi1_err_down, poi1_err_up, poi1_vals)
     poi2_err = symmetric(poi2_err_down, poi2_err_up, poi2_vals)
 
-    # Calculate simple Pearson correlation from points near the minimum (2ΔNLL < 2.30) as a robust estimate
+    # If asymmetric errors are missing, try to recover them from an interpolated 2D grid
+    if (not np.isfinite(poi1_err_down) or not np.isfinite(poi1_err_up) or
+        not np.isfinite(poi2_err_down) or not np.isfinite(poi2_err_up)):
+        try:
+            # moderate grid resolution (speed vs accuracy)
+            g_x, g_y, nll_grid = interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=80)
+            grid_errs = get_asymm_errors_from_grid(g_x, g_y, nll_grid, best_poi1, best_poi2, level=1.0, max_expand=4.0)
+            if grid_errs is not None:
+                g1_dn, g1_up, g2_dn, g2_up = grid_errs
+                if not np.isfinite(poi1_err_down) or poi1_err_down <= 0.0:
+                    poi1_err_down = g1_dn
+                if not np.isfinite(poi1_err_up) or poi1_err_up <= 0.0:
+                    poi1_err_up = g1_up
+                if not np.isfinite(poi2_err_down) or poi2_err_down <= 0.0:
+                    poi2_err_down = g2_dn
+                if not np.isfinite(poi2_err_up) or poi2_err_up <= 0.0:
+                    poi2_err_up = g2_up
+                # recompute symmetric
+                poi1_err = symmetric(poi1_err_down, poi1_err_up, poi1_vals)
+                poi2_err = symmetric(poi2_err_down, poi2_err_up, poi2_vals)
+                print(">>> Recovered asymmetric errors from interpolated grid:", g1_dn, g1_up, g2_dn, g2_up)
+        except Exception:
+            pass
+
+    # --- Calculate correlation coefficient ---
     try:
-        mask_local = (nll_vals - min_nll) < 2.30
-        if np.sum(mask_local) >= 3:
-            cov = np.cov(poi1_vals[mask_local], poi2_vals[mask_local])
-            corr = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1]) if cov[0,0] > 0 and cov[1,1] > 0 else 0.0
+        corr_threshold = 4.0  # Use points within Δ(−2lnL) < 4 (approx 95% CL in 1D, 2σ)
+        local_mask = (nll_vals - min_nll) < corr_threshold
+        if np.sum(local_mask) >= 3:
+            # Enough local points: compute sample covariance
+            cov = np.cov(poi1_vals[local_mask], poi2_vals[local_mask])
+            if cov[0,0] > 0 and cov[1,1] > 0:
+                corr = float(cov[0,1] / np.sqrt(cov[0,0] * cov[1,1]))
+            else:
+                corr = 0.0
         else:
-            corr = 0.0
+            # Too few local points: use weighted covariance (weights ~ likelihood)
+            w = np.exp(-0.5 * (nll_vals - min_nll))
+            w_sum = np.sum(w)
+            if w_sum > 0:
+                w = w / w_sum
+                mean1 = float(np.sum(poi1_vals * w))
+                mean2 = float(np.sum(poi2_vals * w))
+                cov12 = float(np.sum(w * (poi1_vals - mean1) * (poi2_vals - mean2)))
+                var1 = float(np.sum(w * (poi1_vals - mean1)**2))
+                var2 = float(np.sum(w * (poi2_vals - mean2)**2))
+                if var1 > 0 and var2 > 0:
+                    corr = float(cov12 / np.sqrt(var1 * var2))
+                else:
+                    corr = 0.0
+            else:
+                corr = 0.0
     except Exception:
         corr = 0.0
+    # --- End correlation calculation ---
 
     # Debug prints
     print(f">>> Profiled 1σ (ΔlnL=0.5) results:")
