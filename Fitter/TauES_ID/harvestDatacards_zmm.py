@@ -35,8 +35,6 @@ def harvest(setup, year, obs, **kwargs):
     outtag      = tag+extratag
     TIDWP       = 'Medium' if 'Medium' in outtag else 'Tight'
     
-    print("Harbest: Using input directory: %s"%(indir))
-
     # For each region = DM 
     # each variable can have a subset of regions in which it is fitted defined in config file under this variable entry
     if "fitRegions" in setup["observables"][obs]:
@@ -51,7 +49,7 @@ def harvest(setup, year, obs, **kwargs):
         signals = []
         backgrounds = []
         for proc in setup["processes"]:
-          if "ZTT" in proc:
+          if "ZTT" in proc or "ZL" in proc or "ZJ" in proc:
             signals.append(proc)
           elif not "data" in proc:
             backgrounds.append(proc)
@@ -70,18 +68,18 @@ def harvest(setup, year, obs, **kwargs):
 
         print(green("\n>>> defining nuissance parameters ..."))
 
-        if "systematics" in setup:
-          for sys in setup["systematics"]:
-            sysDef = setup["systematics"][sys]
-            scaleFactor = 1.0  
-            if "scaleFactor" in sysDef:
-              scaleFactor = sysDef["scaleFactor"]
-            harvester.cp().process(sysDef["processes"]).AddSyst(harvester, sysDef["name"] if "name" in sysDef else sys, sysDef["effect"], SystMap()(scaleFactor))
+        # if "systematics" in setup:
+        #   for sys in setup["systematics"]:
+        #     sysDef = setup["systematics"][sys]
+        #     scaleFactor = 1.0  
+        #     if "scaleFactor" in sysDef:
+        #       scaleFactor = sysDef["scaleFactor"]
+        #     harvester.cp().process(sysDef["processes"]).AddSyst(harvester, sysDef["name"] if "name" in sysDef else sys, sysDef["effect"], SystMap()(scaleFactor))
    
 
         # Add DY cross section 
-        harvester.cp().process(['ZTT','ZL','ZJ']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
-
+        # ############harvester.cp().process(['ZTT','ZL','ZJ']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
+        # harvester.cp().process(['ZLL']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
 
         # EXTRACT SHAPES
         print(green(">>> extracting shapes..."))
@@ -199,8 +197,7 @@ def main(args):
         observables.append(obs)
     
     # indir = "./input_pt_nbin6_moretes"
-    indir = args.input
-    print("Using input directory: %s"%(indir))
+    indir = args.input 
     if args.multiDimFit:
         args.extratag += "_MDF"
 
@@ -219,7 +216,7 @@ if __name__ == '__main__':
   argv = sys.argv
   description = '''This script makes datacards with CombineHarvester.'''
   parser = ArgumentParser(prog="harvesterDatacards_TES",description=description,epilog="Succes!")
-  parser.add_argument('-y', '--year', dest='year', choices=['2024','2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','UL2018_v10','2022_postEE','2022_preEE', '2023C', '2023D','2024'], type=str, default=2018, action='store', help="select year")
+  parser.add_argument('-y', '--year', dest='year', choices=['2024','2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','UL2018_v10','2022_postEE','2022_preEE', '2023C', '2023D'], type=str, default=2018, action='store', help="select year")
   parser.add_argument('-c', '--config', dest='config', type=str, default='TauES/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup")
   parser.add_argument('-e', '--extra-tag', dest='extratag', type=str, default="", action='store', metavar='TAG', help="extra tag for output files")
   parser.add_argument('-M', '--multiDimFit', dest='multiDimFit', default=False, action='store_true', help="assume multidimensional fit with a POI for each DM")

@@ -72,12 +72,19 @@ def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag, outpu
 
 
 # Merge the datacards between mt regions and Zmm when using Zmm CR and return the name of the CR + region datacard file
-def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir):
+def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir, mumu_input_file=None):
     # datacard of the region to be merged
     datacardfile_region = "ztt_mt_m_vis-"+region+setup["tag"]+extratag+"-"+era+"-13TeV.txt"
     filelist = f"%s={output_dir}/%s" %(region, datacardfile_region)
-    LABEL_mumu = setup_mumu["tag"]+extratag+"-"+era+"-13TeV"
-    filelist += " Zmm="+output_dir+"/ztt_mm_m_vis-baseline"+LABEL_mumu+".txt "
+    # LABEL_mumu = setup_mumu["tag"]+extratag+"-"+era+"-13TeV"
+    # filelist += " Zmm="+output_dir+"/ztt_mm_m_vis-baseline"+LABEL_mumu+".txt "
+
+    if mumu_input_file:
+        filelist += f" Zmm={mumu_input_file} "
+    else:
+        LABEL_mumu = setup_mumu["tag"]+"-"+era+"-13TeV"
+        filelist += " Zmm="+output_dir+"/ztt_mm_m_vis-baseline"+LABEL_mumu+".txt "
+    
     print(filelist)
     # Name of the CR + region datacard file
     outCRfile = "ztt_mt_m_vis-%s_zmmCR" %(region)
@@ -87,25 +94,35 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir):
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     #tes_range    = kwargs.get('tes_range',    "1.000,1.000")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.5")
     extratag     = kwargs.get('extratag',     "_PNet")
     algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
-    npts_fit     = kwargs.get('npts_fit',     "--points=96") ## 66
-    fit_opts     = kwargs.get('fit_opts',     "--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 %s" %(npts_fit))
-    xrtd_opts    = kwargs.get('xrtd_opts',    "--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NE")
-    cmin_opts    = kwargs.get('cmin_opts',    "--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan"                                                 )
+    npts_fit     = kwargs.get('npts_fit',     "--points=66") ## 66  --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
+    fit_opts     = kwargs.get('fit_opts',     "--robustHesse=1 %s" %(npts_fit)) #--setRobustFitTolerance=0.001
+    xrtd_opts    = kwargs.get('xrtd_opts',    "") #--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NEW 
+    cmin_opts    = kwargs.get('cmin_opts',    "") # --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan
     save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult"                                                                           )
     era          = kwargs.get('era',          "")
     config_mumu  = kwargs.get('config_mumu',  "")
-    output_dir   = kwargs.get('input_dir')
-    output_dir = output_dir.replace('input', 'output')
-    output_dir = os.path.join(output_dir, era)
+    mumu_input_file = kwargs.get('mumu_input_file', None)  # Add this line
+    input_dir   = kwargs.get('input_dir')
+    # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
+    base_out = input_dir.replace('input', 'output')
+    if os.path.basename(os.path.normpath(input_dir)) == era:
+        output_dir = os.path.normpath(base_out)
+    else:
+        output_dir = os.path.join(os.path.normpath(base_out), era)
+    # convert to absolute path & create it to prevent nested directories when changing cwd
+    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"input_dir: {input_dir}")
+    print(f"computed output_dir: {output_dir}")
     workspace = ""
 
     # Create the workspace for combined fit
     if int(option) > 3:
         # merge datacards regions
-        datacardfile = merge_datacards_regions(setup,setup_mumu, config_mumu, era, extratag, output_dir)
+        datacardfile = merge_datacards_regions(setup,setup_mumu, config_mumu, era, extratag, output_dir, mumu_input_file)
         print("datacard file for combined fit = %s" %(datacardfile)) 
         # Create workspace 
         os.system(f"text2workspace.py {output_dir}/{datacardfile}.txt")
@@ -176,82 +193,64 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
-            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=1,%s=1 --freezeParameters r " % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1)
-            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s --trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*}" %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts)
+            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=1,%s=1 --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # --freezeParameters r 
+            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*}
             
             # Run combine in output_dir
             cwd = os.getcwd()
             os.makedirs(output_dir, exist_ok=True)
-            os.chdir(output_dir)
-            workspace_filename = f"{datacardfile}.root"
-            MultiDimFit_opts_local = MultiDimFit_opts.replace(workspace, workspace_filename)
-            
-            print("2D MultidimFit %s : " %(r), '\t', MultiDimFit_opts_local)
-            os.system("combine -M MultiDimFit  %s " %(MultiDimFit_opts_local))
-            
-            # Extract actual parameter values from the fit result
-            fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
-            param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
-            
-            print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
-            print(f"[DEBUG] Creating parameter file: {param_file}")
-            
-            if os.path.exists(fit_result_file):
-                # Extract parameter values using ROOT
-                import ROOT
-                
-                try:
+            try:
+                os.chdir(output_dir)
+                workspace_filename = f"{datacardfile}.root"
+                MultiDimFit_opts_local = MultiDimFit_opts.replace(workspace, workspace_filename)
+                print("2D MultidimFit %s : " %(r), '\t', MultiDimFit_opts_local)
+                os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
+                print("COMMAND: combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
+
+                # Extract actual parameter values from the fit result
+                fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
+                param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
+                print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
+                print(f"[DEBUG] Creating parameter file: {param_file}")
+                if os.path.exists(fit_result_file):
+                    import ROOT
                     f = ROOT.TFile.Open(fit_result_file)
-                    if f and not f.IsZombie():
-                        tree = f.Get("limit")
-                        if tree:
-                            # Get the best fit values
-                            tree.GetEntry(0)  # First entry should be the best fit
-                            
-                            # Initialize default values
-                            tes_val = 1.000
-                            tid_val = 1.000
-                            sf_w_val = 1.000
-                            
-                            # Try to get parameter values from the tree
-                            try:
-                                tes_val = getattr(tree, f"tes_{r}", 1.000)
-                                tid_val = getattr(tree, f"tid_SF_{r}", 1.000)
-                                # sf_W might not be in the tree, keep default
-                            except AttributeError:
-                                print(f"[WARNING] Could not extract fitted values from {fit_result_file}, using defaults")
-                            
-                            # Create parameter file with extracted values
-                            with open(param_file, 'w') as pf:
-                                pf.write(f"tes_{r}: {tes_val:.6f}\n")
-                                pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
-                                pf.write(f"sf_W_{r}: {sf_w_val:.6f}\n")
-                            
-                            print(f"[DEBUG] Extracted fitted values: tes={tes_val:.6f}, tid_SF={tid_val:.6f}")
-                        
+                    tree = f.Get("limit") if f and not f.IsZombie() else None
+                    if tree and hasattr(tree, "GetListOfBranches"):
+                        branches = [b.GetName() for b in tree.GetListOfBranches()]
+                        nll_branch = "deltaNLL" if "deltaNLL" in branches else ("nll" if "nll" in branches else None)
+                        best_idx = 0
+                        best_val = float("inf")
+                        nentries = int(tree.GetEntries())
+                        for i in range(nentries):
+                            tree.GetEntry(i)
+                            if nll_branch is None:
+                                best_idx = 0
+                                break
+                            val = float(getattr(tree, nll_branch))
+                            if val < best_val:
+                                best_val = val
+                                best_idx = i
+                        tree.GetEntry(best_idx)
+                        try:
+                            tes_val = float(getattr(tree, f"tes_{r}"))
+                            tid_val = float(getattr(tree, f"tid_SF_{r}"))
+                        except Exception:
+                            tes_val, tid_val = 1.0, 1.0
+                        with open(param_file, "w") as pf:
+                            pf.write(f"tes_{r}: {tes_val:.6f}\n")
+                            pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
                         f.Close()
+                        print(f"[DEBUG] Extracted fitted values: tes={tes_val:.6f}, tid_SF={tid_val:.6f}")
                     else:
-                        print(f"[WARNING] Could not open {fit_result_file}")
-                        raise Exception("File not readable")
-                        
-                except Exception as e:
-                    print(f"[ERROR] Failed to extract parameters from ROOT file: {e}")
-                    # Fallback: create default parameter file
-                    with open(param_file, 'w') as pf:
-                        pf.write(f"tes_{r}: 1.000\n")
-                        pf.write(f"tid_SF_{r}: 1.000\n")
-                        pf.write(f"sf_W_{r}: 1.000\n")
-                
-                print(f"[DEBUG] Created parameter file: {param_file}")
-            else:
-                print(f"[WARNING] 2D fit result file {fit_result_file} not found, creating default parameter file")
-                # Create default parameter file
-                with open(param_file, 'w') as pf:
-                    pf.write(f"tes_{r}: 1.000\n")
-                    pf.write(f"tid_SF_{r}: 1.000\n")
-                    pf.write(f"sf_W_{r}: 1.000\n")
-            
-            os.chdir(cwd)
+                        print(f"[DEBUG] No valid tree found in fit result file.")
+                else:
+                    # create default parameter file if fit result missing
+                    with open(param_file, "w") as pf:
+                        pf.write(f"tes_{r}: 1.000000\n")
+                        pf.write(f"tid_SF_{r}: 1.000000\n")
+            finally:
+                os.chdir(cwd)
         ### Fit with combined datacards  tes_DM0,tes_DM1,tes_DM10,tes_DM11 
         ## Fit of tid_SF in its regions with tes_region and other tid_SF_regions as nuisance parameters    tes_DM0,tes_DM1,tes_DM10,tes_DM11
         elif option == '4': 
@@ -281,15 +280,17 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         else:
             continue
 
-    os.system("mv higgsCombine*root %s" %output_dir)
-    os.system("mv *.root %s" %output_dir)
-    os.system("mv *.png %s"%output_dir)
+    # only move files if we are not already in the output dir
+    if os.path.abspath(os.getcwd()) != output_dir:
+        os.system("mv higgsCombine*root %s" %output_dir)
+        os.system("mv *.root %s" %output_dir)
+        os.system("mv *.png %s"%output_dir)
 
     
 
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.8,1.2")
     extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -340,8 +341,17 @@ def main(args):
     # Always set extratag to a non-empty default value
     extratag = "_PNet"
     input_dir = args.input_dir
-    output_dir = input_dir.replace('input', 'output')
-    output_dir = os.path.join(output_dir, era)
+    # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
+    base_out = input_dir.replace('input', 'output')
+    if os.path.basename(os.path.normpath(input_dir)) == era:
+        output_dir = os.path.normpath(base_out)
+    else:
+        output_dir = os.path.join(os.path.normpath(base_out), era)
+    # convert to absolute path & create it to prevent nested directories when changing cwd
+    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"input_dir: {input_dir}")
+    print(f"computed output_dir: {output_dir}")
     print("Using configuration file: %s"%(args.config))
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)

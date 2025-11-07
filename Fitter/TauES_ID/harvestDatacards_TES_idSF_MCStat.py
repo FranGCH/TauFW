@@ -78,11 +78,11 @@ def harvest(setup, year, obs, **kwargs):
 
         signals = [] # ZTT is the signal
         backgrounds = []
-        for proc in setup["processes"]:
-          if "ZTT" in proc:
-            signals.append(proc)
-          elif not "data" in proc:
-            backgrounds.append(proc)
+        # Make ZTT, ZL and ZJ signals, but only ZTT will get TES and tid_SF
+        ztt_signals = [proc for proc in setup["processes"] if "ZTT" in proc]
+        other_z_signals = [proc for proc in setup["processes"] if any(x in proc for x in ["ZL","ZJ"])]
+        signals = ztt_signals + other_z_signals
+        backgrounds = [proc for proc in setup["processes"] if (proc not in signals and "data" not in proc)]
         print("Signals: %s" % signals)
         print("Backgrounds: %s" % backgrounds)
 
@@ -100,11 +100,13 @@ def harvest(setup, year, obs, **kwargs):
         # Change flag causing bug : 
         harvester.SetFlag("workspaces-use-clone", True)
 
-        # Add Observation and process
+        # Add Observation and processes.
         harvester.AddObservations(['*'], [analysis], [era], [channel], cats)
         harvester.AddProcesses(['*'], [analysis], [era], [channel], backgrounds, cats, False)
-        # CAVEAT: Assume we always want to fit TES as POI; if running for mumu channel, everything will be bkg
-        harvester.AddProcesses(tesshifts, [analysis], [era], [channel], signals, cats, True)
+        # Add ZTT with mass points (TES morphing), and ZL/ZJ as signals without mass points
+        harvester.AddProcesses(tesshifts, [analysis], [era], [channel], ztt_signals, cats, True)
+        if other_z_signals:
+            harvester.AddProcesses(['*'], [analysis], [era], [channel], other_z_signals, cats, True)
 
         print(green("\n>>> defining nuissance parameters ..."))
   
@@ -118,7 +120,7 @@ def harvest(setup, year, obs, **kwargs):
             harvester.cp().process(sysDef["processes"]).AddSyst(harvester, sysDef["name"] if "name" in sysDef else sys, sysDef["effect"], SystMap()(scaleFactor))
             #print sysDef
 
-        # Adding id SF as a rate parameter affecting the signal ZTT 
+        # Adding id SF as a rate parameter affecting only ZTT
         listbin = region.split("_")
         tid_name = "tid_SF"
         # Recommended to define tid_SFRegions in the config file 
@@ -143,8 +145,8 @@ def harvest(setup, year, obs, **kwargs):
             tid_name = "tid_SF_%s"%(listbin[1]) # tid_SF_pt
         
         print("tid : %s" % (tid_name))
-        # Add SF
-        harvester.cp().signals().AddSyst(harvester, tid_name,'rateParam', SystMap()(1.00))
+        # Add SF only to ZTT signals
+        harvester.cp().process(ztt_signals).AddSyst(harvester, tid_name,'rateParam', SystMap()(1.00))
 
         
         # Add W+Jets SF as a free parameter 
@@ -158,6 +160,15 @@ def harvest(setup, year, obs, **kwargs):
         if not "xsec_dy" in setup["systematics"]:
           print("DY cross section as a free parameter")
           harvester.cp().process(['ZTT','ZL','ZJ']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
+        def scaleProcess(process,scale): 
+          """Help function to scale a given process."""
+          process.set_rate(process.rate()*scale)
+
+        # if "scaleFactors"  in setup and "xsec_dy" in setup["scaleFactors"]:
+        #   print("DY cross section from config file")
+        #   xsec_def = setup["scaleFactors"]["xsec_dy"]
+        #   # rate = hist.GetBinContent(1)
+        #   harvester.cp().scaleProcess(xsec_def["processes"], xsec_def["value"])
 
         # Add DY cross section as a free parameter. Don't forgot to add Zmm CR !
         
@@ -169,16 +180,17 @@ def harvest(setup, year, obs, **kwargs):
         # EXTRACT SHAPES
         print(green(">>> extracting shapes..."))
         print(">>>   file %s" % (filename))
-        ## For now assume that everything that is varied by TES is signal, and everything else is background
-        ## Could be revised if wanting to leave the possibility to do other variations or fit normalisation (e.g. for combined TES & ID SF fit)
+        # Extract shapes: backgrounds normal, ZTT with TES mass templates, ZL/ZJ normal templates
         harvester.cp().channel([channel]).backgrounds().ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
-        
-        # For TES variations 
-        if("TESvariations" in setup):
-          #print green(">>> TESvariations...")
-          harvester.cp().channel([channel]).signals().ExtractShapes(filename, "$BIN/$PROCESS_TES$MASS", "$BIN/$PROCESS_TES$MASS_$SYSTEMATIC")
-        else:
-          harvester.cp().channel([channel]).signals().ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
+        # ZTT: use TES templates if present
+        if ztt_signals:
+            if("TESvariations" in setup):
+                harvester.cp().process(ztt_signals).ExtractShapes(filename, "$BIN/$PROCESS_TES$MASS", "$BIN/$PROCESS_TES$MASS_$SYSTEMATIC")
+            else:
+                harvester.cp().process(ztt_signals).ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
+        # ZL/ZJ: regular templates (no TES)
+        if other_z_signals:
+            harvester.cp().process(other_z_signals).ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
 
 
    
@@ -216,7 +228,7 @@ def harvest(setup, year, obs, **kwargs):
         tes.setConstant(True)
 
     
-        # MORPHING
+        # MORPHING (only for ZTT)
         print(green(">>> morphing..."))
         BuildCMSHistFuncFactory(workspace, harvester, tes, "ZTT")
     
@@ -283,9 +295,7 @@ def harvest(setup, year, obs, **kwargs):
           else:
             print('>>> Warning! "%s" does not exist!' % (oldfilename))
         
-def scaleProcess(process,scale): 
-  """Help function to scale a given process."""
-  process.set_rate(process.rate()*scale)
+
   
 def setYield(process,file,dirname,scale=1.):
     """Help function to get yield from file."""

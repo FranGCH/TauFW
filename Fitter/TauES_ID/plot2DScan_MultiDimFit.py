@@ -95,14 +95,15 @@ def format_region_for_sorting(region):
     else:
         return (order_map.get(region, 999), 0)
 
-def interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=100):
+def interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=200):
     """Create a smoother 2D histogram by interpolating the scan data"""
     try:
         from scipy.interpolate import griddata
         from scipy.ndimage import gaussian_filter
+        from scipy.interpolate import Rbf
     except ImportError:
-        raise ImportError("scipy is required for interpolation")
-    
+        raise ImportError("scipy is required for interpolation (griddata / Rbf / gaussian_filter)")
+     
     poi1_vals = np.array(poi1_vals)
     poi2_vals = np.array(poi2_vals)
     nll_vals = np.array(nll_vals)
@@ -128,117 +129,341 @@ def interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=100):
     # Interpolate NLL values onto grid
     points = np.column_stack((poi1_vals, poi2_vals))
     
-    # First try cubic interpolation
+    max_nll = float(np.nanmax(nll_vals))
+    # Try cubic interpolation with a finite fill_value to avoid NaNs
     try:
-        nll_interpolated = griddata(points, nll_vals, (poi1_mesh, poi2_mesh), 
-                                   method='cubic', fill_value=np.nan)
-        # Fill NaN values with linear interpolation
-        mask = np.isnan(nll_interpolated)
-        if np.any(mask):
-            nll_linear = griddata(points, nll_vals, (poi1_mesh, poi2_mesh), 
-                                method='linear', fill_value=np.max(nll_vals))
-            nll_interpolated[mask] = nll_linear[mask]
-    except:
-        # Fallback to linear interpolation
-        nll_interpolated = griddata(points, nll_vals, (poi1_mesh, poi2_mesh), 
-                                   method='linear', fill_value=np.max(nll_vals))
-    
-    # Apply Gaussian smoothing for even smoother contours
-    nll_interpolated = gaussian_filter(nll_interpolated, sigma=1.0)
-    
+        nll_interpolated = griddata(points, nll_vals, (poi1_mesh, poi2_mesh),
+                                    method='cubic', fill_value=max_nll)
+        # If cubic left NaNs, fill those with linear
+        if np.any(~np.isfinite(nll_interpolated)):
+            nll_linear = griddata(points, nll_vals, (poi1_mesh, poi2_mesh),
+                                  method='linear', fill_value=max_nll)
+            nll_interpolated[~np.isfinite(nll_interpolated)] = nll_linear[~np.isfinite(nll_interpolated)]
+    except Exception:
+        # As a more robust fallback try radial-basis interpolation (RBF) which extrapolates better
+        try:
+            rbf = Rbf(poi1_vals, poi2_vals, nll_vals, function='linear')
+            nll_interpolated = rbf(poi1_mesh, poi2_mesh)
+        except Exception:
+            # Last resort: linear griddata with finite fill
+            nll_interpolated = griddata(points, nll_vals, (poi1_mesh, poi2_mesh),
+                                        method='linear', fill_value=max_nll)
+
+    # Ensure no NaNs remain (safety) and treat outside-hull as high cost
+    nll_interpolated = np.where(np.isfinite(nll_interpolated), nll_interpolated, max_nll)
+    # Gentle Gaussian smoothing to keep small-scale features (smaller sigma for higher accuracy)
+    nll_interpolated = gaussian_filter(nll_interpolated, sigma=0.8)
+     
     return poi1_grid, poi2_grid, nll_interpolated
 
+def get_asymm_errors_from_grid(poi1_grid, poi2_grid, nll_grid, best_poi1, best_poi2, level=1.0, max_expand=5.0):
+    """Find asymmetric errors from a 2D interpolated grid (connected component projection).
+    Returns (p1_dn, p1_up, p2_dn, p2_up) or None."""
+    import numpy as _np
+    ix_best = int(_np.argmin(_np.abs(poi1_grid - best_poi1)))
+    iy_best = int(_np.argmin(_np.abs(poi2_grid - best_poi2)))
+    ny, nx = nll_grid.shape
+    if ny != len(poi2_grid) or nx != len(poi1_grid):
+        return None
+    levels_to_try = _np.linspace(level, level * max_expand, num=8)
+    for lvl in levels_to_try:
+        mask = _np.isfinite(nll_grid) & (nll_grid <= float(lvl))
+        if not _np.any(mask):
+            continue
+        true_idxs = _np.argwhere(mask)  # [iy, ix]
+        if mask[iy_best, ix_best]:
+            start = (iy_best, ix_best)
+        else:
+            d2 = (true_idxs[:,0] - iy_best)**2 + (true_idxs[:,1] - ix_best)**2
+            nearest = true_idxs[_np.argmin(d2)]
+            start = (int(nearest[0]), int(nearest[1]))
+        visited = _np.zeros_like(mask, dtype=bool)
+        stack = [start]
+        comp_iy, comp_ix = [], []
+        while stack:
+            iy, ix = stack.pop()
+            if iy < 0 or iy >= ny or ix < 0 or ix >= nx:
+                continue
+            if visited[iy, ix] or not mask[iy, ix]:
+                continue
+            visited[iy, ix] = True
+            comp_iy.append(iy); comp_ix.append(ix)
+            stack.extend([(iy-1, ix),(iy+1, ix),(iy, ix-1),(iy, ix+1)])
+        if len(comp_ix) == 0:
+            continue
+        comp_x = poi1_grid[_np.array(comp_ix, dtype=int)]
+        comp_y = poi2_grid[_np.array(comp_iy, dtype=int)]
+        min_x, max_x = float(_np.min(comp_x)), float(_np.max(comp_x))
+        min_y, max_y = float(_np.min(comp_y)), float(_np.max(comp_y))
+        p1_dn = max(0.0, best_poi1 - min_x); p1_up = max(0.0, max_x - best_poi1)
+        p2_dn = max(0.0, best_poi2 - min_y); p2_up = max(0.0, max_y - best_poi2)
+        if p1_dn + p1_up + p2_dn + p2_up > 0.0:
+            return p1_dn, p1_up, p2_dn, p2_up
+    return None
+
 def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
-    """Calculate correlation and proper uncertainties from scan data - using 3σ filtering like FitDiagnostics"""
+    """Calculate correlation and 1σ uncertainties by profiling each POI (2ΔlnL = 1 => ΔlnL = 0.5)."""
     poi1_vals = np.array(poi1_vals)
     poi2_vals = np.array(poi2_vals)
     nll_vals = np.array(nll_vals)
-    
-    print(f">>> Debug correlation calculation:")
-    print(f"    Total scan points: {len(poi1_vals)}")
-    print(f"    POI1 range: [{np.min(poi1_vals):.4f}, {np.max(poi1_vals):.4f}]")
-    print(f"    POI2 range: [{np.min(poi2_vals):.4f}, {np.max(poi2_vals):.4f}]")
-    print(f"    NLL range: [{np.min(nll_vals):.4f}, {np.max(nll_vals):.4f}]")
-    
-    # Find the best fit point
-    min_idx = np.argmin(nll_vals)
-    best_poi1 = poi1_vals[min_idx]
-    best_poi2 = poi2_vals[min_idx]
-    
-    print(f"    Best fit: POI1={best_poi1:.4f}, POI2={best_poi2:.4f}")
-    
-    # **Use same filtering as FitDiagnostics: points within 3σ (deltaNLL < 9)**
-    # Try different thresholds, but prefer 3σ
-    correlation = 0.0
-    poi1_err = 0.0
-    poi2_err = 0.0
-    
-    for threshold in [9.0, 10.0, 20.0]:  # 3σ first, then relax if needed
-        mask = nll_vals < threshold
-        filtered_poi1 = poi1_vals[mask]
-        filtered_poi2 = poi2_vals[mask]
-        filtered_nll = nll_vals[mask]
-        
-        print(f"    Points with deltaNLL < {threshold}: {np.sum(mask)} / {len(poi1_vals)}")
-        
-        if len(filtered_poi1) < 10:
-            print(f"    WARNING: Not enough scan points for reliable correlation calculation at {threshold}σ")
-            continue
-        
-        # **Same method as FitDiagnostics: direct correlation coefficient of filtered points**
-        if len(np.unique(filtered_poi1)) > 1 and len(np.unique(filtered_poi2)) > 1:
-            correlation = np.corrcoef(filtered_poi1, filtered_poi2)[0, 1]
-            print(f"    Raw correlation (deltaNLL < {threshold}): {correlation:.4f}")
-            
-            if not np.isnan(correlation) and abs(correlation) <= 1.0:
-                # Calculate uncertainties using likelihood weighting of filtered points
-                weights = np.exp(-0.5 * filtered_nll)
-                weights = weights / np.sum(weights)
-                
-                # Weighted mean and std
-                poi1_mean = np.sum(weights * filtered_poi1)
-                poi2_mean = np.sum(weights * filtered_poi2)
-                
-                poi1_var = np.sum(weights * (filtered_poi1 - poi1_mean)**2)
-                poi2_var = np.sum(weights * (filtered_poi2 - poi2_mean)**2)
-                
-                poi1_err = np.sqrt(poi1_var)
-                poi2_err = np.sqrt(poi2_var)
-                
-                # Ensure reasonable minimum uncertainty
-                poi1_range = np.max(poi1_vals) - np.min(poi1_vals)
-                poi2_range = np.max(poi2_vals) - np.min(poi2_vals)
-                poi1_err = max(poi1_err, poi1_range / 100.0)
-                poi2_err = max(poi2_err, poi2_range / 100.0)
-                
-                print(f"    Using threshold deltaNLL < {threshold}")
-                break
-            else:
-                print(f"    Invalid correlation at threshold {threshold}, trying next...")
-        else:
-            print(f"    Insufficient parameter variation at threshold {threshold}")
-    
-    # Final fallback if all thresholds failed
-    if correlation == 0.0 or np.isnan(correlation) or abs(correlation) > 1.0:
-        print("    WARNING: All correlation calculations failed, using fallback method")
-        
-        # Use all points as last resort
-        if len(np.unique(poi1_vals)) > 1 and len(np.unique(poi2_vals)) > 1:
-            correlation = np.corrcoef(poi1_vals, poi2_vals)[0, 1]
-            if np.isnan(correlation) or abs(correlation) > 1.0:
-                correlation = 0.0
-        else:
-            correlation = 0.0
-        
-        # Simple uncertainty estimates
-        poi1_err = (np.max(poi1_vals) - np.min(poi1_vals)) / 6.0  # Range/6 ≈ 1σ for normal distribution
-        poi2_err = (np.max(poi2_vals) - np.min(poi2_vals)) / 6.0
-    
-    print(f"    Final correlation: {correlation:.4f}")
-    print(f"    Uncertainties: {poi1_err:.4f}, {poi2_err:.4f}")
-    
-    return correlation, poi1_err, poi2_err
 
+    # Best fit point (minimum deltaNLL)
+    min_idx = np.argmin(nll_vals)
+    best_poi1 = float(poi1_vals[min_idx])
+    best_poi2 = float(poi2_vals[min_idx])
+    min_nll = float(nll_vals[min_idx])
+
+    def profile_and_crossings(fixed_vals, other_vals, nlls, best_val, threshold=1):
+        """Robust profiling + flexible-crossing finder (quadratic fallback instead of nearest-point)."""
+        unique_raw = np.unique(np.sort(fixed_vals))
+        if len(unique_raw) > 1:
+            spacing = np.median(np.diff(unique_raw))
+            tol = max(1e-10, 0.2 * spacing)
+        else:
+            tol = 1e-8
+        unique_x = np.unique(np.round(unique_raw, decimals=12))
+        prof_y = np.full_like(unique_x, np.nan, dtype=float)
+
+        # Build profile with tolerant grouping
+        for i, x in enumerate(unique_x):
+            mask = np.isclose(fixed_vals, x, atol=tol, rtol=0)
+            if np.any(mask):
+                prof_y[i] = np.min(nlls[mask])
+
+        # Replace totally empty profile entries with a large finite value
+        max_nll = float(np.nanmax(nlls))
+        prof_y = np.where(np.isfinite(prof_y), prof_y, max_nll)
+
+        # Subtract global minimum to get profile ΔNLL
+        prof_d = prof_y - min_nll
+
+        # Find index of closest x to best_val
+        best_idx = int(np.argmin(np.abs(unique_x - best_val)))
+
+        # Helper: linear crossing finder on one side
+        def find_cross(xarr, yarr, start_idx, direction, thr):
+            i = start_idx
+            while 0 <= i + direction < len(xarr):
+                y1 = yarr[i]; y2 = yarr[i + direction]
+                if not (np.isfinite(y1) and np.isfinite(y2)):
+                    i += direction; continue
+                # check for bracket (including equality)
+                if (y1 - thr) * (y2 - thr) <= 0:
+                    x1 = xarr[i]; x2 = xarr[i + direction]
+                    if y2 == y1:
+                        return 0.5 * (x1 + x2)
+                    frac = (thr - y1) / (y2 - y1)
+                    return x1 + frac * (x2 - x1)
+                i += direction
+            return None
+
+        # try nominal threshold
+        left_x = find_cross(unique_x, prof_d, best_idx, -1, threshold)
+        right_x = find_cross(unique_x, prof_d, best_idx, +1, threshold)
+
+        # if missing, try relaxed thresholds (slightly lower/higher)
+        if left_x is None or right_x is None:
+            for thr in (threshold * 0.95, threshold * 1.05):
+                if left_x is None:
+                    left_x = find_cross(unique_x, prof_d, best_idx, -1, thr)
+                if right_x is None:
+                    right_x = find_cross(unique_x, prof_d, best_idx, +1, thr)
+                if left_x is not None and right_x is not None:
+                    break
+
+        # Quadratic-fit fallback (replace nearest-point approximation)
+        def quad_fallback(xarr, yarr, start_idx, direction, thr, max_pts=7):
+            # collect up to max_pts points on the requested side including the closest to best
+            pts_x, pts_y = [], []
+            # start searching from the neighbor toward the side (avoid picking the best point twice)
+            i = start_idx if (0 <= start_idx < len(xarr)) else (start_idx - direction)
+            count = 0
+            while 0 <= i < len(xarr) and count < max_pts:
+                pts_x.append(xarr[i]); pts_y.append(yarr[i])
+                i += direction
+                count += 1
+            if len(pts_x) < 3:
+                return None  # not enough points for a quadratic fit
+            try:
+                # fit quadratic: y = a x^2 + b x + c
+                coeff = np.polyfit(pts_x, pts_y, 2)
+                # solve a x^2 + b x + (c - thr) = 0
+                a, b, c = coeff
+                c_shift = c - thr
+                # guard against degenerate a ~ 0 (linear)
+                if abs(a) < 1e-12:
+                    # linear fallback using last two points
+                    x1, x2 = pts_x[0], pts_x[1] if direction == +1 else pts_x[-2], pts_x[-1]
+                    y1, y2 = pts_y[0], pts_y[1] if direction == +1 else pts_y[-2], pts_y[-1]
+                    if y2 == y1:
+                        return None
+                    frac = (thr - y1) / (y2 - y1)
+                    return x1 + frac * (x2 - x1)
+                disc = b*b - 4*a*c_shift
+                if disc < 0:
+                    return None
+                roots = np.roots([a, b, c_shift])
+                # pick root on the correct side of best_val
+                candidates = []
+                for r in roots:
+                    if not np.isfinite(r):
+                        continue
+                    if direction == -1 and r < best_val:
+                        candidates.append(r)
+                    if direction == +1 and r > best_val:
+                        candidates.append(r)
+                if not candidates:
+                    return None
+                # choose candidate closest to best_val
+                return float(min(candidates, key=lambda rr: abs(rr - best_val)))
+            except Exception:
+                return None
+
+        # apply quadratic fallback where needed
+        if left_x is None:
+            left_x = quad_fallback(unique_x, prof_d, best_idx - 1, -1, threshold)
+        if right_x is None:
+            right_x = quad_fallback(unique_x, prof_d, best_idx + 1, +1, threshold)
+
+        # If still None, leave as None -> will produce NaN errors (preferred over nearest-point hack)
+        err_down = np.nan if left_x is None else best_val - left_x
+        err_up = np.nan if right_x is None else right_x - best_val
+        return err_down, err_up, unique_x, prof_d
+
+    # def profile_and_crossings(fixed_vals, other_vals, nlls, best_val, threshold=1):
+    #     """Profile: for each unique fixed_val take min nll over otherVals.
+    #        Then find left/right crossings where profile - min_nll = threshold.
+    #        Returns (err_down, err_up, profile_x, profile_y). If crossing not found, return (np.nan,np.nan,...)."""
+    #     unique_x = np.unique(np.sort(fixed_vals))
+    #     prof_y = np.full_like(unique_x, np.inf, dtype=float)
+    #     # Build profile
+    #     for i, x in enumerate(unique_x):
+    #         mask = fixed_vals == x
+    #         if np.any(mask):
+    #             prof_y[i] = np.min(nlls[mask])
+    #     # Subtract global minimum to get profile ΔNLL
+    #     prof_d = prof_y - min_nll
+
+    #     # Find index of closest x to best_val
+    #     best_idx = int(np.argmin(np.abs(unique_x - best_val)))
+
+    #     # Helper to find crossing on one side
+    #     def find_cross(xarr, yarr, start_idx, direction):
+    #         # direction = -1 (left) or +1 (right)
+    #         i = start_idx
+    #         while 0 <= i + direction < len(xarr):
+    #             y1 = yarr[i]
+    #             y2 = yarr[i + direction]
+    #             if (y1 <= threshold and y2 > threshold) or (y1 >= threshold and y2 < threshold):
+    #                 # linear interpolation
+    #                 x1 = xarr[i]
+    #                 x2 = xarr[i + direction]
+    #                 if y2 == y1:
+    #                     return (x1 + x2) / 2.0
+    #                 frac = (threshold - y1) / (y2 - y1)
+    #                 return x1 + frac * (x2 - x1)
+    #             i += direction
+    #         return None
+
+    #     left_x = find_cross(unique_x, prof_d, best_idx, -1)
+    #     right_x = find_cross(unique_x, prof_d, best_idx, +1)
+
+    #     err_down = np.nan if left_x is None else best_val - left_x
+    #     err_up = np.nan if right_x is None else right_x - best_val
+    #     return err_down, err_up, unique_x, prof_d
+
+    # Profile POI1 (fix POI1, minimize over POI2)
+    poi1_err_down, poi1_err_up, prof_x1, prof_d1 = profile_and_crossings(poi1_vals, poi2_vals, nll_vals, best_poi1)
+    # Profile POI2 (fix POI2, minimize over POI1)
+    poi2_err_down, poi2_err_up, prof_x2, prof_d2 = profile_and_crossings(poi2_vals, poi1_vals, nll_vals, best_poi2)
+
+    # Create symmetric errors for backward compatibility
+    def symmetric(err_down, err_up, poi_vals):
+        if np.isnan(err_down) and np.isnan(err_up):
+            # fallback: use range/6 as approx 1σ (if profiling failed)
+            rng = np.max(poi_vals) - np.min(poi_vals)
+            return rng / 6.0 if rng > 0 else 0.0
+        # if one side missing, use the available side
+        if np.isnan(err_down):
+            return float(err_up)
+        if np.isnan(err_up):
+            return float(err_down)
+        return float(0.5 * (err_up + err_down))
+
+    poi1_err = symmetric(poi1_err_down, poi1_err_up, poi1_vals)
+    poi2_err = symmetric(poi2_err_down, poi2_err_up, poi2_vals)
+
+    # If asymmetric errors are missing, try to recover them from an interpolated 2D grid
+    if (not np.isfinite(poi1_err_down) or not np.isfinite(poi1_err_up) or
+        not np.isfinite(poi2_err_down) or not np.isfinite(poi2_err_up)):
+        try:
+            # moderate grid resolution (speed vs accuracy)
+            g_x, g_y, nll_grid = interpolate_scan_data(poi1_vals, poi2_vals, nll_vals, nbins=80)
+            grid_errs = get_asymm_errors_from_grid(g_x, g_y, nll_grid, best_poi1, best_poi2, level=1.0, max_expand=4.0)
+            if grid_errs is not None:
+                g1_dn, g1_up, g2_dn, g2_up = grid_errs
+                if not np.isfinite(poi1_err_down) or poi1_err_down <= 0.0:
+                    poi1_err_down = g1_dn
+                if not np.isfinite(poi1_err_up) or poi1_err_up <= 0.0:
+                    poi1_err_up = g1_up
+                if not np.isfinite(poi2_err_down) or poi2_err_down <= 0.0:
+                    poi2_err_down = g2_dn
+                if not np.isfinite(poi2_err_up) or poi2_err_up <= 0.0:
+                    poi2_err_up = g2_up
+                # recompute symmetric
+                poi1_err = symmetric(poi1_err_down, poi1_err_up, poi1_vals)
+                poi2_err = symmetric(poi2_err_down, poi2_err_up, poi2_vals)
+                print(">>> Recovered asymmetric errors from interpolated grid:", g1_dn, g1_up, g2_dn, g2_up)
+        except Exception:
+            pass
+
+    # --- Calculate correlation coefficient ---
+    try:
+        corr_threshold = 4.0  # Use points within Δ(−2lnL) < 4 (approx 95% CL in 1D, 2σ)
+        local_mask = (nll_vals - min_nll) < corr_threshold
+        if np.sum(local_mask) >= 3:
+            # Enough local points: compute sample covariance
+            cov = np.cov(poi1_vals[local_mask], poi2_vals[local_mask])
+            if cov[0,0] > 0 and cov[1,1] > 0:
+                corr = float(cov[0,1] / np.sqrt(cov[0,0] * cov[1,1]))
+            else:
+                corr = 0.0
+        else:
+            # Too few local points: use weighted covariance (weights ~ likelihood)
+            w = np.exp(-0.5 * (nll_vals - min_nll))
+            w_sum = np.sum(w)
+            if w_sum > 0:
+                w = w / w_sum
+                mean1 = float(np.sum(poi1_vals * w))
+                mean2 = float(np.sum(poi2_vals * w))
+                cov12 = float(np.sum(w * (poi1_vals - mean1) * (poi2_vals - mean2)))
+                var1 = float(np.sum(w * (poi1_vals - mean1)**2))
+                var2 = float(np.sum(w * (poi2_vals - mean2)**2))
+                if var1 > 0 and var2 > 0:
+                    corr = float(cov12 / np.sqrt(var1 * var2))
+                else:
+                    corr = 0.0
+            else:
+                corr = 0.0
+    except Exception:
+        corr = 0.0
+    # --- End correlation calculation ---
+
+    # Debug prints
+    print(f">>> Profiled 1σ (ΔlnL=0.5) results:")
+    print(f"    POI1 best = {best_poi1:.6f}, -{poi1_err_down if not np.isnan(poi1_err_down) else float('nan'):.6f}/+{poi1_err_up if not np.isnan(poi1_err_up) else float('nan'):.6f}, sym={poi1_err:.6f}")
+    print(f"    POI2 best = {best_poi2:.6f}, -{poi2_err_down if not np.isnan(poi2_err_down) else float('nan'):.6f}/+{poi2_err_up if not np.isnan(poi2_err_up) else float('nan'):.6f}, sym={poi2_err:.6f}")
+    print(f"    Correlation (local ΔNLL<4): {corr:.4f}")
+
+    # Return symmetric errors for compatibility plus asymmetric components
+    return corr, poi1_err, poi2_err, {
+        'poi1_err_down': poi1_err_down,
+        'poi1_err_up': poi1_err_up,
+        'poi2_err_down': poi2_err_down,
+        'poi2_err_up': poi2_err_up,
+        'profile_poi1_x': prof_x1, 'profile_poi1_d': prof_d1,
+        'profile_poi2_x': prof_x2, 'profile_poi2_d': prof_d2
+    }
 def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
     """
     Extract 2D scan data from MultiDimFit output file.
@@ -268,7 +493,7 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
     nentries = tree.GetEntries()
     print(f">>> Processing {nentries} entries from MultiDimFit scan")
     
-    # Based on your ROOT output, the branches are directly named
+    # Based on ROOT output, the branches are directly named
     poi1_branch = poi1_name  # 'tes_DM0'
     poi2_branch = poi2_name  # 'tid_SF_DM0' 
     nll_branch = 'deltaNLL'
@@ -299,10 +524,10 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
         
         poi1_vals.append(poi1_val)
         poi2_vals.append(poi2_val)
-        nll_vals.append(nll_val)
+        nll_vals.append(2*nll_val)
         
         # Debug first few entries
-        if i < 5:
+        if i < 15:
             print(f"  Entry {i}: {poi1_branch}={poi1_val:.4f}, {poi2_branch}={poi2_val:.4f}, {nll_branch}={nll_val:.4f}")
     
     file.Close()
@@ -345,10 +570,34 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
     min_idx = np.argmin(delta_nll_vals)
     best_poi1 = poi1_vals[min_idx]
     best_poi2 = poi2_vals[min_idx]
+    pos_mask = delta_nll_vals >= 0
+    if np.any(pos_mask):
+        local_idx = int(np.argmin(delta_nll_vals[pos_mask]))
+        global_indices = np.nonzero(pos_mask)[0]
+        best_idx = int(global_indices[local_idx])
+        print(f">>> Best fit chosen as smallest non-negative deltaNLL at idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
+    best_poi1 = poi1_vals[best_idx]
+    best_poi2 = poi2_vals[best_idx]
+    poi1_vals = poi1_vals[pos_mask]
+    poi2_vals = poi2_vals[pos_mask]
+    delta_nll_vals = delta_nll_vals[pos_mask]
+    best_poi1 = poi1_vals[best_idx]
+    best_poi2 = poi2_vals[best_idx]
     
-    # Calculate correlation and uncertainties
-    correlation, poi1_err, poi2_err = calculate_correlation_and_uncertainties(
+
+    # Calculate correlation and uncertainties (now returns extras dict with asymmetric errors)
+    correlation, poi1_err, poi2_err, extras = calculate_correlation_and_uncertainties(
         poi1_vals, poi2_vals, delta_nll_vals)
+
+    # Extract asymmetric errors and profiling info (if available)
+    poi1_err_down = extras.get('poi1_err_down', np.nan)
+    poi1_err_up   = extras.get('poi1_err_up', np.nan)
+    poi2_err_down = extras.get('poi2_err_down', np.nan)
+    poi2_err_up   = extras.get('poi2_err_up', np.nan)
+    prof_poi1_x = extras.get('profile_poi1_x', None)
+    prof_poi1_d = extras.get('profile_poi1_d', None)
+    prof_poi2_x = extras.get('profile_poi2_x', None)
+    prof_poi2_d = extras.get('profile_poi2_d', None)
     
     print(f">>> Found {len(poi1_vals)} data points")
     print(f">>> Best fit: {poi1_name} = {best_poi1:.4f}, {poi2_name} = {best_poi2:.4f}")
@@ -367,6 +616,14 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
         'best_poi2': best_poi2,
         'poi1_err': poi1_err,
         'poi2_err': poi2_err,
+        'poi1_err_down': poi1_err_down,
+        'poi1_err_up': poi1_err_up,
+        'poi2_err_down': poi2_err_down,
+        'poi2_err_up': poi2_err_up,
+        'profile_poi1_x': prof_poi1_x,
+        'profile_poi1_d': prof_poi1_d,
+        'profile_poi2_x': prof_poi2_x,
+        'profile_poi2_d': prof_poi2_d,
         'correlation': correlation
     }
 
@@ -411,9 +668,9 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     poi2_min -= margin * poi2_range
     poi2_max += margin * poi2_range
     
-    # Create 2D histogram with higher resolution
-    nbins_x = 100
-    nbins_y = 100
+    # Create 2D histogram with higher resolution for more accurate contours
+    nbins_x = 50 # 20
+    nbins_y = 50  #20
     hist_2d = TH2D("hist_2d", "", nbins_x, poi1_min, poi1_max, nbins_y, poi2_min, poi2_max)
     
     # Always try interpolation for smoother results
@@ -502,15 +759,15 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     # Set up color palette for better visualization
     hist_2d.SetMinimum(0)
     max_val = hist_2d.GetMaximum()
-    if max_val > 20:
-        hist_2d.SetMaximum(20)  # Cap the maximum for better color scale
-    
+    if max_val > 12:
+        hist_2d.SetMaximum(12)  # Cap the maximum for better color scale
+
     # Draw the 2D histogram with smoother color transitions
     hist_2d.Draw("COLZ")
     
     # Add contour lines for 1σ, 2σ, 3σ confidence levels for 2D
     # For 2D: 1σ = 2.30, 2σ = 6.18, 3σ = 11.83 (for -2ΔlnL)
-    contour_levels = [2.30, 6.18, 11.83]  # 68%, 95%, 99.73% confidence levels for 2D
+    contour_levels = [2.30] #, 6.18]  # 68%, 95% confidence levels for 2D
     
     # Create a separate histogram for contours to avoid interference
     hist_contour = hist_2d.Clone("hist_contour")
@@ -553,15 +810,47 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
         region_title = region
     latex.DrawLatex(text_x, text_y, f"Region: {region_title}")
     
-    # Best fit values with uncertainties
-    latex.DrawLatex(text_x, text_y - line_height, 
-                   f"{x_title}: {best_poi1:.4f} #pm {scan_data['poi1_err']:.4f}")
-    latex.DrawLatex(text_x, text_y - 2*line_height, 
-                   f"{y_title}: {best_poi2:.4f} #pm {scan_data['poi2_err']:.4f}")
+    # Get asymmetric errors (fall back to symmetric if missing)
+    poi1_err_down = scan_data.get('poi1_err_down', scan_data.get('poi1_err', 0.0))
+    poi1_err_up   = scan_data.get('poi1_err_up',   scan_data.get('poi1_err', 0.0))
+    poi2_err_down = scan_data.get('poi2_err_down', scan_data.get('poi2_err', 0.0))
+    poi2_err_up   = scan_data.get('poi2_err_up',   scan_data.get('poi2_err', 0.0))
+
+    # Display asymmetric errors in the text box
+    latex.DrawLatex(text_x, text_y - line_height,
+                   f"{x_title}: {best_poi1:.4f} -{poi1_err_down:.4f}/+{poi1_err_up:.4f}")
+    latex.DrawLatex(text_x, text_y - 2*line_height,
+                   f"{y_title}: {best_poi2:.4f} -{poi2_err_down:.4f}/+{poi2_err_up:.4f}")
     latex.DrawLatex(text_x, text_y - 3*line_height, 
-                   f"Correlation: {scan_data['correlation']:.3f}")
-    latex.DrawLatex(text_x, text_y - 4*line_height, 
-                   f"Scan points: {len(poi1_vals)}")
+                    f"Correlation: {scan_data['correlation']:.3f}")
+    # latex.DrawLatex(text_x, text_y - 4*line_height, 
+    #                 f"Scan points: {len(poi1_vals)}")
+    
+    # Draw asymmetric error bars around the best-fit point
+    try:
+        # horizontal (x) error bar at y = best_poi2
+        if np.isfinite(poi1_err_down) and np.isfinite(poi1_err_up):
+            line_x = TLine(best_poi1 - poi1_err_down, best_poi2, best_poi1 + poi1_err_up, best_poi2)
+            line_x.SetLineColor(kRed); line_x.SetLineWidth(2); line_x.Draw("SAME")
+            # caps
+            cap_dx = 0.01 * (poi1_max - poi1_min)
+            cap1 = TLine(best_poi1 - poi1_err_down, best_poi2 - cap_dx, best_poi1 - poi1_err_down, best_poi2 + cap_dx)
+            cap2 = TLine(best_poi1 + poi1_err_up,   best_poi2 - cap_dx, best_poi1 + poi1_err_up,   best_poi2 + cap_dx)
+            cap1.SetLineColor(kRed); cap1.SetLineWidth(2); cap1.Draw("SAME")
+            cap2.SetLineColor(kRed); cap2.SetLineWidth(2); cap2.Draw("SAME")
+
+        # vertical (y) error bar at x = best_poi1
+        if np.isfinite(poi2_err_down) and np.isfinite(poi2_err_up):
+            line_y = TLine(best_poi1, best_poi2 - poi2_err_down, best_poi1, best_poi2 + poi2_err_up)
+            line_y.SetLineColor(kRed); line_y.SetLineWidth(2); line_y.Draw("SAME")
+            # caps
+            cap_dy = 0.01 * (poi2_max - poi2_min)
+            cap3 = TLine(best_poi1 - cap_dy, best_poi2 - poi2_err_down, best_poi1 + cap_dy, best_poi2 - poi2_err_down)
+            cap4 = TLine(best_poi1 - cap_dy, best_poi2 + poi2_err_up,   best_poi1 + cap_dy, best_poi2 + poi2_err_up)
+            cap3.SetLineColor(kRed); cap3.SetLineWidth(2); cap3.Draw("SAME")
+            cap4.SetLineColor(kRed); cap4.SetLineWidth(2); cap4.Draw("SAME")
+    except Exception:
+        pass
     
     # Add legend for contour lines and points
     legend = TLegend(0.15, 0.50, 0.50, 0.67)
@@ -569,8 +858,8 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     legend.SetBorderSize(0)
     legend.SetTextSize(0.035)
     legend.AddEntry(best_fit_marker, "Best fit", "p")
-    legend.AddEntry(graph_points, "Scan points", "p")
-    legend.AddEntry(hist_contour, "68%, 95%, 99.7% CL", "l")
+    # legend.AddEntry(graph_points, "Scan points", "p")
+    legend.AddEntry(hist_contour, "1#sigma CL", "l")
     legend.Draw()
     
     # CMS style
@@ -881,79 +1170,6 @@ def plot_scan_correlations(scan_results_all_regions, **kwargs):
     
     canvas.Close()
 
-def plot_summary_from_multiple_regions(setup, scan_results_all_regions, **kwargs):
-    """Create summary plots showing TES and TauID measurements with uncertainties"""
-    print(">>> Creating summary plots from MultiDimFit results")
-    
-    year = kwargs.get('year', '2024')
-    indir = kwargs.get('indir', f"output_{year}")
-    outdir = indir.replace('output', 'plots')
-    tag = kwargs.get('tag', "")
-    plottag = kwargs.get('plottag', "")
-    
-    ensureDirectory(outdir)
-    
-    # Extract measurements
-    tes_measurements = []
-    tid_measurements = []
-    region_labels = []
-    
-    # Sort regions
-    sorted_regions = sorted(scan_results_all_regions.items(), key=lambda x: format_region_for_sorting(x[0]))
-    
-    for region, scan_data in sorted_regions:
-        if scan_data is None:
-            continue
-            
-        region_label = format_region_label(region)
-        region_labels.append(region_label)
-        
-        poi1_name = scan_data['poi1_name']
-        poi2_name = scan_data['poi2_name']
-        
-        if 'tes' in poi1_name.lower():
-            tes_val = scan_data['best_poi1']
-            tes_err = scan_data['poi1_err']
-            tid_val = scan_data['best_poi2'] 
-            tid_err = scan_data['poi2_err']
-        else:
-            tes_val = scan_data['best_poi2']
-            tes_err = scan_data['poi2_err']
-            tid_val = scan_data['best_poi1']
-            tid_err = scan_data['poi1_err']
-            
-        tes_measurements.append((tes_val, tes_err, tes_err))
-        tid_measurements.append((tid_val, tid_err, tid_err))
-    
-    # Create plots
-    plot_measurement_summary(
-        region_labels, tes_measurements,
-        title="Tau Energy Scale",
-        ylabel="tau energy scale", 
-        outname=f"{outdir}/tes_summary_multidimfit{tag}{plottag}",
-        year=year
-    )
-    
-    plot_measurement_summary(
-        region_labels, tid_measurements,
-        title="Tau ID Scale Factor", 
-        ylabel="tau ID scale factor",
-        outname=f"{outdir}/tid_summary_multidimfit{tag}{plottag}",
-        year=year
-    )
-    
-    # Create correlation plot
-    plot_scan_correlations(
-        scan_results_all_regions,
-        year=year, 
-        indir=indir, 
-        tag=tag, 
-        plottag=plottag
-    )
-    
-    print(f">>> Created TES summary plot: {outdir}/tes_summary_multidimfit{tag}{plottag}.png")
-    print(f">>> Created TauID summary plot: {outdir}/tid_summary_multidimfit{tag}{plottag}.png")
-    print(f">>> Created scan correlation plot: {outdir}/scan_correlations_multidimfit{tag}{plottag}.png")
 
 def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err_up, 
                          poi2_val, poi2_err_down, poi2_err_up, correlation, region, **kwargs):
@@ -983,49 +1199,6 @@ def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err
     
     return outfname
 
-def write_summary_results(scan_results_all_regions, **kwargs):
-    """Write summary of all 2D fit results to a single file"""
-    year = kwargs.get('year', '2024')
-    tag = kwargs.get('tag', '')
-    channel = kwargs.get('channel', 'mt')
-    outdir = kwargs.get('outdir', 'plots')
-    
-    ensureDirectory(outdir)
-    
-    # Create summary output filename
-    outfname = f"{outdir}/summary_2D_results_{channel}{tag}_{year}.txt"
-    
-    print(f">>> Writing summary 2D fit results to {outfname}")
-    
-    with open(outfname, 'w') as file:
-        file.write("# Summary of 2D Fit Results from MultiDimFit\n")
-        file.write(f"# Year: {year}\n")
-        file.write(f"# Channel: {channel}\n")
-        file.write("# Format: region poi1_name poi1_val poi1_err poi2_name poi2_val poi2_err correlation\n")
-        
-        # Sort regions for consistent output
-        sorted_regions = sorted(scan_results_all_regions.items(), key=lambda x: format_region_for_sorting(x[0]))
-        
-        for region, scan_data in sorted_regions:
-            if scan_data is None:
-                continue
-                
-            # Get parameter info
-            poi1_name = scan_data['poi1_name']
-            poi2_name = scan_data['poi2_name']
-            poi1_val = scan_data['best_poi1']
-            poi2_val = scan_data['best_poi2']
-            poi1_err = scan_data['poi1_err']
-            poi2_err = scan_data['poi2_err']
-            correlation = scan_data.get('correlation', 0.0)
-            
-            # Write to file
-            file.write(f"{region} {poi1_name} {poi1_val:.6f} {poi1_err:.6f} ")
-            file.write(f"{poi2_name} {poi2_val:.6f} {poi2_err:.6f} ")
-            file.write(f"{correlation:.6f}\n")
-    
-    return outfname
-
 def main(args):
     """Main function - handle multiple regions and create summary plots"""
     
@@ -1036,7 +1209,7 @@ def main(args):
     channel = setup["channel"].replace("mu", "m").replace("tau", "t")
     tag = setup.get("tag", "")
     era = args.year
-    extratag = "_PNet"
+    extratag = "_DeepTau"
     
     # Input directory
     if args.indir:
@@ -1109,35 +1282,29 @@ def main(args):
         plot_2d_scan(setup, region, era, scan_data, 
                      indir=indir, tag=tag, plottag=args.plottag)
         
-        # Write individual text results for this region
+        # Write individual text results for this region (use asymmetric errors if available)
         outdir = indir.replace('output', 'plots')
         poi1_val = scan_data['best_poi1']
-        poi1_err = scan_data['poi1_err']
-        poi2_val = scan_data['best_poi2'] 
-        poi2_err = scan_data['poi2_err']
+        poi2_val = scan_data['best_poi2']
         correlation = scan_data.get('correlation', 0.0)
-        
-        # Write individual region results
+
+        # Use asymmetric errors if present in scan_data, fall back to symmetric stored values
+        poi1_err_down = scan_data.get('poi1_err_down', scan_data.get('poi1_err', 0.0))
+        poi1_err_up   = scan_data.get('poi1_err_up',   scan_data.get('poi1_err', 0.0))
+        poi2_err_down = scan_data.get('poi2_err_down', scan_data.get('poi2_err', 0.0))
+        poi2_err_up   = scan_data.get('poi2_err_up',   scan_data.get('poi2_err', 0.0))
+
+        # Write individual region results with asymmetric errors
         write_2d_fit_results(
-            poi1_name, poi2_name, poi1_val, poi1_err, poi1_err,  # symmetric errors
-            poi2_val, poi2_err, poi2_err, correlation, region,
+            poi1_name, poi2_name,
+            poi1_val, poi1_err_down, poi1_err_up,
+            poi2_val, poi2_err_down, poi2_err_up,
+            correlation, region,
             year=era, tag=tag, channel=channel, outdir=outdir
         )
     
     # Create summary plots and text files if we have multiple regions
-    if len([r for r in scan_results_all_regions.values() if r is not None]) > 1:
-        plot_summary_from_multiple_regions(setup, scan_results_all_regions,
-                                         year=era, indir=indir, tag=tag, 
-                                         plottag=args.plottag)
-        
-        # Write summary text results
-        outdir = indir.replace('output', 'plots')
-        write_summary_results(scan_results_all_regions,
-                             year=era, tag=tag, channel=channel, outdir=outdir)
-    elif len(scan_results_all_regions) == 1:
-        print(">>> Only one region processed, summary plots not created")
-    
-    print(">>> All plots and text files completed successfully!")
+
 
 if __name__ == '__main__':
     description = '''Plot 2D parabolas from MultiDimFit scan output.'''
@@ -1176,3 +1343,12 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     main(args)
+
+
+
+
+
+
+
+
+
