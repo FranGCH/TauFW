@@ -565,24 +565,28 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
     
     # deltaNLL is already the correct quantity (no need to subtract minimum)
     delta_nll_vals = nll_vals
-    
+
     # Find best fit point
-    min_idx = np.argmin(delta_nll_vals)
-    best_poi1 = poi1_vals[min_idx]
-    best_poi2 = poi2_vals[min_idx]
+    # Prefer the smallest non-negative deltaNLL; fall back to global minimum if none >= 0.
     pos_mask = delta_nll_vals >= 0
     if np.any(pos_mask):
-        local_idx = int(np.argmin(delta_nll_vals[pos_mask]))
-        global_indices = np.nonzero(pos_mask)[0]
-        best_idx = int(global_indices[local_idx])
-        print(f">>> Best fit chosen as smallest non-negative deltaNLL at idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
-    best_poi1 = poi1_vals[best_idx]
-    best_poi2 = poi2_vals[best_idx]
-    poi1_vals = poi1_vals[pos_mask]
-    poi2_vals = poi2_vals[pos_mask]
-    delta_nll_vals = delta_nll_vals[pos_mask]
-    best_poi1 = poi1_vals[best_idx]
-    best_poi2 = poi2_vals[best_idx]
+        masked_dnl = delta_nll_vals[pos_mask]
+        local_idx = int(np.argmin(masked_dnl))            # index inside masked arrays
+        # apply mask and reindex consistently
+        poi1_vals = poi1_vals[pos_mask]
+        poi2_vals = poi2_vals[pos_mask]
+        delta_nll_vals = delta_nll_vals[pos_mask]
+        best_poi1 = poi1_vals[local_idx]
+        best_poi2 = poi2_vals[local_idx]
+        best_idx = local_idx
+        print(f">>> Best fit chosen as smallest non-negative deltaNLL at masked idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
+    else:
+        # no non-negative entries: use global minimum
+        min_idx = int(np.argmin(delta_nll_vals))
+        best_poi1 = poi1_vals[min_idx]
+        best_poi2 = poi2_vals[min_idx]
+        best_idx = min_idx
+        print(f">>> No non-negative deltaNLL found, using global minimum at idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
     
 
     # Calculate correlation and uncertainties (now returns extras dict with asymmetric errors)
@@ -759,8 +763,8 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     # Set up color palette for better visualization
     hist_2d.SetMinimum(0)
     max_val = hist_2d.GetMaximum()
-    if max_val > 12:
-        hist_2d.SetMaximum(12)  # Cap the maximum for better color scale
+    if max_val > 5:
+        hist_2d.SetMaximum(5)  # Cap the maximum for better color scale
 
     # Draw the 2D histogram with smoother color transitions
     hist_2d.Draw("COLZ")
