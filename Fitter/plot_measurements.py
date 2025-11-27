@@ -13,7 +13,7 @@ def load_measurements():
     """Load measurements from 2D measurement files"""
     
     # Pattern to find all measurement files (both inclusive and pt-binned)
-    pattern = "plots_pt_less_region/againstjet_*/againstelectron_*/2024/measurement_2D_tes_*_tid_SF_*_mt_*_mutau.txt"
+    pattern = "output_pt_less_region/againstjet_*/againstelectron_*/2024/FitparameterValues__mutau_DeepTau_2024-13TeV_*.txt"
     all_files = glob.glob(pattern)
     
     print(f"Found {len(all_files)} measurement files (inclusive and pt-binned)")
@@ -30,7 +30,7 @@ def load_measurements():
         try:
             # Extract DM, pt bin, and working points from filename
             basename = os.path.basename(filename)
-            tes_dm_match = re.search(r'tes_(DM\d+)(?:_(pt\d+))?', basename)
+            tes_dm_match = re.search(r'(DM\d+)(?:_(pt\d+))?', basename)
             jet_wp_match = re.search(r'againstjet_(\w+)', filename)
             ele_wp_match = re.search(r'againstelectron_(\w+)', filename)
             
@@ -60,33 +60,82 @@ def load_measurements():
                 lines = f.readlines()
             
             tes_val = None
-            tes_err = None
+            tes_err_up = None
+            tes_err_down = None
             tid_val = None
-            tid_err = None
-            correlation = None
+            tid_err_up = None
+            tid_err_down = None
+            correlation = 0.0 # Default to 0.0 as it is missing in the new file format
+            
+            # Temporary variables for bounds (new format)
+            tes_low = None
+            tes_high = None
+            tid_low = None
+            tid_high = None
             
             for line in lines:
                 line = line.strip()
                 if line.startswith('#') or line == '':
                     continue
-                    
-                parts = line.split()
-                if len(parts) >= 4:
-                    param_name = parts[0]
-                    value = float(parts[1])
-                    error_down = float(parts[2])
-                    error_up = float(parts[3])
-                    
-                    if param_name.startswith('tes_'):
-                        tes_val = value
-                        tes_err = error_up
-                    elif param_name.startswith('tid_SF_'):
-                        tid_val = value
-                        tid_err = error_up
-                elif line.startswith('correlation'):
-                    parts = line.split()
+                
+                # Handle new format: key: value
+                if ':' in line:
+                    parts = line.split(':')
                     if len(parts) >= 2:
-                        correlation = float(parts[1])
+                        key = parts[0].strip()
+                        try:
+                            val = float(parts[1].strip())
+                            
+                            if key.startswith('tes_'):
+                                if '1sigma_low' in key:
+                                    tes_low = val
+                                elif '1sigma_high' in key:
+                                    tes_high = val
+                                else:
+                                    tes_val = val
+                            elif key.startswith('tid_SF_'):
+                                if '1sigma_low' in key:
+                                    tid_low = val
+                                elif '1sigma_high' in key:
+                                    tid_high = val
+                                else:
+                                    tid_val = val
+                        except ValueError:
+                            pass
+
+                # Handle old format: name val err_down err_up
+                else:
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        param_name = parts[0]
+                        try:
+                            value = float(parts[1])
+                            error_down = float(parts[2])
+                            error_up = float(parts[3])
+                            
+                            if param_name.startswith('tes_'):
+                                tes_val = value
+                                tes_err_down = error_down
+                                tes_err_up = error_up
+                            elif param_name.startswith('tid_SF_'):
+                                tid_val = value
+                                tid_err_down = error_down
+                                tid_err_up = error_up
+                        except ValueError:
+                            pass
+                # elif line.startswith('correlation'):
+                #     parts = line.split()
+                #     if len(parts) >= 2:
+                #         correlation = float(parts[1])
+            
+            # Calculate errors from bounds if using new format
+            if tes_val is not None and tes_low is not None and tes_high is not None:
+                tes_err_down = abs(tes_val - tes_low)
+                tes_err_up = abs(tes_high - tes_val)
+                
+            if tid_val is not None and tid_low is not None and tid_high is not None:
+                tid_err_down = abs(tid_val - tid_low)
+                tid_err_up = abs(tid_high - tid_val)
             
             if all(x is not None for x in [tes_val, tid_val, correlation]):
                 measurements.append({
@@ -96,12 +145,14 @@ def load_measurements():
                     'jet_wp': jet_wp,
                     'ele_wp': ele_wp,
                     'tes_val': tes_val,
-                    'tes_err': tes_err,
+                    'tes_err_down': tes_err_down,
+                    'tes_err_up': tes_err_up,
                     'tid_val': tid_val,
-                    'tid_err': tid_err,
+                    'tid_err_down': tid_err_down,
+                    'tid_err_up': tid_err_up,
                     'correlation': correlation
                 })
-                print(f"  {region_name}: TES={tes_val:.4f}±{tes_err:.4f}, TauID={tid_val:.4f}±{tid_err:.4f}, Corr={correlation:.4f}")
+                print(f"  {region_name}: TES={tes_val:.4f} -{tes_err_down:.4f}/+{tes_err_up:.4f}, TauID={tid_val:.4f} -{tid_err_down:.4f}/+{tid_err_up:.4f}, Corr={correlation:.4f}")
             else:
                 print(f"  Incomplete data in {basename}")
                 
@@ -211,6 +262,7 @@ def create_correlation_plot(measurements):
     
     c1.SaveAs("correlation_plot.png")
     c1.SaveAs("correlation_plot.pdf")
+    c1.SaveAs("correlation_plot.root")
     print("Correlation plot saved as correlation_plot.png/pdf")
     
     return c1
@@ -231,7 +283,7 @@ def create_tes_plot(measurements):
     y_labels = []
     for i, meas in enumerate(measurements):
         gr.SetPoint(i, meas['tes_val'], i)
-        gr.SetPointError(i, meas['tes_err'], meas['tes_err'], 0, 0)
+        gr.SetPointError(i, meas['tes_err_down'], meas['tes_err_up'], 0, 0)
         
         # Create clean region labels
         if meas['pt_bin'] == 'inclusive':
@@ -258,7 +310,7 @@ def create_tes_plot(measurements):
     
     # Find x-range
     tes_values = [m['tes_val'] for m in measurements]
-    tes_errors = [m['tes_err'] for m in measurements]
+    tes_errors = [max(m['tes_err_up'], m['tes_err_down']) for m in measurements]
     x_min = min(v - e for v, e in zip(tes_values, tes_errors)) * 0.98
     x_max = max(v + e for v, e in zip(tes_values, tes_errors)) * 1.02
     gr.GetXaxis().SetRangeUser(x_min, x_max)
@@ -304,6 +356,7 @@ def create_tes_plot(measurements):
     
     c2.SaveAs("tes_measurements.png")
     c2.SaveAs("tes_measurements.pdf")
+    c2.SaveAs("tes_measurements.root")
     print("TES plot saved as tes_measurements.png/pdf")
     
     return c2
@@ -324,7 +377,7 @@ def create_tauID_plot(measurements):
     y_labels = []
     for i, meas in enumerate(measurements):
         gr.SetPoint(i, meas['tid_val'], i)
-        gr.SetPointError(i, meas['tid_err'], meas['tid_err'], 0, 0)
+        gr.SetPointError(i, meas['tid_err_down'], meas['tid_err_up'], 0, 0)
         
         # Create clean region labels
         if meas['pt_bin'] == 'inclusive':
@@ -351,7 +404,7 @@ def create_tauID_plot(measurements):
     
     # Find x-range
     tid_values = [m['tid_val'] for m in measurements]
-    tid_errors = [m['tid_err'] for m in measurements]
+    tid_errors = [max(m['tid_err_up'], m['tid_err_down']) for m in measurements]
     x_min = min(v - e for v, e in zip(tid_values, tid_errors)) * 0.95
     x_max = max(v + e for v, e in zip(tid_values, tid_errors)) * 1.05
     gr.GetXaxis().SetRangeUser(x_min, x_max)
@@ -397,6 +450,7 @@ def create_tauID_plot(measurements):
     
     c3.SaveAs("tauID_measurements.png")
     c3.SaveAs("tauID_measurements.pdf")
+    c3.SaveAs("tauID_measurements.root")
     print("TauID plot saved as tauID_measurements.png/pdf")
     
     return c3
