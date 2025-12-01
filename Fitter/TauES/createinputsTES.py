@@ -169,15 +169,15 @@ def main(args):
           newsampleset_sys = sampleset.shift(sysDef["processes"], sampleAppend, "_"+sysDef["name"]+sysDef["variations"][iSysVar], sysDef["title"], split=True,filter=False,share=True)
           createinputs(fname,newsampleset_sys, observables, bins, filter=sysDef["processes"], replaceweight=weightReplaced, dots=True, parallel=parallel)
 
-          # Check for overlap with TES variations in setup
-          if "TESvariations" in setup:
-            overlap_TES_sys = list( set(sysDef["processes"]) & set(setup["TESvariations"]["processes"]) )
-            # If overlap exists, apply TES variations
-            if overlap_TES_sys:
-              for var in setup["TESvariations"]["values"]:
-                print("Variation: TES = %f"%var)
-                newsampleset_TESsys = sampleset.shift(overlap_TES_sys, ("_TES%.3f"%var).replace(".","p")+sampleAppend, "_TES%.3f"%var+"_"+sysDef["name"]+sysDef["variations"][iSysVar], " %.1d"%((1.-var)*100.)+"% TES" + sysDef["title"], split=True,filter=False,share=True)
-                createinputs(fname,newsampleset_TESsys, observables, bins, filter=overlap_TES_sys, replaceweight=weightReplaced, dots=True, parallel=parallel)
+          # Check for overlap with TES variations in setup #### HERE these should be removed
+          # if "TESvariations" in setup:
+          #   overlap_TES_sys = list( set(sysDef["processes"]) & set(setup["TESvariations"]["processes"]) )
+          #   # If overlap exists, apply TES variations
+          #   if overlap_TES_sys:
+          #     for var in setup["TESvariations"]["values"]:
+          #       print("Variation: TES = %f"%var)
+          #       newsampleset_TESsys = sampleset.shift(overlap_TES_sys, ("_TES%.3f"%var).replace(".","p")+sampleAppend, "_TES%.3f"%var+"_"+sysDef["name"]+sysDef["variations"][iSysVar], " %.1d"%((1.-var)*100.)+"% TES" + sysDef["title"], split=True,filter=False,share=True)
+          #       createinputs(fname,newsampleset_TESsys, observables, bins, filter=overlap_TES_sys, replaceweight=weightReplaced, dots=True, parallel=parallel)
 
       ############
       #   PLOT   #
