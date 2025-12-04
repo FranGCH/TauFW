@@ -150,9 +150,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         if int(option) <= 3 :
             # For CR Zmumu 
             print("config_mumu = %s"  %(config_mumu))
-            if str(config_mumu) != 'None':
+            
+            # FIX: Check if config_mumu exists OR if a direct file was provided
+            if str(config_mumu) != 'None' or mumu_input_file:
                 # merge datacards regions and CR
-                datacardfile = merge_datacards_ZmmCR(setup, setup_mumu, era, extratag, r, output_dir)
+                # FIX: Pass mumu_input_file to the merge function
+                datacardfile = merge_datacards_ZmmCR(setup, setup_mumu, era, extratag, r, output_dir, mumu_input_file)
                 print("datacard file for fit by region with additionnal CR = %s" %(datacardfile)) 
 
             else:
@@ -491,7 +494,8 @@ def main(args):
     setup['mumu_datacard_file'] = getattr(args, 'mumu_datacard_file', None)
 
     # Run the fit using combine with the different options 
-    run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag)
+    # FIX: Pass mumu_input_file explicitly in the kwargs
+    run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag, mumu_input_file=args.mumu_datacard_file)
 
     # Plots
     plotScan(setup, setup_mumu, era=era, config=config, config_mumu=config_mumu, option=option, indir=output_dir, extratag=extratag)

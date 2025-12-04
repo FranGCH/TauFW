@@ -1,39 +1,80 @@
 import os
+import argparse
 from PIL import Image
 
-# Directory containing your PNGs
-IMG_DIR = "./output_plots/"          # change to your path
-OUT_DIR = "./combined_pre_post/" # choose your output folder
-os.makedirs(OUT_DIR, exist_ok=True)
+def main():
+    parser = argparse.ArgumentParser(description="Combine prefit, postfit, and optional scan plots.")
+    parser.add_argument('--img_dir', type=str, default="./output_plots/", help="Directory containing prefit/postfit PNGs")
+    parser.add_argument('--out_dir', type=str, default="./combined_pre_post/", help="Output directory")
+    parser.add_argument('--scan_dir', type=str, default=None, help="Directory containing scan plots (optional)")
+    parser.add_argument('--jet_wp', type=str, default="medium", help="Jet working point (not used in this script)")
+    parser.add_argument('--ele_wp', type=str, default="tight", help="Electron working point (not used in this script)")
+    args = parser.parse_args()
+    
+    IMG_DIR = args.img_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
+    OUT_DIR = args.out_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
+    SCAN_DIR = args.scan_dir
 
-files = [f for f in os.listdir(IMG_DIR) if f.endswith(".png")]
+    os.makedirs(OUT_DIR, exist_ok=True)
 
-# Create dictionaries for fast lookup
-prefit = {f.replace("prefit_", ""): f for f in files if f.startswith("prefit_")}
-postfit = {f.replace("postfit_", ""): f for f in files if f.startswith("postfit_")}
+    files = [f for f in os.listdir(IMG_DIR) if f.endswith(".png")]
 
-for key in sorted(prefit.keys()):
-    if key in postfit:
-        pre_path = os.path.join(IMG_DIR, prefit[key])
-        post_path = os.path.join(IMG_DIR, postfit[key])
+    # Create dictionaries for fast lookup
+    # key includes extension, e.g., "DM0_pt1.png"
+    prefit = {f.replace("prefit_", ""): f for f in files if f.startswith("prefit_")}
+    postfit = {f.replace("postfit_", ""): f for f in files if f.startswith("postfit_")}
 
-        pre_img = Image.open(pre_path)
-        post_img = Image.open(post_path)
+    for key in sorted(prefit.keys()):
+        if key in postfit:
+            pre_path = os.path.join(IMG_DIR, prefit[key])
+            post_path = os.path.join(IMG_DIR, postfit[key])
 
-        # Match heights (resize prefit to postfit height)
-        h = max(pre_img.height, post_img.height)
-        pre_img = pre_img.resize((pre_img.width, h))
-        post_img = post_img.resize((post_img.width, h))
+            pre_img = Image.open(pre_path)
+            post_img = Image.open(post_path)
+            
+            images_to_combine = [pre_img]
 
-        # Create combined image
-        combined = Image.new("RGB", (pre_img.width + post_img.width, h))
-        combined.paste(pre_img, (0, 0))
-        combined.paste(post_img, (pre_img.width, 0))
+            # Check for scan plot if directory is provided
+            if SCAN_DIR:
+                tag = key.replace(".png", "") # e.g. DM0_pt1
+                # Construct scan filename based on pattern:
+                # scan_2D_tes_{TAG}_tid_SF_{TAG}_mt_{TAG}_mutaumultidimfit.png
+                scan_filename = f"scan_2D_tes_{tag}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"
+                scan_path = os.path.join(SCAN_DIR, scan_filename)
+                
+                if os.path.exists(scan_path):
+                    scan_img = Image.open(scan_path)
+                    images_to_combine.append(scan_img)
+                else:
+                    print(f"Warning: Scan plot not found for {tag} at {scan_path}")
 
-        # Output name
-        out_name = f"combined_{key}"
-        combined.save(os.path.join(OUT_DIR, out_name))
+            images_to_combine.append(post_img)
 
-        print(f"Created {out_name}")
+            # Match heights (resize all to max height among images)
+            max_h = max(img.height for img in images_to_combine)
+            resized_images = []
+            for img in images_to_combine:
+                # Resize to max height, keeping original width (as per original script logic)
+                resized_images.append(img.resize((img.width, max_h)))
 
-print("Done!")
+            # Calculate total width
+            total_width = sum(img.width for img in resized_images)
+            
+            # Create combined image
+            combined = Image.new("RGB", (total_width, max_h))
+            
+            current_x = 0
+            for img in resized_images:
+                combined.paste(img, (current_x, 0))
+                current_x += img.width
+
+            # Output name
+            out_name = f"pre_scan_post_{key}"
+            combined.save(os.path.join(OUT_DIR, out_name))
+
+            print(f"Created {out_name}")
+
+    print("Done!")
+
+if __name__ == "__main__":
+    main()

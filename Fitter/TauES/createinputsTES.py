@@ -7,7 +7,7 @@ from collections import OrderedDict
 sys.path.append("../Plotter/") # for config.samples
 # from config.samples import *
 from config.samples_v15 import *
-from TauFW.Plotter.plot.utils import LOG as PLOG
+from TauFW.Plotter.plot.utils import LOG as PLOG, ensuredir
 from TauFW.Fitter.plot.datacard import createinputs, plotinputs
 from TauFW.Fitter.plot.rebinning import rebinning
 import yaml
@@ -108,27 +108,55 @@ def main(args):
     #   OBSERVABLES   #
     ###################
       
-    observables = []
+    # Organize observables and regions
+    # Structure: [ (Var_obj, [Sel_obj, Sel_obj, ...]) ]
+    obs_region_groups = []
+    
     for obsName in setup["observables"]:
-      obs = setup["observables"][obsName]
-      observables.append( Var(obsName, obs["binning"][0], obs["binning"][1], obs["binning"][2], **obs["extra"]) )
+        obs_config = setup["observables"][obsName]
+        default_binning = obs_config["binning"]
+        
+        # Get target regions for this observable
+        target_region_names = obs_config.get("fitRegions", setup.get("regions", {}).keys())
+        # Filter to only those present in setup['regions']
+        target_region_names = [r for r in target_region_names if r in setup["regions"]]
+        
+        # Group regions by binning
+        regions_by_binning = {} # Key: tuple(binning), Value: list of region names
+        
+        if not target_region_names:
+             print(f"WARNING: No target regions found for observable {obsName}")
+             print(f"  fitRegions: {obs_config.get('fitRegions')}")
+             print(f"  setup['regions'].keys(): {list(setup['regions'].keys())}")
 
-
-    ############
-    #   BINS / FIT REGIONS  #
-    ############
-      
-    bins = [ ]
-    if DM == '':
-      bins.append(Sel("baseline", setup["baselineCuts"]))
-    jetcut = map_wp_to_int["againstjet"][againstjet]
-    electroncut = map_wp_to_int["againstelectron"][againstelectron]
-    setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
-    setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2',   f'idDeepTau2018v2p5VSe_2>={electroncut}')
-    print('baselinecuts: ', jetcut, '\t', againstjet, '\t', electroncut, '\t', againstelectron, '\t', setup["baselineCuts"])
-    if "regions" in setup:
-      for region in setup["regions"]:
-        bins.append(Sel(region, setup["regions"][region]['title'], setup["baselineCuts"]+" && "+setup["regions"][region]["definition"]))
+        for regName in target_region_names:
+            reg_config = setup["regions"][regName]
+            # Check if region has specific binning
+            binning = tuple(reg_config.get("binning", default_binning))
+            
+            if binning not in regions_by_binning:
+                regions_by_binning[binning] = []
+            regions_by_binning[binning].append(regName)
+            
+        # Create Var and Sel objects for each group
+        for binning, regNames in regions_by_binning.items():
+            # Create Var object
+            obsExpr = obs_config.get('variable', obsName)
+            extra = obs_config.get("extra", {}).copy()
+            if 'filename' not in extra:
+                 extra['filename'] = obsName
+            
+            var_obj = Var(obsExpr, binning[0], binning[1], binning[2], **extra)
+            
+            # Create Sel objects
+            sel_objs = []
+            for regName in regNames:
+                reg_config = setup["regions"][regName]
+                sel_objs.append(
+                    Sel(regName, reg_config['title'], setup["baselineCuts"]+" && "+reg_config["definition"])
+                )
+            
+            obs_region_groups.append((var_obj, sel_objs))
 
 
     #######################
@@ -142,14 +170,20 @@ def main(args):
     fname   = "%s/%s_%s_tes_$OBS%s.inputs-%s-%s.root"%(outdir,analysis,chshort,DM,era,tag)
 
     print("Nominal inputs")
-    createinputs(fname, sampleset, observables, bins, filter=setup["processes"], dots=True, parallel=parallel)
+    
+    # Helper function to run createinputs for all groups
+    def run_createinputs_all(fname_in, sampleset_in, groups_in, **kwargs):
+        for var_obj, sel_objs in groups_in:
+             createinputs(fname_in, sampleset_in, [var_obj], sel_objs, **kwargs)
+
+    run_createinputs_all(fname, sampleset, obs_region_groups, filter=setup["processes"], dots=True, parallel=parallel)
 
     if "TESvariations" in setup:
       for var in setup["TESvariations"]["values"]:
         print("Variation: TES = %f"%var)
 
         newsampleset = sampleset.shift(setup["TESvariations"]["processes"], ("_TES%.3f"%var).replace(".","p"), "_TES%.3f"%var, " %.1d"%((1.-var)*100.)+"% TES", split=True,filter=False,share=True)
-        createinputs(fname,newsampleset, observables, bins, filter=setup["TESvariations"]["processes"], dots=True, parallel=parallel)
+        run_createinputs_all(fname, newsampleset, obs_region_groups, filter=setup["TESvariations"]["processes"], dots=True, parallel=parallel)
 
     if "systematics" in setup:
       for sys in setup["systematics"]:
@@ -167,7 +201,7 @@ def main(args):
           weightReplaced = [sysDef["nomWeight"],sysDef["altWeights"][iSysVar]] if "altWeights" in sysDef else ["",""]
           # Create a new sample set with systematic variations
           newsampleset_sys = sampleset.shift(sysDef["processes"], sampleAppend, "_"+sysDef["name"]+sysDef["variations"][iSysVar], sysDef["title"], split=True,filter=False,share=True)
-          createinputs(fname,newsampleset_sys, observables, bins, filter=sysDef["processes"], replaceweight=weightReplaced, dots=True, parallel=parallel)
+          run_createinputs_all(fname, newsampleset_sys, obs_region_groups, filter=sysDef["processes"], replaceweight=weightReplaced, dots=True, parallel=parallel)
 
           # Check for overlap with TES variations in setup #### HERE these should be removed
           # if "TESvariations" in setup:
@@ -196,18 +230,26 @@ def main(args):
             varprocs = OrderedDict([
                        ('Nom',      ["ZTT","ZL","ZJ","W","VV","ST","TTT","TTL","TTJ","QCD","data_obs"])])
 
-        plotinputs(fname,varprocs,observables,bins,text=text,
-                   pname=pname,tag=tag,group=groups, paralel=parallel)
-        rebinning(fname, obs=observables[0].filename, tag=tag) 
-        fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
+        # Helper function for plotting per observable
+        def run_plotinputs_all(fname_in, varprocs_in, groups_in, **kwargs):
+            for var_obj, sel_objs in groups_in:
+                plotinputs(fname_in, varprocs_in, [var_obj], sel_objs, **kwargs)
+
+        if obs_region_groups:
+            run_plotinputs_all(fname,varprocs,obs_region_groups,text=text,
+                       pname=pname,tag=tag,group=groups, parallel=parallel)
+            rebinning(fname, obs=obs_region_groups[0][0].filename, tag=tag) 
+            fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
+        else:
+            print("WARNING: No observable/region groups found. Skipping plotting.")
         plotdir   = ensuredir(plotdir,"rebinning")
         pname  = "%s/%s_$OBS_%s-$BIN-%s$TAG%s.png"%(plotdir,analysis,chshort,era,tag)
-        plotinputs(fname,varprocs,observables,bins,text=text,
+        run_plotinputs_all(fname,varprocs,obs_region_groups,text=text,
                    pname=pname,tag=tag,group=groups, parallel=parallel)
         pname  = "%s/%s_$OBS_%s-$BIN-%s$TAG%s_wqcd_subtracted.png"%(plotdir,analysis,chshort,era,tag)
         varprocs = OrderedDict([
                        ('Nom',      ['ZTT', 'data_obs_nonztt_subtratced'])])
-        plotinputs(fname,varprocs,observables,bins,text=text,
+        run_plotinputs_all(fname,varprocs,obs_region_groups,text=text,
                    pname=pname,tag=tag,group=groups, parallel=parallel, mean=True) 
   end_time = time.time()    # End timing
   elapsed = end_time - start_time
@@ -229,7 +271,7 @@ if __name__ == "__main__":
   parser.add_argument('-j', '--jet', dest='againstjet', default='Medium', help="against jet cut")
   parser.add_argument('-e', '--electron', dest='againstelectron', default='VVLoose', help="against electron cut")
   args = parser.parse_args()
-  LOG.verbosity = args.verbosity
+  # LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity
   main(args)
   print("\n>>> Done.")

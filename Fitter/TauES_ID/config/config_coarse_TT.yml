@@ -42,39 +42,43 @@ regions:
     DM0_pt1: 
         definition: "dm_2==0 && pt_2>20 && pt_2<40"
         title: "h^{#pm}, pt: 20-40"
-    DM0_pt2:
-        definition: "dm_2==0 && pt_2>=40 && pt_2<60"
-        title: "h^{#pm}, pt: 40-60"
-    DM0_pt3:
-        definition: "dm_2==0 && pt_2>=60 && pt_2<200"
-        title: "h^{#pm}, pt: 60-200"
-    DM1_pt1: 
-        definition: "dm_2==1 && pt_2>20 && pt_2<40"
-        title: "h^{#pm}#pi^{0}, pt: 20-40"
-    DM1_pt2:
-        definition: "dm_2==1 && pt_2>=40 && pt_2<60"
-        title: "h^{#pm}#pi^{0}, pt: 40-60"
-    DM1_pt3:
-        definition: "dm_2==1 && pt_2>=60 && pt_2<200"
-        title: "h^{#pm}#pi^{0}, pt: 60-200"
-    DM10_pt1: 
-        definition: "dm_2==10 && pt_2>20 && pt_2<40"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 20-40"
-    DM10_pt2:
-        definition: "dm_2==10 && pt_2>=40 && pt_2<60"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 40-60"
-    DM10_pt3:
-        definition: "dm_2==10 && pt_2>=60 && pt_2<200"
-        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 60-200"
-    DM11_pt1: 
-        definition: "dm_2==11 && pt_2>20 && pt_2<40"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 20-40"
-    DM11_pt2:
-        definition: "dm_2==11 && pt_2>=40 && pt_2<60"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 40-60"
-    DM11_pt3:
-        definition: "dm_2==11 && pt_2>60 && pt_2<200"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-200"
+    # DM0_pt2:
+    #     definition: "dm_2==0 && pt_2>=40 && pt_2<60"
+    #     title: "h^{#pm}, pt: 40-60"
+    # DM0_pt3:
+    #     definition: "dm_2==0 && pt_2>=60 && pt_2<200"
+    #     title: "h^{#pm}, pt: 60-200"
+    #     binning: [11, 40, 150] # Coarser binning for high pt
+    # DM1_pt1: 
+    #     definition: "dm_2==1 && pt_2>20 && pt_2<40"
+    #     title: "h^{#pm}#pi^{0}, pt: 20-40"
+    # DM1_pt2:
+    #     definition: "dm_2==1 && pt_2>=40 && pt_2<60"
+    #     title: "h^{#pm}#pi^{0}, pt: 40-60"
+    # DM1_pt3:
+    #     definition: "dm_2==1 && pt_2>=60 && pt_2<200"
+    #     title: "h^{#pm}#pi^{0}, pt: 60-200"
+    #     binning: [11, 40, 150] 
+    # DM10_pt1: 
+    #     definition: "dm_2==10 && pt_2>20 && pt_2<40"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}, pt: 20-40"
+    # DM10_pt2:
+    #     definition: "dm_2==10 && pt_2>=40 && pt_2<60"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}, pt: 40-60"
+    # DM10_pt3:
+    #     definition: "dm_2==10 && pt_2>=60 && pt_2<200"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}, pt: 60-200"
+    #     binning: [11, 40, 150] 
+    # DM11_pt1: 
+    #     definition: "dm_2==11 && pt_2>20 && pt_2<40"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 20-40"
+    # DM11_pt2:
+    #     definition: "dm_2==11 && pt_2>=40 && pt_2<60"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 40-60"
+    # DM11_pt3:
+    #     definition: "dm_2==11 && pt_2>60 && pt_2<200"
+    #     title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-200"
+    #     binning: [11, 40, 150] 
 
 plottingOrder: &region_list 
           [ 
@@ -82,15 +86,15 @@ plottingOrder: &region_list
             #    "DM1", 
             #  "DM10", 
             #  "DM11",
-            # "DM0_pt1", 
+            "DM0_pt1", 
             # "DM0_pt2", 
-            "DM0_pt3", 
+            # "DM0_pt3", 
             #  "DM1_pt1", 
-            "DM1_pt2", 
+            # "DM1_pt2", 
             # "DM1_pt3", 
             # "DM10_pt1", 
             # "DM10_pt2", 
-            "DM10_pt3", 
+            # "DM10_pt3", 
             # "DM11_pt1", 
             # "DM11_pt2", 
             # "DM11_pt3",
@@ -107,7 +111,7 @@ observables:
         title: "m_{vis}"
         extra:
             cut: "40<m_vis && m_vis<150"
-        fitRegions: *region_list
+        fitRegions:  *region_list
         scanRegions: *region_list
 # Assume that this code is meant to fit TES variations; more options could be added when adding other POIs
 
@@ -116,10 +120,9 @@ TESvariations:
     # values : [0.950, 0.960 ,0.970, 0.980, 0.990,0.996, 1.004, 1.010, 1.020, 1.030, 1.040, 1.050] 
     # values : [0.950, 0.960 ,0.970, 0.980, 0.990, 1.010, 1.020, 1.030, 1.040, 1.050] 
 
-    values : [0.950 ,0.970, 0.980, 0.990, 1.010, 1.020, 1.030,  1.050] 
-    # values : [0.950, 0.960 ,0.970, 0.980, 0.990, 0.994, 1.006, 1.010, 1.020, 1.030, 1.040, 1.050]  
+    # values : [0.950 ,0.970, 0.980, 0.990, 1.010, 1.020, 1.030,  1.050] 
+    values : [0.950, 0.960 ,0.970, 0.980, 0.990, 0.994, 1.006, 1.010, 1.020, 1.030, 1.040, 1.050]  
      
-    # values : [ 0.950, 1.000, 1.05] 
     
     processes: ["ZTT"] #,"TTT"] # as well??? 
 
@@ -244,14 +247,14 @@ systematics:
         title: "+/- 10% JTF"
         variations: ["Up", "Down"]
         sampleAppend: ["_JTF1p100","_JTF0p900"]
-    shape_dy: #<-- check if this is ok
-        effect: "shape"
-        processes: ["ZTT", "ZL", "ZJ"] #"ZTT",
-        name: "shape_dy_$BIN"
-        title: "+/- 5% Zptweight"
-        variations: ["Up", "Down"]
-        nomWeight: "zptweight_nnlo" 
-        altWeights: ["((2*(zptweight_nnlo)) - 1)", "(2 - (zptweight_nnlo))"]
+    # shape_dy: #<-- check if this is ok
+    #     effect: "shape"
+    #     processes: ["ZTT", "ZL", "ZJ"] #"ZTT",
+    #     name: "shape_dy_$BIN"
+    #     title: "+/- 5% Zptweight"
+    #     variations: ["Up100", "No", "Up10", "Down10"]
+    #     nomWeight: "zptweight_nnlo" 
+    #     altWeights: ["((2*(zptweight_nnlo)) - 1)", "1", "((1.1*zptweight_nnlo) - 0.1)", "((0.9*zptweight_nnlo) + 0.1)"]
     shape_ttbar: #<-- check if this is ok
         effect: "shape"
         processes: [ "TTT", "TTL", "TTJ"]
