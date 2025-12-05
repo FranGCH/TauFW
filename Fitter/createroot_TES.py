@@ -1,17 +1,19 @@
-  
 #! /usr/bin/env python
 # Author: P.Mastrapasqua, O. Poncet (May 2023)
 # Usage: python TauES_ID/createJSON_TES.py -y UL2018 -c ./TauES_ID/config/FitSetup_mutau_9pt_40-200.yml
 '''This script makes pt-dependants TES json/root files from config file.'''
 import ROOT
-import os, sys,yaml
+import os, sys, yaml, glob
 from array import array
 from argparse import ArgumentParser
 from collections import OrderedDict
-from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF1, TMultiGraph, TGraph, TGraph2D, TPolyMarker3D, TGraphAsymmErrors, TLine,kBlack, kBlue, kRed, kGreen, kYellow, kOrange, kMagenta, kTeal, kAzure, TMath, TH1F
-from fit_tools import FitSF
+from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF1, TMultiGraph, TGraph, TGraph2D, TPolyMarker3D, TGraphAsymmErrors, TLine, TH2F, TPaveText, kBlack, kBlue, kRed, kGreen, kYellow, kOrange, kMagenta, kTeal, kAzure, TMath, TH1F, kWhite
+# from fit_tools import FitSF
 #from TauFW.Plotter.sample.utils import CMSStyle
-# import correctionlib.schemav2 as cs
+try:
+    import correctionlib.schemav2 as cs
+except ImportError:
+    cs = None
 # import rich
 
 def load_pt_values(setup,**kwargs):
@@ -56,129 +58,465 @@ def load_edges(setup,**kwargs):
     print(edg)
     return edg
 
-# Load the id SF measurement from measurement_poi_.txt file produced with plotParabola_POI_region.py
-def load_sf_measurements(setup,year,**kwargs):
 
-  tag     = kwargs.get('tag',         ""              )
-  jet_wp  = kwargs.get('jet_wp',      "Tight"         )
-  ele_wp  = kwargs.get('ele_wp',      "Tight"         )
-  sf      = kwargs.get('sf',          "tes"         )
-  region = []
-  tes = []
-  tes_errhi = []
-  tes_errlo = []
-  inputfilename = f"plots_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/measurement_{sf}_mt_mutau_mt65_DM_pt_Dt2p5_puppimet_DeepTau_fit_asymm.txt"
-  with open(inputfilename, 'r') as file:
-      next(file)
-      for line in file:
-        cols = line.strip().split()
-        region.append(str(cols[0]))
-        tes.append(float(cols[1]))
-        tes_errhi.append(float(cols[3]))
-        tes_errlo.append(float(cols[2]))
-  #Print the lists
-  # print(region)
-  # print(tes)
-  # print(tes_errhi)
-  # print(tes_errlo)
-  return region, tes, tes_errhi, tes_errlo
+# Load the SF measurements from the new 2D measurement files
+def load_sf_measurements(setup, year, **kwargs):
+    tag     = kwargs.get('tag',         ""              )
+    jet_wp  = kwargs.get('jet_wp',      "Tight"         )
+    ele_wp  = kwargs.get('ele_wp',      "Tight"         )
+    sf      = kwargs.get('sf',          "tes"         )
+    
+    region = []
+    tes_values = []
+    tid_values = []
+    tes_errhi = []
+    tes_errlo = []
+    tid_errhi = []
+    tid_errlo = []
+    
+    print(f"[DEBUG] Looking for {sf} measurements in year {year}")
+    
+    # Use glob to find all measurement files
+    pattern = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_*.txt"
+    #f"plots_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/measurement_2D_tes_*_tid_SF_*_mt_*_mutau.txt"
+    all_files = glob.glob(pattern)
+    print(f"[DEBUG] Found {len(all_files)} measurement files")
+    
+    for inputfilename in all_files:
+        print(f"[DEBUG] Processing: {inputfilename}")
+        
+        try:
+            with open(inputfilename, 'r') as file:
+                # Store data for the requested SF type found in this file
+                # Structure: { region_name: {'val': v, 'low': l, 'high': h} }
+                file_data = {}
+                
+                for line in file:
+                    if line.startswith('#') or line.strip() == '':
+                        continue
+                    
+                    # Check for new format "key: value"
+                    if ':' in line:
+                        parts = line.strip().split(':')
+                        if len(parts) != 2: continue
+                        
+                        key = parts[0].strip()
+                        try:
+                            value = float(parts[1].strip())
+                        except ValueError:
+                            continue
+
+                        # Check if this key matches the requested SF type (tes or tid_SF)
+                        if key.startswith(sf + '_'):
+                            # Parse key to extract region and type (val, low, high)
+                            # Format examples: 
+                            # tes_DM0_pt1
+                            # tes_DM0_pt1_1sigma_low
+                            # tes_DM0_pt1_1sigma_high
+                            
+                            remainder = key[len(sf)+1:] # remove "tes_" or "tid_SF_"
+                            
+                            if remainder.endswith('_1sigma_low'):
+                                reg = remainder[:-11] # len('_1sigma_low') = 11
+                                kind = 'low'
+                            elif remainder.endswith('_1sigma_high'):
+                                reg = remainder[:-12] # len('_1sigma_high') = 12
+                                kind = 'high'
+                            else:
+                                reg = remainder
+                                kind = 'val'
+                            
+                            if reg not in file_data:
+                                file_data[reg] = {}
+                            file_data[reg][kind] = value
+                
+                # Process the data collected from the file
+                for reg, data in file_data.items():
+                    if 'val' in data:
+                        val = data['val']
+                        low = data.get('low', val) # Default to val (0 error) if missing
+                        high = data.get('high', val)
+                        
+                        # Calculate errors
+                        # The file has absolute values for 1sigma bounds
+                        err_down = abs(val - low)
+                        err_up = abs(high - val)
+                        
+                        region.append(reg)
+                        if sf == 'tes':
+                            tes_values.append(val)
+                            tes_errhi.append(err_up)
+                            tes_errlo.append(err_down)
+                        else:
+                            tid_values.append(val)
+                            tid_errhi.append(err_up)
+                            tid_errlo.append(err_down)
+                            
+                        print(f"[DEBUG] Successfully loaded {reg}: {sf}={val}, +{err_up}/-{err_down}")
+                    
+        except FileNotFoundError:
+            print(f"[DEBUG] File not found: {inputfilename}")
+            continue
+    
+    print(f"[DEBUG] Total regions loaded: {len(region)}")
+    print(f"[DEBUG] Regions: {region}")
+    
+    # Return the appropriate values based on the requested SF type
+    if sf == 'tes':
+        return region, tes_values, tes_errhi, tes_errlo
+    else:  # tid_SF
+        return region, tid_values, tid_errhi, tid_errlo
 
 
-def plot_dm_graph(setup,form,ele_wp,**kwargs):
+def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
+    tag = kwargs.get('tag', "")
+    jet_wps = [jet_wp]  # Use only the specified jet working point
+    sfs = ['tes', 'tid_SF']
+    pt_avg_list, pt_error_list = load_pt_values(setup)
+    pt_edges = load_edges(setup)
+    
+    # Ensure output directory exists
+    ensureDirectory("tau_sf")
+    
+    # Loop over DMs
+    print(">>> DM exclusive ")
+    # Define the DM order
+    dm_order = ["DM0", "DM1", "DM10", "DM11"]
 
-  tag     = kwargs.get('tag',         ""              )
-  jet_wps = ['Loose', 'Medium', 'Tight', 'VTight']
-  sfs     = ['tes', 'tid_SF']
-  pt_avg_list, pt_error_list = load_pt_values(setup)
-  pt_edges = load_edges(setup)
-  
-  # loop over DMs
-  print(">>> DM exclusive ")
-  # define the DM order
-  dm_order = ["DM0_", "DM1_", "DM10_", "DM11_"]
+    # Define pt edges for each pt bin (adjust these based on your actual pt ranges)
+    pt_bin_edges = {
+        "pt1": [20.0, 30.0],   # Adjust these ranges as needed
+        "pt2": [30.0, 40.0],   # Adjust these ranges as needed  
+        "pt3": [40.0, 200.0],  # Adjust these ranges as needed
+    }
 
-  # create a dictionary to store sf data
-  sf_dict = {}
-  # loop over DMs
-  for sf in sfs:
-   sf_dict[sf] = {}
-   for era in ['2023C', '2023D']:
-       sf_dict[sf][era] = {}
-       for dm in dm_order:
-           print(">>>>>>>>>>>> %s:" %(dm))
-           #loop over jet_wps
-           for jet_wp in jet_wps:
-               print('jet_wp: ', jet_wp)
-               region, tes, tes_errhi, tes_errlo = load_sf_measurements(setup, era, tag=tag, jet_wp=jet_wp, ele_wp=ele_wp, sf=sf)
-               # filter elements with current DM
-               dm_list = [elem for elem in region if dm in elem]
-               print("Elements with %s:" %(dm_list))
-               # get values for current DM
-               print(">>>>>> INPUT FOR JSON")
-               dm_tes = [tes[region.index(elem)] for elem in dm_list]
-               print("tes for : %s" %(dm_tes))
-               dm_pt_edges = [pt_edges[region.index(elem)] for elem in dm_list]
-               dm_pt_edges.append(pt_edges[-1])
-               print("pt_edges for : %s" %(dm_pt_edges))
-
-               dm_tes_errhi = [tes_errhi[region.index(elem)] for elem in dm_list]
-               print("tes_errhi :  %s" %(dm_tes_errhi))
-               dm_tes_errlo = [tes_errlo[region.index(elem)] for elem in dm_list]
-               print("tes_errlo :  %s" %(dm_tes_errlo))
-   
-               dm_tes_up = [sum(x) for x in zip(dm_tes,dm_tes_errhi)] 
-               print("tes_up for : %s" %(dm_tes_up))
-               dm_tes_errlo_neg = [-x for x in dm_tes_errlo]
-               dm_tes_down = [sum(x) for x in zip(dm_tes,dm_tes_errlo_neg)]
-               print("tes_down for : %s" %(dm_tes_down))
-
-               sf_dict[sf][era][dm.replace("_","")+ f'_{jet_wp}'] = {"edges": dm_pt_edges, "content":dm_tes, "up": dm_tes_up, "down": dm_tes_down}
-  print("SF dictionary")
-  print(sf_dict)
-  colors = [kBlack, kBlue, kRed, kMagenta, kYellow, kOrange, kGreen, kTeal, kAzure]
-  for sf in sfs:
-    if form=='root':
-       #loop on DMs
-       for idx, jet_wp in enumerate(jet_wps):
-          if sf == 'tes':
-             name = 'TauES'
-          else:
-             name = 'TauID'
-          sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_2023_VSjet{jet_wp}_VSele{ele_wp}_Run3_May24.root", 'recreate')
-          for era in ['2023C', '2023D']:
+    # Create a dictionary to store sf data
+    sf_dict = {}
+    
+    # Loop over SFs and years
+    for sf in sfs:
+        sf_dict[sf] = {}
+        # Use 2024 instead of hardcoded 2023C, 2023D
+        for year in ['2024']:
+            sf_dict[sf][year] = {}
+            
             for dm in dm_order:
-               funcstr = '(x<=20)*0'
-               funcstr_up = '(x<=20)*0'
-               funcstr_down = '(x<=20)*0'
+                print(f">>>>>>>>>>>> {dm}:")
+                
+                # Loop over jet_wps (only one in this case)
+                for current_jet_wp in jet_wps:
+                    print(f'jet_wp: {current_jet_wp}')
+                    # Load measurements
+                    region, tes, tes_errhi, tes_errlo = load_sf_measurements(
+                        setup, year, tag=tag, jet_wp=current_jet_wp, ele_wp=ele_wp, sf=sf
+                    )
+                    
+                    # Filter elements with current DM (exact match to avoid DM1 matching DM10, DM11)
+                    dm_list = [elem for elem in region if elem == dm or elem.startswith(dm + '_')]
+                    print(f"Elements with {dm}: {dm_list}")
+                    
+                    # Get values for current DM
+                    print(">>>>>> INPUT FOR JSON")
+                    if dm_list:
+                        # Sort dm_list to ensure consistent ordering (pt1, pt2, pt3, then inclusive)
+                        def sort_key(item):
+                            if '_pt1' in item:
+                                return (item.replace('_pt1', ''), 1)
+                            elif '_pt2' in item:
+                                return (item.replace('_pt2', ''), 2)
+                            elif '_pt3' in item:
+                                return (item.replace('_pt3', ''), 3)
+                            else:
+                                return (item, 0)  # Inclusive DM comes first
+                        
+                        sorted_dm_list = sorted(dm_list, key=sort_key)
+                        
+                        # Get sorted values
+                        dm_tes = [tes[region.index(elem)] for elem in sorted_dm_list]
+                        dm_tes_errhi = [tes_errhi[region.index(elem)] for elem in sorted_dm_list]
+                        dm_tes_errlo = [tes_errlo[region.index(elem)] for elem in sorted_dm_list]
+                        
+                        print(f"tes for : {dm_tes}")
+                        
+                        # Build pt_edges for this DM based on the pt bins found
+                        dm_pt_edges = []
+                        has_pt_bins = any('_pt' in elem for elem in sorted_dm_list)
+                        
+                        if has_pt_bins:
+                            # We have pt binned measurements
+                            for elem in sorted_dm_list:
+                                if '_pt1' in elem:
+                                    if pt_bin_edges["pt1"][0] not in dm_pt_edges:
+                                        dm_pt_edges.append(pt_bin_edges["pt1"][0])
+                                elif '_pt2' in elem:
+                                    if pt_bin_edges["pt2"][0] not in dm_pt_edges:
+                                        dm_pt_edges.append(pt_bin_edges["pt2"][0])
+                                elif '_pt3' in elem:
+                                    if pt_bin_edges["pt3"][0] not in dm_pt_edges:
+                                        dm_pt_edges.append(pt_bin_edges["pt3"][0])
+                            
+                            # Add the final edge
+                            if any('_pt3' in elem for elem in sorted_dm_list):
+                                dm_pt_edges.append(pt_bin_edges["pt3"][1])
+                            elif any('_pt2' in elem for elem in sorted_dm_list):
+                                dm_pt_edges.append(pt_bin_edges["pt2"][1])
+                            elif any('_pt1' in elem for elem in sorted_dm_list):
+                                dm_pt_edges.append(pt_bin_edges["pt1"][1])
+                        else:
+                            # Only inclusive measurement, use full pt range
+                            dm_pt_edges = [20.0, 200.0]
+                        
+                        # Sort edges to ensure they're in ascending order
+                        dm_pt_edges = sorted(list(set(dm_pt_edges)))
+                        print(f"pt_edges for : {dm_pt_edges}")
 
-               key = dm+f'{jet_wp}'
+                        print(f"tes_errhi :  {dm_tes_errhi}")
+                        print(f"tes_errlo :  {dm_tes_errlo}")
 
-               for ip in range(0, len(sf_dict[sf][era][key]["content"])):
-                 pt_avg = (sf_dict[sf][era][key]["edges"][ip]+sf_dict[sf][era][key]["edges"][ip+1])/2
-                 pt_err = pt_avg - sf_dict[sf][era][key]["edges"][ip]
-                 print('ip: ', ip)
-                 funcstr += '+ ( x > ' + str(sf_dict[sf][era][key]["edges"][ip]) + ' && x <=' + str(sf_dict[sf][era][key]["edges"][ip+1]) + ')*' + str(sf_dict[sf][era][key]["content"][ip])
-                 funcstr_up += '+ ( x > ' + str(sf_dict[sf][era][key]["edges"][ip]) + ' && x <=' + str(sf_dict[sf][era][key]["edges"][ip+1]) + ')*' + str(sf_dict[sf][era][key]["up"][ip])
-                 funcstr_down += '+ ( x > ' + str(sf_dict[sf][era][key]["edges"][ip]) + ' && x <=' + str(sf_dict[sf][era][key]["edges"][ip+1]) + ')*' + str(sf_dict[sf][era][key]["down"][ip])
-               #fit_func='pol1'
-               #fit_up, h_uncert_up, h_up, uncerts_up = FitSF(graph_cent,func=fit_func)
-               funcstr +='+ ( x > 200)*1.0'
-               funcstr_up +='+ ( x > 200)*1.0'
-               funcstr_down +='+ ( x > 200)*1.0'
-               print(key)
-               print(funcstr, '\t', dm, '\t', era)
-               func_SF      = TF1(dm+era, funcstr,     0,200)
-               func_SF.Write()
-               func_SF_up   = TF1(dm+era+'_up', funcstr_up,     0,200)
-               func_SF_up.Write()
-               func_SF_down = TF1(dm+era+'_down', funcstr_down,     0,200)
-               func_SF_down.Write()
-          sfile.Write()
-          sfile.Close()
+                        dm_tes_up = [val + err for val, err in zip(dm_tes, dm_tes_errhi)]
+                        print(f"tes_up for : {dm_tes_up}")
+                        dm_tes_down = [val - err for val, err in zip(dm_tes, dm_tes_errlo)]
+                        print(f"tes_down for : {dm_tes_down}")
 
-#   if form=='json': 
-#       ###############################################################
-#       ## create JSON file with SFs (following correctionlib rules)
+                        # Store in dictionary with correct key
+                        key = f'{dm}_{current_jet_wp}'
+                        sf_dict[sf][year][key] = {
+                            "edges": dm_pt_edges, 
+                            "content": dm_tes, 
+                            "up": dm_tes_up, 
+                            "down": dm_tes_down
+                        }
+                    else:
+                        # No data for this DM
+                        key = f'{dm}_{current_jet_wp}'
+                        sf_dict[sf][year][key] = {
+                            "edges": [], 
+                            "content": [], 
+                            "up": [], 
+                            "down": []
+                        }
+    print("SF dictionary")
+    print(sf_dict)
+
+    # Create ROOT files
+    colors = [kBlack, kBlue, kRed, kMagenta, kYellow, kOrange, kGreen, kTeal, kAzure]
+    for sf in sfs:
+        if form == 'root':
+            # Loop on DMs
+            for idx, current_jet_wp in enumerate(jet_wps):
+                if sf == 'tes':
+                    name = 'TauES'
+                else:
+                    name = 'TauID'
+                    
+                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_2024_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
+                
+                for year in ['2024']:
+                    for dm in dm_order:
+                        # Build the function strings
+                        funcstr = '(x<=20)*0'
+                        funcstr_up = '(x<=20)*0'  
+                        funcstr_down = '(x<=20)*0'
+
+                        # Build key
+                        key = f'{dm}_{current_jet_wp}'
+                        
+                        print(f"[DEBUG] Looking for key: {key}")
+                        print(f"[DEBUG] Available keys: {list(sf_dict[sf][year].keys())}")
+                        
+                        # Check if we have data
+                        if key not in sf_dict[sf][year] or len(sf_dict[sf][year][key]["content"]) == 0:
+                            print(f"[DEBUG] No data for {key}, creating default function returning 1.0")
+                            funcstr = '1.0'
+                            funcstr_up = '1.0'
+                            funcstr_down = '1.0'
+                        else:
+                            print(f"[DEBUG] Found data for {key}: {len(sf_dict[sf][year][key]['content'])} bins")
+                            edges = sf_dict[sf][year][key]["edges"]
+                            content = sf_dict[sf][year][key]["content"]
+                            up_content = sf_dict[sf][year][key]["up"]
+                            down_content = sf_dict[sf][year][key]["down"]
+                            
+                            # Ensure we have the right number of edges (should be len(content) + 1)
+                            print(f"[DEBUG] Edges: {edges}, Content: {content}")
+                            
+                            # Build the piecewise function for each bin
+                            for ip in range(len(content)):
+                                if ip < len(edges) - 1:  # Make sure we don't go out of bounds
+                                    pt_low = edges[ip]
+                                    pt_high = edges[ip + 1]
+                                    print(f'ip: {ip}, pt_low: {pt_low}, pt_high: {pt_high}')
+                                    funcstr += f'+ (x > {pt_low} && x <= {pt_high})*{content[ip]}'
+                                    funcstr_up += f'+ (x > {pt_low} && x <= {pt_high})*{up_content[ip]}'
+                                    funcstr_down += f'+ (x > {pt_low} && x <= {pt_high})*{down_content[ip]}'
+                                else:
+                                    # Last bin - extend to high pT
+                                    pt_low = edges[ip] if ip < len(edges) else edges[-1]
+                                    print(f'ip: {ip} (last bin), pt_low: {pt_low}')
+                                    funcstr += f'+ (x > {pt_low})*{content[ip]}'
+                                    funcstr_up += f'+ (x > {pt_low})*{up_content[ip]}'
+                                    funcstr_down += f'+ (x > {pt_low})*{down_content[ip]}'
+
+
+                        print(key)
+                        print(funcstr, '\t', dm, '\t', year)
+                        
+                        # Create functions
+                        func_SF = TF1(dm + year, funcstr, 0, 200)
+                        func_SF.Write()
+                        func_SF_up = TF1(dm + year + '_up', funcstr_up, 0, 200)
+                        func_SF_up.Write()
+                        func_SF_down = TF1(dm + year + '_down', funcstr_down, 0, 200)
+                        func_SF_down.Write()
+                
+                sfile.Write()
+                sfile.Close()
+
+    # Create JSON files
+    if form == 'json':
+        if cs is None:
+            print("Warning: correctionlib not available. JSON files will not be created.")
+            return
+            
+        try:
+            import json
+            
+            for sf in sfs:
+                for idx, current_jet_wp in enumerate(jet_wps):
+                    if sf == 'tes':
+                        name = 'TauES'
+                    else:
+                        name = 'TauID'
+                    
+                    # Create correction with systematic variation as input parameter
+                    dm_systematic_categories = []
+                    
+                    for dm in dm_order:
+                        dm_num = int(dm.replace('DM', ''))  # Convert DM0 -> 0, DM11 -> 11
+                        key = f'{dm}_{current_jet_wp}'
+                        
+                        if key in sf_dict[sf]['2024'] and len(sf_dict[sf]['2024'][key]["content"]) > 0:
+                            # Use actual data for all variations
+                            edges = sf_dict[sf]['2024'][key]["edges"]
+                            nom_content = sf_dict[sf]['2024'][key]["content"]
+                            up_content = sf_dict[sf]['2024'][key]["up"]
+                            down_content = sf_dict[sf]['2024'][key]["down"]
+                            
+                            # Ensure content length is len(edges) - 1 for correctionlib
+                            for content_name, content in [("nom", nom_content), ("up", up_content), ("down", down_content)]:
+                                if len(content) != len(edges) - 1:
+                                    print(f"Warning: Adjusting content length for {dm} {content_name}: {len(content)} -> {len(edges)-1}")
+                                    if len(content) > len(edges) - 1:
+                                        content[:] = content[:len(edges)-1]  # Truncate in place
+                                    else:
+                                        content.extend([1.0] * (len(edges) - 1 - len(content)))  # Pad with 1.0
+                        else:
+                            # Use default values for all variations
+                            edges = [20.0, 200.0]
+                            nom_content = up_content = down_content = [1.0]
+                        
+                        # Create systematic variation categories for this DM
+                        dm_systematic_categories.append(cs.CategoryItem(
+                            key=dm_num,
+                            value=cs.Category(
+                                nodetype="category",
+                                input="syst",
+                                content=[
+                                    cs.CategoryItem(key="nom", value=cs.Binning(
+                                        nodetype="binning",
+                                        input="pT",
+                                        edges=edges,
+                                        content=nom_content,
+                                        flow="clamp"
+                                    )),
+                                    cs.CategoryItem(key="up", value=cs.Binning(
+                                        nodetype="binning",
+                                        input="pT",
+                                        edges=edges,
+                                        content=up_content,
+                                        flow="clamp"
+                                    )),
+                                    cs.CategoryItem(key="down", value=cs.Binning(
+                                        nodetype="binning",
+                                        input="pT",
+                                        edges=edges,
+                                        content=down_content,
+                                        flow="clamp"
+                                    ))
+                                ]
+                            )
+                        ))
+                    
+                    # Create single correction with systematic variation and working points as inputs
+                    corr = cs.Correction(
+                        name=f"{name}SF",
+                        version=1,
+                        description=f"{name} SF, pT binned divided by DM with systematic variations and working point inputs (DeepTau2018v2p5)",
+                        inputs=[
+                            cs.Variable(name="genmatch", type="int", description="Tau genmatch, sf only on real taus (genmatch 5)"),
+                            cs.Variable(name="DM", type="int", description="Tau decay mode (0,1,10,11)"),
+                            cs.Variable(name="pT", type="real", description="Tau transverse momentum"),
+                            cs.Variable(name="syst", type="string", description="Systematic variation ('nom', 'up', 'down')"),
+                            cs.Variable(name="wp_VSmu", type="string", description="DeepTau2018v2p5 working point vs muon ('VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
+                            cs.Variable(name="wp_VSe", type="string", description="DeepTau2018v2p5 working point vs electron ('VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
+                            cs.Variable(name="wp_VSjet", type="string", description="DeepTau2018v2p5 working point vs jet ('VVVLoose', 'VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
+                        ],
+                        output={'name': "sf", 'type': "real", 'description': f"{name} scale factor"},
+                        data=cs.Category(
+                            nodetype="category",
+                            input="wp_VSmu",
+                            content=[
+                                cs.CategoryItem(key="Tight", value=cs.Category(
+                                    nodetype="category", 
+                                    input="wp_VSe",
+                                    content=[
+                                        cs.CategoryItem(key=ele_wp, value=cs.Category(
+                                            nodetype="category",
+                                            input="wp_VSjet", 
+                                            content=[
+                                                cs.CategoryItem(key=current_jet_wp, value=cs.Category(
+                                                    nodetype="category",
+                                                    input="genmatch",
+                                                    content=[
+                                                        cs.CategoryItem(key=1, value=1.0),
+                                                        cs.CategoryItem(key=2, value=1.0),
+                                                        cs.CategoryItem(key=3, value=1.0),
+                                                        cs.CategoryItem(key=4, value=1.0),
+                                                        cs.CategoryItem(key=5, value=cs.Category(
+                                                            nodetype="category",
+                                                            input="DM",
+                                                            content=dm_systematic_categories
+                                                        )),
+                                                        cs.CategoryItem(key=6, value=1.0),
+                                                        cs.CategoryItem(key=0, value=1.0)
+                                                    ]
+                                                ))
+                                            ]
+                                        ))
+                                    ]
+                                ))
+                            ]
+                        )
+                    )
+                    
+                    cset = cs.CorrectionSet(
+                        schema_version=2,
+                        description=f"{name} SFs with systematic variations",
+                        corrections=[corr]
+                    )
+                    
+                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_2024_VSjet{current_jet_wp}_VSele{ele_wp}.json"
+                    with open(json_filename, "w") as fout:
+                        print(f">>> Writing JSON: {json_filename}")
+                        fout.write(cset.json())
+        
+        except ImportError as e:
+            print(f"Warning: Failed to import correctionlib: {e}")
+            print("JSON files will not be created")
+            
+    # Old commented code for reference
+    #   ###############################################################
+    #   ## create JSON file with SFs (following correctionlib rules)
 #       corr = cs.Correction(
 #          name="TauIdSF",
 #          version=1,
@@ -265,18 +603,18 @@ def ensureDirectory(dirname):
 
 
 def main(args):
+    print("Using configuration file: %s"%args.config)
+    with open(args.config, 'r') as file:
+        setup = yaml.safe_load(file)
+
+    tag           = setup["tag"] if "tag" in setup else ""
+    form          = args.form
+    ele_wp        = args.ele_wp
+    jet_wp        = args.jet_wp
+    #CMSStyle.setCMSEra(year)
+
+    plot_dm_graph(setup, form, ele_wp, jet_wp, tag=tag)
     
-  print("Using configuration file: %s"%args.config)
-  with open(args.config, 'r') as file:
-      setup = yaml.safe_load(file)
-
-  tag           = setup["tag"] if "tag" in setup else ""
-  form          = args.form
-  ele_wp        = args.ele_wp
-  #CMSStyle.setCMSEra(year)
-
-  plot_dm_graph(setup,form,ele_wp,tag=tag)
-
 
 
 
@@ -288,6 +626,7 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--config', dest='config', type=str, default='TauES_ID/config/Default_FitSetupTES_mutau_DM_mt65pt_lessptregion.yml', action='store', help="set config file")
   parser.add_argument('-f', '--form', dest='form', choices=['json', 'root'], type=str, default='root', action='store', help="select format")
   parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
+  parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
   args = parser.parse_args()
   main(args)
   print(">>>\n>>> done\n")
