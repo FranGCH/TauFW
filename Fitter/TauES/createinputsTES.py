@@ -16,7 +16,9 @@ import time
 #nano doc: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html
 
 map_wp_to_int = OrderedDict([('againstjet', 
-				OrderedDict([('Loose',  4),
+				OrderedDict([('VVLoose', 2),
+               ('VLoose', 3),
+               ('Loose',  4),
 					     ('Medium', 5),
 					     ('Tight',  6),
 					     ('VTight', 7)])),
@@ -102,6 +104,32 @@ def main(args):
 
     # Name of observed data 
     sampleset.datasample.name = setup["samples"]["data"]
+
+    ################################################
+    #   APPLY WORKING POINTS TO BASELINE CUTS      #
+    ################################################
+    # Map string WP to integer and replace in baseline cuts
+    # Assumes config has 'idDeepTau2018v2p5VSjet_2>=5' (Medium) and 'idDeepTau2018v2p5VSe_2>=2' (VVLoose)
+    
+    if "baselineCuts" in setup:
+        jetcut = map_wp_to_int["againstjet"][againstjet]
+        electroncut = map_wp_to_int["againstelectron"][againstelectron]
+        
+        print(f"Updating baseline cuts for WP: VSjet {againstjet} (idx {jetcut}), VSele {againstelectron} (idx {electroncut})")
+        
+        # Replace VSjet cut (Default Medium=5)
+        if 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
+            setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
+        else:
+            print("WARNING: Could not find standard VSjet cut 'idDeepTau2018v2p5VSjet_2>=5' in baselineCuts to replace!")
+
+        # Replace VSele cut (Default VVLoose=2)
+        if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
+            setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
+        else:
+            print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")
+            
+        print(f"New baselineCuts: {setup['baselineCuts']}")
 
      
     ###################
@@ -275,4 +303,4 @@ if __name__ == "__main__":
   PLOG.verbosity = args.verbosity
   main(args)
   print("\n>>> Done.")
-  
+
