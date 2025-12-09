@@ -14,6 +14,7 @@ import yaml
 import ROOT
 import numpy as np
 from math import sqrt, pi
+import logging
 from argparse import ArgumentParser
 from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF2, TGraph2D, TH2D, TPolyMarker3D, TGraphAsymmErrors, TLine, TEllipse
 from ROOT import kBlack, kBlue, kRed, kGreen, kYellow, kOrange, kMagenta, kTeal, kAzure, TMath
@@ -25,7 +26,7 @@ gStyle.SetOptTitle(0)
 
 # CMS style
 CMSStyle.setTDRStyle()
-
+logger = logging.getLogger(__name__)
 def ensureDirectory(dirname):
     """Make directory if it does not exist."""
     if not os.path.exists(dirname):
@@ -1209,7 +1210,7 @@ def main(args):
     channel = setup["channel"].replace("mu", "m").replace("tau", "t")
     tag = setup.get("tag", "")
     era = args.year
-    extratag = "_DeepTau"
+    extratag = "_PNet"
     
     # Input directory
     if args.indir:

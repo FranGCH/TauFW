@@ -48,13 +48,13 @@ echo "    Log file will be: ${LOG_FILE}"
 # python3 TauES/createinputsTES_MyV.py \
 #     -y 2024 \
 #     -c TauES_ID/config/config_coarse_TT.yml \
-#     -j Medium \
+#     -j Tight \
 #     -e VVLoose > ${LOG_FILE} 2>&1
 
 python3 TauES/createinputsTES_MyV.py \
     -y 2024 \
     -c TauES/config/FitSetup_mumu.yml \
-    -j Medium \
+    -j Tight \
     -e VVLoose > ${LOG_FILE} 2>&1
 
 # Record the exit status of the command

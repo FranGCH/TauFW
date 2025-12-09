@@ -32,7 +32,7 @@ def calculate_SFpostfit(config, year, output_file):
     param_SF_postfit_dict = {}  # Store param_SF_postfit values for different parameters
 
     # Mapping for region replacement
-    region_mapping = {'DM0': 'dm_2==0', 'DM1': 'dm_2==1', 'DM10': 'dm_2==10', 'DM11': 'dm_2==11'}
+    region_mapping = {'DM0': 'decayModePNet_2==0', 'DM1': 'decayModePNet_2==1','DM2': 'decayModePNet_2==2', 'DM10': 'decayModePNet_2==10', 'DM11': 'decayModePNet_2==11'}
 
     # Process parameters without comparing to the yaml file
     additional_params = {
@@ -51,7 +51,7 @@ def calculate_SFpostfit(config, year, output_file):
         for region in setup["plottingOrder"]:
             param_values = {}
             # Read values from txt file
-            with open('./postfit_%s/FitparameterValues_%s_DeepTau_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
+            with open('./postfit_%s/FitparameterValues_%s_PNet_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
                 txt_data = txt_file.readlines()
             for line in txt_data:
                 match = re.match(r'(\w+)\s*:\s*([\d.-]+)', line)
@@ -76,7 +76,7 @@ def calculate_SFpostfit(config, year, output_file):
                 param_values = {}
 
                 # Read values from txt file
-                with open('./postfit_%s/FitparameterValues_%s_DeepTau_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
+                with open('./postfit_%s/FitparameterValues_%s_PNet_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
                     txt_data = txt_file.readlines()
 
                 # Extract parameter name and value from txt data

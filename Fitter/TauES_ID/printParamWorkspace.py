@@ -52,7 +52,7 @@ def save_fit_parameters_to_txt(file_name, workspace_name, output_file):
     file.Close()
 
 
-regions = ["DM0", "DM1", "DM10", "DM11"]
+regions = ["DM0", "DM1","DM2", "DM10", "DM11"]
 
 outdir = "postfit_2022_postEE"
 input_workspace_name = "fit_s"

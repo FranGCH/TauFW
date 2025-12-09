@@ -4,7 +4,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--e ", nargs='+', dest="eras", default=['2023D'], help="which era")
 parser.add_argument("--ew ", nargs='+', dest="ele_wps", default=['Tight'], choices=['Tight', 'VVLoose'], help="which against electron wp")
-parser.add_argument("--d ", nargs='+', dest="dms", default=['DM1'], choices=['DM0', 'DM1', 'DM10', 'DM11'], help="which decay mode")
+parser.add_argument("--d ", nargs='+', dest="dms", default=['DM1'], choices=['DM0', 'DM1',"DM2", 'DM10', 'DM11'], help="which decay mode")
 parser.add_argument("--jw ", nargs='+', dest="jet_wps", default=['Tight'], choices=['Loose', 'Medium', 'Tight', 'VTight'], help="which against jet wp")
 options = parser.parse_args()
 

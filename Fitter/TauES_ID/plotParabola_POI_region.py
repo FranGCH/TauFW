@@ -18,7 +18,8 @@ from itertools import combinations
 from math import sqrt, log, ceil, floor
 
 import yaml
-
+import logging
+logger = logging.getLogger(__name__)
 gROOT.SetBatch(True)
 #gROOT.SetBatch(False)
 gStyle.SetOptTitle(0)
@@ -30,7 +31,7 @@ CMSStyle.setTDRStyle()
 def plotParabola(setup,var,region,year,**kwargs):
     print(green("plot parabola for %s, %s"%(region, var),pre="\n>>> "))
     
-    indir        = kwargs.get('indir',       "output_%s"%year )
+    indir        = kwargs.get('indir',       "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year )
     outdir       = indir.replace('output', 'plots') #kwargs.get('outdir',      "plots_%s"%year  )
     tag          = kwargs.get('tag',         ""               )
     plottag      = kwargs.get('plottag',     ""               )
@@ -304,10 +305,11 @@ def plotParabola(setup,var,region,year,**kwargs):
     
 def plotParabolaMDF(setup,var,year,**kwargs):
     """Plot multidimensional parabola."""
+    logger.info("plotParabolaMDF called from plotParabola_POI_region")
     print(green("plot multidimensional parabola for %s"%(var),pre="\n>>> "))
 
-    indir      = kwargs.get('indir',      "output_%s"%year )
-    outdir     = kwargs.get('outdir',     "plots_%s"%year  )
+    indir      = kwargs.get('indir',      "output_%s"%year ) #kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year )
+    outdir     = kwargs.get('outdir',     "plots_%s"%year  ) #indir.replace('output_pt_less_region', 'plots_%s'%year)
     poi          = kwargs.get('poi',       ""              )
     tag        = kwargs.get('tag',        ""               )
     nnlmin     = kwargs.get('nnlmin',     0                )
@@ -549,9 +551,10 @@ def createParabola(filename, poi, region):
 def findMultiDimSlices(channel,var,**kwargs):
     """Find minimum of multidimensional parabola in MultiDimFit file and return
     dictionary of the corresponding values of POI's."""
+    logger.info("findMultiDimSlices called from plotParabola_POI_region")
     year     = kwargs.get('year', "")
     tag      = kwargs.get('tag', "" )
-    indir    = kwargs.get('indir',       "output_%s"%year )
+    indir    = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir',      "output_%s"%year )
     filename = '%s/higgsCombine.%s_%s-%s%s-%s-13TeV.MultiDimFit.mH90.root'%(indir,channel,var,'MDF',tag,year)
     file     = ensureTFile(filename)
     tree     = file.Get('limit')

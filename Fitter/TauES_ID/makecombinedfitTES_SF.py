@@ -17,6 +17,9 @@ import sys
 import os
 import yaml
 from argparse import ArgumentParser
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):

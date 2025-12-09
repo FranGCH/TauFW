@@ -21,9 +21,9 @@ def calculate_shape_syst():
     year = "2022_postEE"
     tag= "_mutau_mt65cut_DM_Dt2p5_VSJetMedium_mvisrange_puppimet"
     
-    for region in ["DM0", "DM1", "DM10", "DM11"]:
+    for region in ["DM0", "DM1","DM2", "DM10", "DM11"]:
 
-        with open('./postfit_%s/FitparameterValues_%s_DeepTau_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
+        with open('./postfit_%s/FitparameterValues_%s_PNet_%s-13TeV_%s.txt' % (year,tag, year,region), 'r') as txt_file:
             txt_data = txt_file.readlines()
         for line in txt_data:
             match = re.match(r'(\w+)\s*:\s*([\d.-]+)', line)

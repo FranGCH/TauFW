@@ -16,6 +16,7 @@ The autoMCstat function is used to have bin-by-bin uncertainties for the sum of 
 import ROOT; ROOT.PyConfig.IgnoreCommandLineOptions = True
 import os, sys, re
 import yaml
+import logging
 import CombineHarvester.CombineTools.ch as ch
 from CombineHarvester.CombineTools.ch import CombineHarvester, MassesFromRange, SystMap, BinByBinFactory, CardWriter, SetStandardBinNames, AutoRebin
 import CombineHarvester.CombinePdfs.morphing as morphing
@@ -24,6 +25,8 @@ from CombineHarvester.CombinePdfs.morphing import BuildCMSHistFuncFactory
 
 import ROOT
 from ROOT import RooWorkspace, TFile, RooRealVar
+
+logger = logging.getLogger(__name__)
 
 def check_integral(filename, procs, name, region):
     from ROOT import TFile, TH1
@@ -49,6 +52,7 @@ def check_integral(filename, procs, name, region):
 
 def harvest(setup, year, obs, **kwargs):
     """Harvest cards."""
+    logger.info("---- Harvest function at harvestDatacards_TES_idSF_MCStat.py ")
 
     channel = setup["channel"].replace("mu","m").replace("tau","t")
     

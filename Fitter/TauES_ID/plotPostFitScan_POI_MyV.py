@@ -4,7 +4,6 @@
 import os, sys, re, glob
 import numpy, copy
 from array import array
-import logging 
 from argparse import ArgumentParser
 from plotParabola_POI_region import measurepoi, ensureDirectory, ensureTFile
 from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF1, TH2F, TGraph, TLine, TColor,\
@@ -17,7 +16,7 @@ import yaml
 gROOT.SetBatch(True)
 #gROOT.SetBatch(False)
 gStyle.SetOptTitle(0)
-logger = logging.getLogger(__name__)
+
 
 DIR_DC      = "input"
 
@@ -38,15 +37,14 @@ PLOTS_DIR   = "postfit"
 
 def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     """Calculate and plot correlation between parameters."""
-    logger.info("plot correlation")
     print(green("\n>>> plotCorrelation %s, %s"%(region, var)))
     if len(parameters)==1 and isinstance(parameters[0],list): parameters = parameters[0]
     parameters  = [p.replace('$CAT',region).replace('$CHANNEL',channel) for p in list(parameters)]
     
     title       = kwargs.get('title',     ""                )
     name        = kwargs.get('name',      ""                )
-    indir       = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir',      "output_%s"%year )
-    outdir      = indir.replace('output_pt_less_region', 'postfit_%s'%year) #kwargs.get('outdir',    "postfit_%s"%year )
+    indir       = kwargs.get('indir',     "output_%s"%year  )
+    outdir      = indir.replace('output', 'postfit') #kwargs.get('outdir',    "postfit_%s"%year )
     tag         = kwargs.get('tag',       ""                )
     plotlabel   = kwargs.get('plotlabel', ""                )
     order       = kwargs.get('order',     False             )
@@ -176,7 +174,7 @@ def writeParametersFitVal(channel,var,region,year,*parameters,**kwargs):
 
 
     # get variables
-    indir       = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir',     "output_%s"%year  )
+    indir       = kwargs.get('indir',     "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year  ) #kwargs.get('indir',     "output_%s"%year  )
     tag         = kwargs.get('tag',       ""                )
     poi         = kwargs.get('poi',       ""                )
     era         = "%s-13TeV"%year
@@ -276,8 +274,8 @@ def plotPostFitValues(channel,var,region,year,paramfull_list,*parameters,**kwarg
     
     title       = kwargs.get('title',     ""    )
     name        = kwargs.get('name',      ""    )
-    indir       = kwargs.get('indir',     "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year  )
-    outdir      = indir.replace('output_pt_less_region', 'postfit_%s'%year) #kwargs.get('outdir',    "postfit_%s"%year )
+    indir       = kwargs.get('indir',     "output_%s"%year  )
+    outdir      = indir.replace('output', 'postfit') #kwargs.get('outdir',    "postfit_%s"%year )
     tag         = kwargs.get('tag',       ""    )
     plotlabel   = kwargs.get('plotlabel', ""    )
     poi         = kwargs.get('poi',       ""    )
@@ -600,7 +598,7 @@ def chunkify(list,nmax,overlap=0,complete=False):
   
 def getBBBList(channel,var,region,year,process,**kwargs):
     """Get list of all BBB nuisance parameter for a proces."""
-    indir    = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir', "output_%s"%year)
+    indir    = kwargs.get('indir', "output_%s"%year)
     era      = "%s-13TeV"%year
     tag      = kwargs.get('tag', "" )
     filename = '%s/higgsCombine.%s_%s-%s%s-%s.MultiDimFit.mH90.root'%(indir,channel,var,region,tag,era)
@@ -624,7 +622,7 @@ def main(args):
     ensureDirectory(PLOTS_DIR)
     year      = args.year
     poi       = args.poi
-    lumi      = 36.5 if year=='2016' else 41.4 if (year=='2017' or year=='UL2017') else 59.5 if (year=='2018' or year=='UL2018') else 19.5 if year=='UL2016_preVFP' else 16.8
+    lumi      = 36.5 if year=='2016' else 41.4 if (year=='2017' or year=='UL2017') else 59.5 if (year=='2018' or year=='UL2018') else 19.5 if year=='UL2016_preVFP' else 109 if year=='2024' else 16.8
     channel   = setup["channel"].replace("mu","m").replace("tau","t")
     tag       = setup["tag"] if "tag" in setup else ""
     tag += args.extratag
@@ -634,46 +632,60 @@ def main(args):
     # Leave hard-coded this part as this is purely a plotting choice
     nuisances = [ #"eff_t_$CAT", "trackedParam_tid_SF_DM0","trackedParam_tid_SF_DM10", "trackedParam_tid_SF_pt1","trackedParam_tid_SF_pt2","trackedParam_tid_SF_pt3",
                  "trackedParam_tid_SF_DM0","trackedParam_tid_SF_DM10", "xsec_dy", "norm_wj",
-                  "shape_jTauFake", "rate_jTauFake", "xsec_tt", "trackedParam_tes_DM0","trackedParam_tes_DM1","trackedParam_tes_DM10","trackedParam_tes_DM11" ]
+                  "shape_jTauFake", "rate_jTauFake", "xsec_tt", "trackedParam_tes_DM0","trackedParam_tes_DM1",
+                  "trackedParam_tes_DM10","trackedParam_tes_DM11","trackedParam_tes_DM2" ]
     compare   = {
       "norm":
-          [ "eff_m", "xsec_tt", "xsec_st", "norm_qcd", "lumi", "xsec_vv", "norm_qcd", "rate_jTauFake_DM0", "rate_jTauFake_DM1","rate_jTauFake_DM10","rate_jTauFake_DM11","muonFakerate_DM0","muonFakerate_DM1","muonFakerate_DM10","muonFakerate_DM11"
+          [ "eff_m", "xsec_tt", "xsec_st", "norm_qcd", "lumi", "xsec_vv", "norm_qcd", "rate_jTauFake_DM0", "rate_jTauFake_DM1",
+          "rate_jTauFake_DM10","rate_jTauFake_DM11","rate_jTauFake_DM2","muonFakerate_DM0","muonFakerate_DM1",
+          "muonFakerate_DM10","muonFakerate_DM11","muonFakerate_DM2"
         ],
       "norm":
         [ "xsec_tt", "xsec_st", "norm_qcd", "lumi", "xsec_vv", "norm_qcd"
         ],
       "shapes":
-        ["shape_mTauFake_DM0_pt1","shape_mTauFake_DM0_pt2","shape_mTauFake_DM0_pt3", "shape_mTauFake_DM0_pt4",
-         "shape_mTauFake_DM1_pt1","shape_mTauFake_DM1_pt2","shape_mTauFake_DM1_pt3", "shape_mTauFake_DM1_pt4",
-         "shape_mTauFake_DM10_pt1","shape_mTauFake_DM10_pt2","shape_mTauFake_DM10_pt3", "shape_mTauFake_DM10_pt4",
-         "shape_mTauFake_DM11_pt1","shape_mTauFake_DM11_pt2","shape_mTauFake_DM11_pt3", "shape_mTauFake_DM11_pt4",
-         "shape_jTauFake_DM0_pt1","shape_jTauFake_DM0_pt2","shape_jTauFake_DM0_pt3", "shape_jTauFake_DM0_pt4",
-         "shape_jTauFake_DM1_pt1","shape_jTauFake_DM1_pt2","shape_jTauFake_DM1_pt3", "shape_jTauFake_DM1_pt4",
-         "shape_jTauFake_DM10_pt1","shape_jTauFake_DM10_pt2","shape_jTauFake_DM10_pt3", "shape_jTauFake_DM10_pt4",
-         "shape_jTauFake_DM11_pt1","shape_jTauFake_DM11_pt2","shape_jTauFake_DM11_pt3", "shape_jTauFake_DM11_pt4",
+        ["shape_mTauFake_DM0_pt1","shape_mTauFake_DM0_pt2","shape_mTauFake_DM0_pt3", #"shape_mTauFake_DM0_pt4",
+         "shape_mTauFake_DM1_pt1","shape_mTauFake_DM1_pt2","shape_mTauFake_DM1_pt3", #"shape_mTauFake_DM1_pt4",
+         "shape_mTauFake_DM10_pt1","shape_mTauFake_DM10_pt2","shape_mTauFake_DM10_pt3",# "shape_mTauFake_DM10_pt4",
+         "shape_mTauFake_DM11_pt1","shape_mTauFake_DM11_pt2","shape_mTauFake_DM11_pt3", #"shape_mTauFake_DM11_pt4",
+         "shape_mTauFake_DM2_pt1","shape_mTauFake_DM2_pt2","shape_mTauFake_DM2_pt3",
+         "shape_jTauFake_DM0_pt1","shape_jTauFake_DM0_pt2","shape_jTauFake_DM0_pt3", #"shape_jTauFake_DM0_pt4",
+         "shape_jTauFake_DM1_pt1","shape_jTauFake_DM1_pt2","shape_jTauFake_DM1_pt3", #"shape_jTauFake_DM1_pt4",
+         "shape_jTauFake_DM10_pt1","shape_jTauFake_DM10_pt2","shape_jTauFake_DM10_pt3", #"shape_jTauFake_DM10_pt4",
+         "shape_jTauFake_DM11_pt1","shape_jTauFake_DM11_pt2","shape_jTauFake_DM11_pt3", #"shape_jTauFake_DM11_pt4",
+         "shape_jTauFake_DM2_pt1","shape_jTauFake_DM2_pt2","shape_jTauFake_DM2_pt3",
          "shape_dy"
         ],
       "rateParam":
-        [ "trackedParam_xsec_dy", "trackedParam_sf_W_DM0_pt1","trackedParam_sf_W_DM0_pt2","trackedParam_sf_W_DM0_pt3", "trackedParam_sf_W_DM1_pt1","trackedParam_sf_W_DM1_pt2","trackedParam_sf_W_DM1_pt3", "trackedParam_sf_W_DM10_pt1", "trackedParam_sf_W_DM10_pt2","trackedParam_sf_W_DM10_pt3","trackedParam_sf_W_DM11_pt1", "trackedParam_sf_W_DM11_pt2","trackedParam_sf_W_DM11_pt3"
+        [ "trackedParam_xsec_dy", "trackedParam_sf_W_DM0_pt1","trackedParam_sf_W_DM0_pt2","trackedParam_sf_W_DM0_pt3", 
+         "trackedParam_sf_W_DM1_pt1","trackedParam_sf_W_DM1_pt2","trackedParam_sf_W_DM1_pt3",
+         "trackedParam_sf_W_DM10_pt1", "trackedParam_sf_W_DM10_pt2","trackedParam_sf_W_DM10_pt3","trackedParam_sf_W_DM11_pt1", "trackedParam_sf_W_DM11_pt2","trackedParam_sf_W_DM11_pt3",
+         "trackedParam_sf_W_DM2_pt1","trackedParam_sf_W_DM2_pt2","trackedParam_sf_W_DM2_pt3",
         ],
       "tid":
-      ["trackedParam_tid_SF_DM0_pt1", "trackedParam_tid_SF_DM0_pt2", "trackedParam_tid_SF_DM0_pt3","trackedParam_tid_SF_DM0_pt4",
-      "trackedParam_tid_SF_DM1_pt1","trackedParam_tid_SF_DM1_pt2", "trackedParam_tid_SF_DM1_pt3","trackedParam_tid_SF_DM1_pt4",
-      "trackedParam_tid_SF_DM10_pt1","trackedParam_tid_SF_DM10_pt2", "trackedParam_tid_SF_DM10_pt3","trackedParam_tid_SF_DM10_pt4",
-      "trackedParam_tid_SF_DM11_pt1","trackedParam_tid_SF_DM11_pt2", "trackedParam_tid_SF_DM11_pt3","trackedParam_tid_SF_DM11_pt4"]
+      ["trackedParam_tid_SF_DM0_pt1", "trackedParam_tid_SF_DM0_pt2", "trackedParam_tid_SF_DM0_pt3",#"trackedParam_tid_SF_DM0_pt4",
+      "trackedParam_tid_SF_DM1_pt1","trackedParam_tid_SF_DM1_pt2", "trackedParam_tid_SF_DM1_pt3",#"trackedParam_tid_SF_DM1_pt4",
+      "trackedParam_tid_SF_DM10_pt1","trackedParam_tid_SF_DM10_pt2", "trackedParam_tid_SF_DM10_pt3",#"trackedParam_tid_SF_DM10_pt4",
+      "trackedParam_tid_SF_DM11_pt1","trackedParam_tid_SF_DM11_pt2", "trackedParam_tid_SF_DM11_pt3",#"trackedParam_tid_SF_DM11_pt4"
+      "trackedParam_tid_SF_DM2_pt1","trackedParam_tid_SF_DM2_pt2", "trackedParam_tid_SF_DM2_pt3",
+      ]
 }
     fulllist  = [
-      "tes_DM0_pt1","tes_DM0_pt2", "tes_DM0_pt3","tes_DM0_pt4","tes_DM1_pt1","tes_DM1_pt2","tes_DM1_pt3","tes_DM1_pt4",
-      "tes_DM10_pt1","tes_DM10_pt2","tes_DM10_pt3","tes_DM10_pt4",
-      "tes_DM11_pt1","tes_DM11_pt2","tes_DM11_pt3","tes_DM11_pt4",
-      "trackedParam_xsec_dy","trackedParam_sf_W_DM0_pt1", "trackedParam_sf_W_DM0_pt2",  "trackedParam_sf_W_DM0_pt3", "trackedParam_sf_W_DM0_pt4",
-      "trackedParam_sf_W_DM1_pt1", "trackedParam_sf_W_DM1_pt2",  "trackedParam_sf_W_DM1_pt3", "trackedParam_sf_W_DM1_pt4",
-      "trackedParam_sf_W_DM10_pt1", "trackedParam_sf_W_DM10_pt2",  "trackedParam_sf_W_DM10_pt3", "trackedParam_sf_W_DM10_pt4",
-      "trackedParam_sf_W_DM11_pt1", "trackedParam_sf_W_DM11_pt2",  "trackedParam_sf_W_DM11_pt3", "trackedParam_sf_W_DM11_pt4",
-      "trackedParam_tid_SF_DM0_pt1","trackedParam_tid_SF_DM0_pt2", "trackedParam_tid_SF_DM0_pt3","trackedParam_tid_SF_DM0_pt4",
-      "trackedParam_tid_SF_DM1_pt1","trackedParam_tid_SF_DM1_pt2", "trackedParam_tid_SF_DM1_pt3","trackedParam_tid_SF_DM1_pt4",
-      "trackedParam_tid_SF_DM10_pt1","trackedParam_tid_SF_DM10_pt2", "trackedParam_tid_SF_DM10_pt3","trackedParam_tid_SF_DM10_pt4",
-      "trackedParam_tid_SF_DM11_pt1","trackedParam_tid_SF_DM11_pt2", "trackedParam_tid_SF_DM11_pt3","trackedParam_tid_SF_DM11_pt4",
+      "tes_DM0_pt1","tes_DM0_pt2", "tes_DM0_pt3",#"tes_DM0_pt4",
+      "tes_DM1_pt1","tes_DM1_pt2","tes_DM1_pt3",#"tes_DM1_pt4",
+      "tes_DM10_pt1","tes_DM10_pt2","tes_DM10_pt3",#"tes_DM10_pt4",
+      "tes_DM11_pt1","tes_DM11_pt2","tes_DM11_pt3",#"tes_DM11_pt4",
+      "tes_DM2_pt1","tes_DM2_pt2","tes_DM2_pt3",
+      "trackedParam_xsec_dy","trackedParam_sf_W_DM0_pt1", "trackedParam_sf_W_DM0_pt2",  "trackedParam_sf_W_DM0_pt3", #"trackedParam_sf_W_DM0_pt4",
+      "trackedParam_sf_W_DM1_pt1", "trackedParam_sf_W_DM1_pt2",  "trackedParam_sf_W_DM1_pt3", #"trackedParam_sf_W_DM1_pt4",
+      "trackedParam_sf_W_DM10_pt1", "trackedParam_sf_W_DM10_pt2",  "trackedParam_sf_W_DM10_pt3", #"trackedParam_sf_W_DM10_pt4",
+      "trackedParam_sf_W_DM11_pt1", "trackedParam_sf_W_DM11_pt2",  "trackedParam_sf_W_DM11_pt3", #"trackedParam_sf_W_DM11_pt4",
+      "trackedParam_sf_W_DM2_pt1", "trackedParam_sf_W_DM2_pt2",  "trackedParam_sf_W_DM2_pt3",      
+      "trackedParam_tid_SF_DM0_pt1","trackedParam_tid_SF_DM0_pt2", "trackedParam_tid_SF_DM0_pt3",#"trackedParam_tid_SF_DM0_pt4",
+      "trackedParam_tid_SF_DM1_pt1","trackedParam_tid_SF_DM1_pt2", "trackedParam_tid_SF_DM1_pt3",#"trackedParam_tid_SF_DM1_pt4",
+      "trackedParam_tid_SF_DM10_pt1","trackedParam_tid_SF_DM10_pt2", "trackedParam_tid_SF_DM10_pt3",#"trackedParam_tid_SF_DM10_pt4",
+      "trackedParam_tid_SF_DM11_pt1","trackedParam_tid_SF_DM11_pt2", "trackedParam_tid_SF_DM11_pt3",#"trackedParam_tid_SF_DM11_pt4",
+      "trackedParam_tid_SF_DM2_pt1","trackedParam_tid_SF_DM2_pt2", "trackedParam_tid_SF_DM2_pt3",
       "shape_dy", 
       "xsec_tt", "xsec_st", "norm_qcd", "lumi", "xsec_vv", "norm_qcd", "eff_m"
     ]

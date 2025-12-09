@@ -129,9 +129,9 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 elif r == "DM1" :
                     tes_range = "0.990,1.010"
                 elif r == "DM2" :
-                    tes_range = "0.990,1.010"
+                    tes_range = "0.985,1.010"
                 elif r == "DM10" :
-                    tes_range = "0.990,1.010"
+                    tes_range = "0.990,1.030"
                 elif r == "DM11":
                     tes_range = "0.990,1.010"
                 elif r == "DM0_pt1" :
@@ -297,6 +297,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
+                print(f"[DEBUG] Option 3 - Workspace file: {workspace_file}")
                 # FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
                 FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 "
                 # print(f"[DEBUG] Option 3 - FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
@@ -328,7 +329,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 
                 # Move files to postfit directory
                 os.system(f"mv {outf_fit} {postfit_outdir}/")
+                print(f"[DEBUG] mv {outf_fit} {postfit_outdir}/")
                 print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
+
+                if os.path.abspath(os.getcwd()) != fit_outdir:
+                    os.system("mv higgsCombine*root %s" %fit_outdir)
+
             else:
                 print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
                 print(f">>>>>>>>>>>>>>>>>[ERROR] Parameter file {param_file} does not exist. Skipping region {r}.")
@@ -344,6 +350,7 @@ def plotScan(setup, setup_mumu, option, **kwargs):
     if indir and not indir.rstrip('/').endswith(str(era)):
         indir = os.path.join(indir, str(era))
     indir_arg    = f"-i {indir}" if indir else ""
+    print(f"[INFO] indir_arg for plotting: {indir_arg} in plotScan")
     # Plot 
 
     if option == '2' or option == '4'  :
