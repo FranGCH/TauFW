@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """
 Date : Sept 2025
-Author : @haawedik based on plotParabola_POI_region.py by @oponcet
+Author : @haawedik
 Description :
 This script plots 2D parabolas from MultiDimFit output files when you have
-scanned over two parameters simultaneously (like option 3 in your workflow).
-This is more straightforward than extracting from FitDiagnostics.
+scanned over two parameters simultaneously 
 """
 
 import sys
@@ -466,8 +465,8 @@ def calculate_correlation_and_uncertainties(poi1_vals, poi2_vals, nll_vals):
     }
 def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
     """
-    Extract 2D scan data from MultiDimFit output file.
-    Returns arrays of parameter values and corresponding NLL values.
+    Extract 2D scan data from MultiDimFit output file using direct tree loop.
+    Finds best fit (min NLL) and 1-sigma intervals (NLL <= 0.5).
     """
     print(f">>> Reading 2D scan data from {multidimfit_file}")
     
@@ -478,144 +477,117 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
         file.Close()
         return None
     
-    # First, let's see what branches are available
-    print(">>> Available branches:")
-    branches = []
-    for branch in tree.GetListOfBranches():
-        branch_name = branch.GetName()
-        branches.append(branch_name)
-        print(f"  {branch_name}")
-    
+    # Verify branches exist
+    branches = [b.GetName() for b in tree.GetListOfBranches()]
+    if poi1_name not in branches or poi2_name not in branches or "deltaNLL" not in branches:
+        print(f"ERROR: Missing branches. Looking for {poi1_name}, {poi2_name}, deltaNLL")
+        print(f"Available: {branches}")
+        file.Close()
+        return None
+
+    # Arrays for plotting
     poi1_vals = []
     poi2_vals = []
-    nll_vals = []
+    nll_vals = [] # 2*NLL for plotting compatibility
+    
+    # Arrays for 1-sigma calculation
+    poi1_in_1sigma = []
+    poi2_in_1sigma = []
+    
+    best_val = float("inf")
+    best_idx = 0
+    best_poi1 = 0.0
+    best_poi2 = 0.0
     
     nentries = tree.GetEntries()
-    print(f">>> Processing {nentries} entries from MultiDimFit scan")
-    
-    # Based on ROOT output, the branches are directly named
-    poi1_branch = poi1_name  # 'tes_DM0'
-    poi2_branch = poi2_name  # 'tid_SF_DM0' 
-    nll_branch = 'deltaNLL'
-    
-    # Verify branches exist
-    if poi1_branch not in branches:
-        print(f"ERROR: Branch '{poi1_branch}' not found")
-        file.Close()
-        return None
-    if poi2_branch not in branches:
-        print(f"ERROR: Branch '{poi2_branch}' not found") 
-        file.Close()
-        return None
-    if nll_branch not in branches:
-        print(f"ERROR: Branch '{nll_branch}' not found")
-        file.Close()
-        return None
-    
-    print(f">>> Using branches: {poi1_branch}, {poi2_branch}, {nll_branch}")
+    print(f">>> Processing {nentries} entries")
     
     for i in range(nentries):
         tree.GetEntry(i)
         
-        # Get parameter values using the found branch names
-        poi1_val = getattr(tree, poi1_branch)
-        poi2_val = getattr(tree, poi2_branch)
-        nll_val = getattr(tree, nll_branch)
+        val_poi1 = getattr(tree, poi1_name)
+        val_poi2 = getattr(tree, poi2_name)
+        val_nll = getattr(tree, "deltaNLL")
         
-        poi1_vals.append(poi1_val)
-        poi2_vals.append(poi2_val)
-        nll_vals.append(2*nll_val)
+        # Store for plotting (convert NLL to 2*NLL for standard likelihood plots)
+        poi1_vals.append(val_poi1)
+        poi2_vals.append(val_poi2)
+        nll_vals.append(2 * val_nll)
         
-        # Debug first few entries
-        if i < 15:
-            print(f"  Entry {i}: {poi1_branch}={poi1_val:.4f}, {poi2_branch}={poi2_val:.4f}, {nll_branch}={nll_val:.4f}")
-    
+        # Logic for 1-sigma interval (deltaNLL <= 0.5)
+        if 0 <= val_nll <= 0.5:
+            poi1_in_1sigma.append(val_poi1)
+            poi2_in_1sigma.append(val_poi2)
+            
+        # Logic for best fit (minimum non-negative deltaNLL)
+        if val_nll < best_val and val_nll >= 0:
+            best_val = val_nll
+            best_idx = i
+            best_poi1 = val_poi1
+            best_poi2 = val_poi2
+            
     file.Close()
     
-    if len(poi1_vals) == 0:
-        print(f"ERROR: No valid data found")
-        return None
+    # Calculate 1-sigma ranges
+    if poi1_in_1sigma:
+        poi1_low = min(poi1_in_1sigma)
+        poi1_high = max(poi1_in_1sigma)
+    else:
+        print(f"WARNING: No points found within 1-sigma region for {poi1_name}")
+        poi1_low = best_poi1
+        poi1_high = best_poi1
+        
+    if poi2_in_1sigma:
+        poi2_low = min(poi2_in_1sigma)
+        poi2_high = max(poi2_in_1sigma)
+    else:
+        print(f"WARNING: No points found within 1-sigma region for {poi2_name}")
+        poi2_low = best_poi2
+        poi2_high = best_poi2
+
+    # Debug prints as requested
+    print(f"[DEBUG] {poi1_name} 1-sigma range: {poi1_low} - {poi1_high}")
+    print(f"[DEBUG] {poi2_name} 1-sigma range: {poi2_low} - {poi2_high}")
+    print(f"[DEBUG] Best fit entry index: {best_idx} with deltaNLL = {best_val}")
+    print(f"[DEBUG] Best fit {poi1_name}: {best_poi1}")
+    print(f"[DEBUG] Best fit {poi2_name}: {best_poi2}")
     
-    # Convert to numpy arrays for easier manipulation
+    print(f"[INFO] Extracted {poi1_name}: {best_poi1:.6f}")
+    print(f"[INFO] Extracted {poi2_name}: {best_poi2:.6f}")
+
+    # Calculate asymmetric errors
+    poi1_err_down = best_poi1 - poi1_low
+    poi1_err_up = poi1_high - best_poi1
+    poi2_err_down = best_poi2 - poi2_low
+    poi2_err_up = poi2_high - best_poi2
+    
+    # Symmetric error approximation
+    poi1_err = (poi1_err_down + poi1_err_up) / 2.0
+    poi2_err = (poi2_err_down + poi2_err_up) / 2.0
+    
+    # Calculate correlation using points near the minimum (approx 2 sigma region)
     import numpy as np
-    poi1_vals = np.array(poi1_vals)
-    poi2_vals = np.array(poi2_vals)
-    nll_vals = np.array(nll_vals)
+    poi1_arr = np.array(poi1_vals)
+    poi2_arr = np.array(poi2_vals)
+    nll_arr = np.array(nll_vals) # 2*NLL
     
-    # Debug scan pattern
-    print(f">>> Scan pattern analysis:")
-    print(f"    Unique POI1 values: {len(np.unique(poi1_vals))}")
-    print(f"    Unique POI2 values: {len(np.unique(poi2_vals))}")
-    unique_poi1 = np.unique(poi1_vals)
-    unique_poi2 = np.unique(poi2_vals)
-    expected_points = len(unique_poi1) * len(unique_poi2)
-    print(f"    Expected grid points: {expected_points}, Actual points: {len(poi1_vals)}")
-    print(f"    POI1 range: [{np.min(poi1_vals):.4f}, {np.max(poi1_vals):.4f}]")
-    print(f"    POI2 range: [{np.min(poi2_vals):.4f}, {np.max(poi2_vals):.4f}]")
-    print(f"    NLL range: [{np.min(nll_vals):.4f}, {np.max(nll_vals):.4f}]")
-    
-    # Check if this is actually a 2D scan or two 1D scans
-    if len(poi1_vals) == len(unique_poi1) + len(unique_poi2):
-        print("    WARNING: This looks like two separate 1D scans, not a 2D scan!")
-        print("    You need to run: combine -M MultiDimFit --algo=grid --redefineSignalPOIs poi1,poi2")
-    elif len(poi1_vals) < expected_points * 0.8:
-        print("    WARNING: Scan appears incomplete or not fully gridded")
-    else:
-        print("    This appears to be a proper 2D grid scan")
-    
-    # deltaNLL is already the correct quantity (no need to subtract minimum)
-    delta_nll_vals = nll_vals
-
-    # Find best fit point
-    # Prefer the smallest non-negative deltaNLL; fall back to global minimum if none >= 0.
-    pos_mask = delta_nll_vals >= 0
-    if np.any(pos_mask):
-        masked_dnl = delta_nll_vals[pos_mask]
-        local_idx = int(np.argmin(masked_dnl))            # index inside masked arrays
-        # apply mask and reindex consistently
-        poi1_vals = poi1_vals[pos_mask]
-        poi2_vals = poi2_vals[pos_mask]
-        delta_nll_vals = delta_nll_vals[pos_mask]
-        best_poi1 = poi1_vals[local_idx]
-        best_poi2 = poi2_vals[local_idx]
-        best_idx = local_idx
-        print(f">>> Best fit chosen as smallest non-negative deltaNLL at masked idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
-    else:
-        # no non-negative entries: use global minimum
-        min_idx = int(np.argmin(delta_nll_vals))
-        best_poi1 = poi1_vals[min_idx]
-        best_poi2 = poi2_vals[min_idx]
-        best_idx = min_idx
-        print(f">>> No non-negative deltaNLL found, using global minimum at idx {best_idx}, value={delta_nll_vals[best_idx]:.6f}")
-    
-
-    # Calculate correlation and uncertainties (now returns extras dict with asymmetric errors)
-    correlation, poi1_err, poi2_err, extras = calculate_correlation_and_uncertainties(
-        poi1_vals, poi2_vals, delta_nll_vals)
-
-    # Extract asymmetric errors and profiling info (if available)
-    poi1_err_down = extras.get('poi1_err_down', np.nan)
-    poi1_err_up   = extras.get('poi1_err_up', np.nan)
-    poi2_err_down = extras.get('poi2_err_down', np.nan)
-    poi2_err_up   = extras.get('poi2_err_up', np.nan)
-    prof_poi1_x = extras.get('profile_poi1_x', None)
-    prof_poi1_d = extras.get('profile_poi1_d', None)
-    prof_poi2_x = extras.get('profile_poi2_x', None)
-    prof_poi2_d = extras.get('profile_poi2_d', None)
-    
-    print(f">>> Found {len(poi1_vals)} data points")
-    print(f">>> Best fit: {poi1_name} = {best_poi1:.4f}, {poi2_name} = {best_poi2:.4f}")
-    print(f">>> NLL range: {np.min(delta_nll_vals):.3f} to {np.max(delta_nll_vals):.3f}")
-    print(f">>> Calculated correlation: {correlation:.4f}")
-    print(f">>> {poi1_name} = {best_poi1:.4f} ± {poi1_err:.4f}")
-    print(f">>> {poi2_name} = {best_poi2:.4f} ± {poi2_err:.4f}")
-    
+    # Use points within 2*NLL < 4 (approx 95% CL) for correlation estimate
+    mask = nll_arr < 4.0
+    correlation = 0.0
+    if np.sum(mask) >= 3:
+        try:
+            cov = np.cov(poi1_arr[mask], poi2_arr[mask])
+            if cov[0,0] > 0 and cov[1,1] > 0:
+                correlation = float(cov[0,1] / np.sqrt(cov[0,0] * cov[1,1]))
+        except Exception:
+            correlation = 0.0
+            
     return {
         'poi1_name': poi1_name,
         'poi2_name': poi2_name,
-        'poi1_vals': poi1_vals,
-        'poi2_vals': poi2_vals,
-        'delta_nll_vals': delta_nll_vals,
+        'poi1_vals': np.array(poi1_vals),
+        'poi2_vals': np.array(poi2_vals),
+        'delta_nll_vals': np.array(nll_vals),
         'best_poi1': best_poi1,
         'best_poi2': best_poi2,
         'poi1_err': poi1_err,
@@ -624,11 +596,12 @@ def extract_2d_scan_data(multidimfit_file, poi1_name, poi2_name):
         'poi1_err_up': poi1_err_up,
         'poi2_err_down': poi2_err_down,
         'poi2_err_up': poi2_err_up,
-        'profile_poi1_x': prof_poi1_x,
-        'profile_poi1_d': prof_poi1_d,
-        'profile_poi2_x': prof_poi2_x,
-        'profile_poi2_d': prof_poi2_d,
-        'correlation': correlation
+        'correlation': correlation,
+        # Store absolute limits for writing to file if needed
+        'poi1_low': poi1_low,
+        'poi1_high': poi1_high,
+        'poi2_low': poi2_low,
+        'poi2_high': poi2_high
     }
 
 def plot_2d_scan(setup, region, year, scan_data, **kwargs):
@@ -835,24 +808,24 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
         # horizontal (x) error bar at y = best_poi2
         if np.isfinite(poi1_err_down) and np.isfinite(poi1_err_up):
             line_x = TLine(best_poi1 - poi1_err_down, best_poi2, best_poi1 + poi1_err_up, best_poi2)
-            line_x.SetLineColor(kRed); line_x.SetLineWidth(2); line_x.Draw("SAME")
+            line_x.SetLineColor(kRed); line_x.SetLineWidth(2); line_x.Draw("SAME") # Changed width 2 -> 3
             # caps
-            cap_dx = 0.01 * (poi1_max - poi1_min)
-            cap1 = TLine(best_poi1 - poi1_err_down, best_poi2 - cap_dx, best_poi1 - poi1_err_down, best_poi2 + cap_dx)
-            cap2 = TLine(best_poi1 + poi1_err_up,   best_poi2 - cap_dx, best_poi1 + poi1_err_up,   best_poi2 + cap_dx)
-            cap1.SetLineColor(kRed); cap1.SetLineWidth(2); cap1.Draw("SAME")
-            cap2.SetLineColor(kRed); cap2.SetLineWidth(2); cap2.Draw("SAME")
+            # cap_dx = 0.02 * (poi1_max - poi1_min) # Changed size 0.01 -> 0.02
+            # cap1 = TLine(best_poi1 - poi1_err_down, best_poi2 - cap_dx, best_poi1 - poi1_err_down, best_poi2 + cap_dx)
+            # cap2 = TLine(best_poi1 + poi1_err_up,   best_poi2 - cap_dx, best_poi1 + poi1_err_up,   best_poi2 + cap_dx)
+            # cap1.SetLineColor(kRed); cap1.SetLineWidth(3); cap1.Draw("SAME") # Changed width 2 -> 3
+            # cap2.SetLineColor(kRed); cap2.SetLineWidth(3); cap2.Draw("SAME") # Changed width 2 -> 3
 
         # vertical (y) error bar at x = best_poi1
         if np.isfinite(poi2_err_down) and np.isfinite(poi2_err_up):
             line_y = TLine(best_poi1, best_poi2 - poi2_err_down, best_poi1, best_poi2 + poi2_err_up)
-            line_y.SetLineColor(kRed); line_y.SetLineWidth(2); line_y.Draw("SAME")
+            line_y.SetLineColor(kRed); line_y.SetLineWidth(2); line_y.Draw("SAME") # Changed width 2 -> 3
             # caps
-            cap_dy = 0.01 * (poi2_max - poi2_min)
-            cap3 = TLine(best_poi1 - cap_dy, best_poi2 - poi2_err_down, best_poi1 + cap_dy, best_poi2 - poi2_err_down)
-            cap4 = TLine(best_poi1 - cap_dy, best_poi2 + poi2_err_up,   best_poi1 + cap_dy, best_poi2 + poi2_err_up)
-            cap3.SetLineColor(kRed); cap3.SetLineWidth(2); cap3.Draw("SAME")
-            cap4.SetLineColor(kRed); cap4.SetLineWidth(2); cap4.Draw("SAME")
+            # cap_dy = 0.02 * (poi2_max - poi2_min) # Changed size 0.01 -> 0.02
+            # cap3 = TLine(best_poi1 - cap_dy, best_poi2 - poi2_err_down, best_poi1 + cap_dy, best_poi2 - poi2_err_down)
+            # cap4 = TLine(best_poi1 - cap_dy, best_poi2 + poi2_err_up,   best_poi1 + cap_dy, best_poi2 + poi2_err_up)
+            # cap3.SetLineColor(kRed); cap3.SetLineWidth(3); cap3.Draw("SAME") # Changed width 2 -> 3
+            # cap4.SetLineColor(kRed); cap4.SetLineWidth(3); cap4.Draw("SAME") # Changed width 2 -> 3
     except Exception:
         pass
     
@@ -863,7 +836,7 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     legend.SetTextSize(0.035)
     legend.AddEntry(best_fit_marker, "Best fit", "p")
     # legend.AddEntry(graph_points, "Scan points", "p")
-    legend.AddEntry(hist_contour, "1#sigma CL", "l")
+    legend.AddEntry(hist_contour, "1#sigma CL contour", "l")
     legend.Draw()
     
     # CMS style
@@ -944,7 +917,7 @@ def plot_measurement_summary(region_labels, measurements, **kwargs):
         y_pos = n_regions - i - 0.5
         val, err_down, err_up = measurement
         graph.SetPoint(i, val, y_pos)
-        graph.SetPointError(i, err_down, err_up, 0.1, 0.1)
+        graph.SetPointError(i, err_down, err_up, 0.2, 0.2) # Changed vertical cap size 0.1 -> 0.2
     
     # Style the graph
     graph.SetMarkerStyle(20)
@@ -1177,7 +1150,7 @@ def plot_scan_correlations(scan_results_all_regions, **kwargs):
 
 def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err_up, 
                          poi2_val, poi2_err_down, poi2_err_up, correlation, region, **kwargs):
-    """Write 2D fit results to text file, similar to measurepoi() in plotParabola_POI_region.py"""
+    """Write 2D fit results to text file"""
     year = kwargs.get('year', '2024')
     tag = kwargs.get('tag', '')
     channel = kwargs.get('channel', 'mt')
@@ -1185,12 +1158,16 @@ def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err
     
     ensureDirectory(outdir)
     
-    # Create output filename similar to plotParabola_POI_region format
     outfname = f"{outdir}/measurement_2D_{poi1_name}_{poi2_name}_{channel}_{region}{tag}.txt"
     
     print(f">>> Writing 2D fit results to {outfname}")
     
-    # Write results to file in same format as plotParabola_POI_region
+    # Calculate absolute limits
+    poi1_low = poi1_val - poi1_err_down
+    poi1_high = poi1_val + poi1_err_up
+    poi2_low = poi2_val - poi2_err_down
+    poi2_high = poi2_val + poi2_err_up
+    
     with open(outfname, 'w') as file:
         file.write("# 2D Fit Results from MultiDimFit\n")
         file.write(f"# Region: {region}\n")
@@ -1200,6 +1177,12 @@ def write_2d_fit_results(poi1_name, poi2_name, poi1_val, poi1_err_down, poi1_err
         file.write(f"{poi1_name} {poi1_val:.6f} {poi1_err_down:.6f} {poi1_err_up:.6f}\n")
         file.write(f"{poi2_name} {poi2_val:.6f} {poi2_err_down:.6f} {poi2_err_up:.6f}\n")
         file.write(f"correlation {correlation:.6f}\n")
+        # Add absolute limits as requested
+        file.write(f"# Absolute 1-sigma limits:\n")
+        file.write(f"{poi1_name}_1sigma_low: {poi1_low:.6f}\n")
+        file.write(f"{poi1_name}_1sigma_high: {poi1_high:.6f}\n")
+        file.write(f"{poi2_name}_1sigma_low: {poi2_low:.6f}\n")
+        file.write(f"{poi2_name}_1sigma_high: {poi2_high:.6f}\n")
     
     return outfname
 

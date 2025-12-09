@@ -46,6 +46,14 @@ def main(args):
   print("Using configuration file: %s"%setupConfFile  )
   with open(setupConfFile, 'r') as file:
     setup = yaml.safe_load(file)
+    
+    # FIX: Handle missing 'regions' key (e.g. for mumu config)
+    if "regions" not in setup:
+        # If fitRegions are used in observables, we might need them. 
+        # For mumu config provided, it uses "baseline".
+        print("WARNING: 'regions' key missing in config. Adding default 'baseline' region.")
+        setup["regions"] = { 'baseline': {'definition': '1', 'title': 'Baseline'} }
+
     if DM and 'regions' in setup or inclusive:
        newreg = {}
        for reg in setup['regions']:
@@ -112,24 +120,29 @@ def main(args):
     # Assumes config has 'idDeepTau2018v2p5VSjet_2>=5' (Medium) and 'idDeepTau2018v2p5VSe_2>=2' (VVLoose)
     
     if "baselineCuts" in setup:
-        jetcut = map_wp_to_int["againstjet"][againstjet]
-        electroncut = map_wp_to_int["againstelectron"][againstelectron]
-        
-        print(f"Updating baseline cuts for WP: VSjet {againstjet} (idx {jetcut}), VSele {againstelectron} (idx {electroncut})")
-        
-        # Replace VSjet cut (Default Medium=5)
-        if 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
-            setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
-        else:
-            print("WARNING: Could not find standard VSjet cut 'idDeepTau2018v2p5VSjet_2>=5' in baselineCuts to replace!")
-
-        # Replace VSele cut (Default VVLoose=2)
-        if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
-            setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
-        else:
-            print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")
+        # Only apply WP replacement if we are in a channel that likely uses Taus (mutau, etau, etc)
+        # or if the cuts are actually present.
+        if "tau" in channel or "idDeepTau" in setup["baselineCuts"]:
+            jetcut = map_wp_to_int["againstjet"][againstjet]
+            electroncut = map_wp_to_int["againstelectron"][againstelectron]
             
-        print(f"New baselineCuts: {setup['baselineCuts']}")
+            print(f"Updating baseline cuts for WP: VSjet {againstjet} (idx {jetcut}), VSele {againstelectron} (idx {electroncut})")
+            
+            # Replace VSjet cut (Default Medium=5)
+            if 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
+            else:
+                print("WARNING: Could not find standard VSjet cut 'idDeepTau2018v2p5VSjet_2>=5' in baselineCuts to replace!")
+
+            # Replace VSele cut (Default VVLoose=2)
+            if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
+            else:
+                print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")
+                
+            print(f"New baselineCuts: {setup['baselineCuts']}")
+        else:
+            print(f"Channel '{channel}' does not seem to use Tau ID working points. Skipping WP replacement in baseline cuts.")
 
      
     ###################
