@@ -170,7 +170,7 @@ def getsampleset(channel,era,**kwargs):
         ( 'VV', "ZZto2Nu2Q",             "ZZ 2#nu2q",                    4.826*kfactor_zz ), # LO times kfactor
         ( 'VV', "ZZto4L",             "ZZ 4l",                    4.344*kfactor_zz), # LO times kfactor
         # ( 'VV', "WW",             "WW",                    80.23*kfactor_ww ), # LO times kfactor
-        # ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
+        ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
        #  ( 'VV', "ZZ",             "ZZ",                    12.75*kfactor_zz ), # LO times kfactor
         #WZ->2L2Q
         #WW->4Q
@@ -353,8 +353,8 @@ def getsampleset(channel,era,**kwargs):
   #     sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYto2L-4Jets_MLL-50_ext1', name="DY_M50", cme=cme) # Drell-Yan, M > 50 GeV
   # JOIN
   sampleset.join('DY', name='DY' ) # Drell-Yan, M < 50 GeV + M > 50 GeV
-  # if '2024' in era:
-  sampleset.join('Wto*Nu-2Jets', name='WJ' ) # W + jets (NLO), merge different decay modes samples
+  if '2024' in era:
+    sampleset.join('Wto*Nu-2Jets', name='WJ' ) # W + jets (NLO), merge different decay modes samples
   if 'VV' in join:
     sampleset.join('VV','WZ','WW','ZZ', name='VV' ) # Diboson
   if 'TT' in join and era!='year':
