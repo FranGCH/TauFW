@@ -62,7 +62,7 @@ def getsampleset(datasample,expsamples,sigsamples=[ ],**kwargs):
   
   # DATA (OBSERVED)
   group = "Data"
-  title = 'Oberved'
+  title = 'Observed'
   datakwargs = kwargs.copy()
   datakwargs['weight'] = dataweight
   if not datasample:
@@ -97,7 +97,7 @@ def getsampleset(datasample,expsamples,sigsamples=[ ],**kwargs):
     elif len(fnames)>1:
       namerexp = re.compile(dname.replace('?','.').replace('*','.*'))
       dname    = dname.replace('?','').replace('*','')
-      datasample = MergedSample(dname,'Oberved',data=True)
+      datasample = MergedSample(dname,'Observed',data=True)
       for fname in fnames:
         setname = namerexp.findall(fname)[0]
         #print(setname)

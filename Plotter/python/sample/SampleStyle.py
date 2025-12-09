@@ -45,8 +45,8 @@ sample_titles = {
   'WJ':         "W + jets",
   'JTF':        "j -> tau_h fakes",
   'QCD':        "QCD multijet",
-  'Data':       "Oberved",
-  'data_obs':   "Oberved",
+  'Data':       "Observed",
+  'data_obs':   "Observed",
 }
 
 sample_colors = {
@@ -146,7 +146,7 @@ def set_sample_colors(coldict):
     ('Fake*rate',        coldict['QCD']),
     ('j*tau*fake',       coldict['QCD']),
     ('Data',             coldict['Data']),
-    ('Oberved',          coldict['Data']),
+    ('Observed',          coldict['Data']),
     ('data_obs',         coldict['Data']),
   ])
 set_sample_colors(sample_colors)
