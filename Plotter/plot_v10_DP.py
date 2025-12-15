@@ -9,7 +9,7 @@
 #>>>>Run with --serial option if using py3:
 #   ./plot_v10.py -y 2018 -c mutau --serial
 
-from config.samples_v15 import *
+from config.samples_v15_DP import *
 from TauFW.Plotter.plot.string import filtervars
 from TauFW.Plotter.plot.utils import LOG as PLOG
 from TauFW.Plotter.plot.Plot import Plot, deletehist
@@ -71,10 +71,18 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
       m_vis_ymax = 200*1e3
     elif '2025' in era:
       m_vis_ymax = 60*1e3
+    elif '2023C' == era:
+      m_vis_ymax = 35*1e3
+    elif '2023D' == era:
+      m_vis_ymax = 19*1e3
+    elif '2022_preEE' == era:
+      m_vis_ymax = 15*1e3
+    elif '2022_postEE' == era:
+      m_vis_ymax = 50*1e3
     else:
-      m_vis_ymax = 100*1e3
+      m_vis_ymax = None
     variables += [
-      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),# ymargin=1.3),ymax = m_vis_ymax),
+      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3,ymax = m_vis_ymax),
       # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
       # Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
       # Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
@@ -331,7 +339,7 @@ def main(args):
       fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
 
     if dp:
-      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA/"
+      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA"
     else:
       outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
     
