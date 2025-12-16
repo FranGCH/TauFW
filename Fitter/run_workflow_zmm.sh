@@ -52,14 +52,12 @@
 # # python3 merge_tau_jsons.py 
 
 # echo "=== Workflow completed ==="
-
-
 #!/bin/bash
 # Save as run_workflow.sh
 # Usage: ./run_workflow.sh
 
 # Define working points
-J_VALUES=("VVLoose" "VLoose" "Loose" "Medium" "Tight") #add VTight 
+J_VALUES=("VTight" "VVLoose" "VLoose" "Loose" "Medium" "Tight")
 E_VALUES=("VVLoose"  "Tight")
 
 YEAR="2024"
