@@ -5,6 +5,7 @@ E_VALUES=("Tight" "VVLoose")
 
 YEAR=2024
 CONFIG="TauES_ID/config/config_coarse_TT.yml"
+CONFIG_MM="TauES/config/FitSetup_mumu.yml" #CR config
 
 # Create timestamped log file
 TIMESTAMP=$(date +"%Y%m%d_%H%M")
@@ -27,6 +28,11 @@ for j in "${J_VALUES[@]}"; do
             -c ${CONFIG} \
             -j ${j} \
             -e ${e} 2>&1 | tee -a "$LOGFILE"
+        python3 TauES/createinputsTES.py \
+            -y ${YEAR} \
+            -c ${CONFIG_MM} \
+            -j ${j} \
+            -e ${e} 
 
         STATUS=${PIPESTATUS[0]}   # Correct status when using tee
 
