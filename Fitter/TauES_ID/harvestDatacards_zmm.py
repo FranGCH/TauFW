@@ -68,17 +68,17 @@ def harvest(setup, year, obs, **kwargs):
 
         print(green("\n>>> defining nuissance parameters ..."))
 
-        # if "systematics" in setup:
-        #   for sys in setup["systematics"]:
-        #     sysDef = setup["systematics"][sys]
-        #     scaleFactor = 1.0  
-        #     if "scaleFactor" in sysDef:
-        #       scaleFactor = sysDef["scaleFactor"]
-        #     harvester.cp().process(sysDef["processes"]).AddSyst(harvester, sysDef["name"] if "name" in sysDef else sys, sysDef["effect"], SystMap()(scaleFactor))
+        if "systematics" in setup: #######
+          for sys in setup["systematics"]:
+            sysDef = setup["systematics"][sys]
+            scaleFactor = 1.0  
+            if "scaleFactor" in sysDef:
+              scaleFactor = sysDef["scaleFactor"]
+            harvester.cp().process(sysDef["processes"]).AddSyst(harvester, sysDef["name"] if "name" in sysDef else sys, sysDef["effect"], SystMap()(scaleFactor))
    
 
         # Add DY cross section 
-        # ############harvester.cp().process(['ZTT','ZL','ZJ']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
+        # harvester.cp().process(['ZTT','ZL','ZJ']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
         # harvester.cp().process(['ZLL']).AddSyst(harvester, "xsec_dy" ,'rateParam', SystMap()(1.00))
 
         # EXTRACT SHAPES
