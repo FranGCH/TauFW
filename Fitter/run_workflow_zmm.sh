@@ -1,3 +1,54 @@
+# Define working points
+J_VALUES=("VTight" "VVLoose" "VLoose" "Loose" "Medium" "Tight")
+E_VALUES=("VVLoose"  "Tight")
+
+YEAR="2024"
+CONFIG_TT="TauES_ID/config/config_coarse_TT.yml"
+CONFIG_MM="TauES/config/FitSetup_mumu.yml"
+
+# Loop over each combination
+for JET_WP in "${J_VALUES[@]}"; do
+  for ELE_WP in "${E_VALUES[@]}"; do
+    echo "=========================================="
+    echo "=== Running Workflow for Jet=$JET_WP, Ele=$ELE_WP ==="
+    echo "=========================================="
+
+    BASE_INPUT="input_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
+    BASE_OUTPUT="output_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
+    BASE_PLOTS="plots_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
+
+    echo "=== Step 1: Running MultiDimFit ==="
+    python3 TauES_ID/harvestDatacards_zmm.py -y $YEAR -c $CONFIG_MM -i ${BASE_INPUT}/ -o ${BASE_OUTPUT}/$YEAR/
+    python3 TauES_ID/makecombinedfitTES_SF.py -y $YEAR -c $CONFIG_TT -i ${BASE_INPUT}/ \
+      --input_file ${BASE_INPUT}/ztt_mt_tes_m_vis.inputs-$YEAR-13TeV_mutau.root \
+      -o 3 --mumu_datacard_file ${BASE_OUTPUT}/$YEAR/ztt_mm_m_vis-baseline_mumu-$YEAR-13TeV.txt \
+      2>&1 | tee step1_multidimfit_${JET_WP}_${ELE_WP}.log
+
+    echo "=== Step 2: Running FitDiagnostics + PostFit ==="
+    python3 TauES_ID/makecombinedfitTES_SF_postfit.py -y $YEAR -c $CONFIG_TT --indir ${BASE_OUTPUT}/ -o 3 \
+      --mumu_input_file ${BASE_OUTPUT}/$YEAR/ztt_mm_m_vis-baseline_mumu-$YEAR-13TeV.txt \
+      -cmm $CONFIG_MM --jet_wp ${JET_WP} --ele_wp ${ELE_WP} 2>&1 | tee step2_postfit_${JET_WP}_${ELE_WP}.log
+
+    echo "=== Step 3: Running Plots ==="
+    python3 python/plot/runpostfit.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} --include-cr \
+      2>&1 | tee step3_plots_${JET_WP}_${ELE_WP}.log
+    python3 pre_post_plot_combiner.py --scan_dir ${BASE_PLOTS}/$YEAR/ --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
+    python3 plot_measurements.py --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
+
+    echo "=== Step 4: Correction File Generation ==="
+    python3 createroot_TES.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -f root
+    python3 createroot_TES.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -f json
+
+    echo "=== Workflow completed for Jet=$JET_WP, Ele=$ELE_WP ==="
+    echo
+  done
+done
+# Merge all JSON correction files
+echo "=== Merging all JSON correction files ==="
+python3 merge_tau_jsons.py --type both -o tau_sf/TauCorrections_2024.json
+
+echo "All workflows completed successfully!"
+
 # #!/bin/bash
 # # Save as run_workflow.sh
 
@@ -55,54 +106,3 @@
 #!/bin/bash
 # Save as run_workflow.sh
 # Usage: ./run_workflow.sh
-
-# Define working points
-J_VALUES=("VTight" "VVLoose" "VLoose" "Loose" "Medium" "Tight")
-E_VALUES=("VVLoose"  "Tight")
-
-YEAR="2024"
-CONFIG_TT="TauES_ID/config/config_coarse_TT.yml"
-CONFIG_MM="TauES/config/FitSetup_mumu.yml"
-
-# Loop over each combination
-for JET_WP in "${J_VALUES[@]}"; do
-  for ELE_WP in "${E_VALUES[@]}"; do
-    echo "=========================================="
-    echo "=== Running Workflow for Jet=$JET_WP, Ele=$ELE_WP ==="
-    echo "=========================================="
-
-    BASE_INPUT="input_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
-    BASE_OUTPUT="output_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
-    BASE_PLOTS="plots_pt_less_region/againstjet_${JET_WP}/againstelectron_${ELE_WP}"
-
-    echo "=== Step 1: Running MultiDimFit ==="
-    python3 TauES_ID/harvestDatacards_zmm.py -y $YEAR -c $CONFIG_MM -i ${BASE_INPUT}/ -o ${BASE_OUTPUT}/$YEAR/
-    python3 TauES_ID/makecombinedfitTES_SF.py -y $YEAR -c $CONFIG_TT -i ${BASE_INPUT}/ \
-      --input_file ${BASE_INPUT}/ztt_mt_tes_m_vis.inputs-$YEAR-13TeV_mutau.root \
-      -o 3 --mumu_datacard_file ${BASE_OUTPUT}/$YEAR/ztt_mm_m_vis-baseline_mumu-$YEAR-13TeV.txt \
-      2>&1 | tee step1_multidimfit_${JET_WP}_${ELE_WP}.log
-
-    echo "=== Step 2: Running FitDiagnostics + PostFit ==="
-    python3 TauES_ID/makecombinedfitTES_SF_postfit.py -y $YEAR -c $CONFIG_TT --indir ${BASE_OUTPUT}/ -o 3 \
-      --mumu_input_file ${BASE_OUTPUT}/$YEAR/ztt_mm_m_vis-baseline_mumu-$YEAR-13TeV.txt \
-      -cmm $CONFIG_MM --jet_wp ${JET_WP} --ele_wp ${ELE_WP} 2>&1 | tee step2_postfit_${JET_WP}_${ELE_WP}.log
-
-    echo "=== Step 3: Running Plots ==="
-    python3 python/plot/runpostfit.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} --include-cr \
-      2>&1 | tee step3_plots_${JET_WP}_${ELE_WP}.log
-    python3 pre_post_plot_combiner.py --scan_dir ${BASE_PLOTS}/$YEAR/ --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
-    python3 plot_measurements.py --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
-
-    echo "=== Step 4: Correction File Generation ==="
-    python3 createroot_TES.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -f root
-    python3 createroot_TES.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -f json
-
-    echo "=== Workflow completed for Jet=$JET_WP, Ele=$ELE_WP ==="
-    echo
-  done
-done
-# Merge all JSON correction files
-echo "=== Merging all JSON correction files ==="
-python3 merge_tau_jsons.py --type both -o tau_sf/TauCorrections_2024.json
-
-echo "All workflows completed successfully!"
