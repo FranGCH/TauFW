@@ -255,14 +255,14 @@ systematics:
     #     variations: ["Up100", "No", "Up10", "Down10"]
     #     nomWeight: "zptweight_nnlo" 
     #     altWeights: ["((2*(zptweight_nnlo)) - 1)", "1", "((1.1*zptweight_nnlo) - 0.1)", "((0.9*zptweight_nnlo) + 0.1)"]
-    shape_ttbar: #<-- check if this is ok
-        effect: "shape"
-        processes: [ "TTT", "TTL", "TTJ"]
-        name: "shape_ttbar_$BIN"
-        title: "+/- 3% ttptweight"
-        variations: ["Up", "Down"]
-        nomWeight: "ttptweight" 
-        altWeights: ["pow(ttptweight,1.03)", "pow(ttptweight,0.97)"]
+    # shape_ttbar: #<-- check if this is ok
+    #     effect: "shape"
+    #     processes: [ "TTT", "TTL", "TTJ"]
+    #     name: "shape_ttbar_$BIN"
+    #     title: "+/- 3% ttptweight"
+    #     variations: ["Up", "Down"]
+    #     nomWeight: "ttptweight" 
+    #     altWeights: ["pow(ttptweight,1.03)", "pow(ttptweight,0.97)"]
     lumi:
         effect: "lnN"
         processes: ["ZTT", "ZL", "ZJ", "TTT", "TTL", "TTJ", "W", "ST", "VV"] #processes: ["ZTT", "ZL", "ZJ", "TTT", "TTL", "TTJ", "W", "ST", "VV"]
