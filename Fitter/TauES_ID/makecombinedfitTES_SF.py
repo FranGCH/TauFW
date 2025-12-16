@@ -429,6 +429,7 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
         # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
+            print(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
             os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
         # for r in setup["observables"]["m_vis"]["scanRegions"]:
         #     # Plot TES
