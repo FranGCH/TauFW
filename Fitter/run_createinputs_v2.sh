@@ -39,22 +39,22 @@ echo "Environment setup complete."
 cd ${CMSSW_PATH}/TauFW/Fitter
 
 # Define a log file specific to this job
-LOG_FILE="condor_job_output_mumuMedium.log"
+LOG_FILE="condor_job_output_mutauMedium.log"
 echo ""
-echo ">>> Running createinputsTES_MyV.py ..."
+echo ">>> Running createinputsTES.py ..."
 echo "    Log file will be: ${LOG_FILE}"
 
 # Execute your command, redirecting all output (stdout and stderr) to the log file
-# python3 TauES/createinputsTES_MyV.py \
+# python3 TauES/createinputsTES.py \
 #     -y 2024 \
 #     -c TauES_ID/config/config_coarse_TT.yml \
 #     -j Tight \
 #     -e VVLoose > ${LOG_FILE} 2>&1
 
-python3 TauES/createinputsTES_MyV.py \
+python3 TauES/createinputsTES.py \
     -y 2024 \
     -c TauES/config/FitSetup_mumu.yml \
-    -j Tight \
+    -j Medium \
     -e VVLoose > ${LOG_FILE} 2>&1
 
 # Record the exit status of the command

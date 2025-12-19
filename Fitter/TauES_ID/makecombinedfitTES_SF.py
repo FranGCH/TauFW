@@ -17,9 +17,6 @@ import sys
 import os
 import yaml
 from argparse import ArgumentParser
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):
@@ -61,6 +58,15 @@ def merge_datacards_regions(setup, setup_mumu, config_mumu, era, extratag, outpu
     if hasattr(setup, 'mumu_datacard_file') and setup.get('mumu_datacard_file'):
         filelist += f"zmm={setup.get('mumu_datacard_file')} "
         outcombinedfile += "CR"
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
+        print(100*'-')
         os.system(f"combineCards.py {filelist} >output_{era}/{outcombinedfile}.txt")
         print(">>>>>>>>> merging datacards is done ")
     # Otherwise, use the old logic (commented out)
@@ -95,16 +101,16 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir, mu
     return outCRfile
     
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
-    #tes_range    = kwargs.get('tes_range',    "1.000,1.000")
+    # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.5")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
     extratag     = kwargs.get('extratag',     "_PNet")
-    algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
-    npts_fit     = kwargs.get('npts_fit',     "--points=66") ## 66  --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
-    fit_opts     = kwargs.get('fit_opts',     "--robustHesse=1 %s" %(npts_fit)) #--setRobustFitTolerance=0.001
-    xrtd_opts    = kwargs.get('xrtd_opts',    "") #--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NEW 
-    cmin_opts    = kwargs.get('cmin_opts',    "") # --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan
-    save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult"                                                                           )
+    algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
+    npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
+    fit_opts     = kwargs.get('fit_opts',      "--setRobustFitTolerance=0.001 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=0 --setRobustFitStrategy=1  --X-rtd MINIMIZER_analytic %s"%(npts_fit) ) #--setRobustFitTolerance=0.001--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1  --X-rtd FITTER_NEW_CROSSING_ALGO
+    xrtd_opts    = kwargs.get('xrtd_opts',    "") 
+    cmin_opts    = kwargs.get('cmin_opts',     "--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan") # --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan
+    save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult --saveWorkspace") #--saveSpecifiedNuis all --saveFitResult")   
     era          = kwargs.get('era',          "")
     config_mumu  = kwargs.get('config_mumu',  "")
     mumu_input_file = kwargs.get('mumu_input_file', None)  # Add this line
@@ -144,9 +150,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         if int(option) <= 3 :
             # For CR Zmumu 
             print("config_mumu = %s"  %(config_mumu))
-            if str(config_mumu) != 'None':
+            
+            # FIX: Check if config_mumu exists OR if a direct file was provided
+            if str(config_mumu) != 'None' or mumu_input_file:
                 # merge datacards regions and CR
-                datacardfile = merge_datacards_ZmmCR(setup, setup_mumu, era, extratag, r, output_dir)
+                # FIX: Pass mumu_input_file to the merge function
+                datacardfile = merge_datacards_ZmmCR(setup, setup_mumu, era, extratag, r, output_dir, mumu_input_file)
                 print("datacard file for fit by region with additionnal CR = %s" %(datacardfile)) 
 
             else:
@@ -179,6 +188,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             MultiDimFit_opts_local = MultiDimFit_opts.replace(workspace, workspace_filename)
             print("MultidimFit %s : " %(r), '\t', MultiDimFit_opts_local)
             os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doInitialFit --robustFit 1   --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}={tes_range}")  
+        
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}={tes_range} -v 0")
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 -o tes_impacts_{r}.json --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}={tes_range} -v 0") 
+            os.system(f"plotImpacts.py -i tes_impacts_{r}.json -o impacts_tes_SF_{r}")
+
             os.chdir(cwd)
         # Fit of tid_SF_DM by DM with tes as a nuisance parameter
         elif option == '2':
@@ -186,18 +201,25 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             NP = "rgx{.*tid.*}" 
             print(">>>>>>> Scan of "+POI)
             #POI_OPTS = "-P %s  --setParameterRanges %s=%s:tes_%s=%s -m 90 --setParameters r=1,rgx{.*tid.*}=1,rgx{.*tes.*}=1 --freezeParameters r,tes_%s --redefineSignalPOIs tes_%s --floatOtherPOIs 1" % (POI, POI, tid_SF_range,r,tes_range,r,r)  # tes_DM
-            POI_OPTS = "-P %s --redefineSignalPOIs tes_%s --setParameterRanges %s=%s:tes_%s=%s -m 90 --setParameters r=1,rgx{.*tid.*}=1,rgx{.*tes.*}=1 --freezeParameters r --floatOtherPOIs=1" % (POI,r, POI, tid_SF_range, r,tes_range)  # tes_DM
+            POI_OPTS = "-P %s --redefineSignalPOIs tes_%s --setParameterRanges %s=%s:tes_%s=%s -m 90 --setParameters r=1,rgx{.*tid.*}=1,rgx{.*tes.*}=1 --setParameterRange r=0.96,1.04 --floatOtherPOIs=1" % (POI,r, POI, tid_SF_range, r,tes_range)  # tes_DM
             MultiDimFit_opts = " %s %s %s -n .%s %s %s %s %s --trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --saveInactivePOI=1 " %(workspace, algo, POI_OPTS, BINLABELoutput,fit_opts, xrtd_opts, cmin_opts, save_opts)
             print("MultidimFit %s : " %(r), '\t', MultiDimFit_opts)
             os.system("combine -M MultiDimFit %s " %(MultiDimFit_opts))
+
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doInitialFit --robustFit 1   --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2")  
+        
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2 -v 0")
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 -o tid_impacts_{r}.json --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2 -v 0") 
+            os.system(f"plotImpacts.py -i tid_impacts_{r}.json -o impacts_tid_SF_{r}")
 
         # 2D Fit of tes_DM and tid_SF_DM by DM, both are pois
         elif option == '3':  
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
-            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=1,%s=1 --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # --freezeParameters r 
-            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*}
+            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # :r=0.96,1.04 %s=1,%s=1, ,POI2, POI1  --freezeParameters r
+            # POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=0.8,%s=1.025 --redefineSignalPOIs %s,%s  --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1, POI2,POI1) # %s=1,%s=1, ,POI2, POI1  --freezeParameters r  --freezeParameters r
+            MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --cminFallbackAlgo Minuit2,Migrad,0:0.001
             
             # Run combine in output_dir
             cwd = os.getcwd()
@@ -215,45 +237,137 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
                 print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
                 print(f"[DEBUG] Creating parameter file: {param_file}")
-                if os.path.exists(fit_result_file):
-                    import ROOT
-                    f = ROOT.TFile.Open(fit_result_file)
-                    tree = f.Get("limit") if f and not f.IsZombie() else None
-                    if tree and hasattr(tree, "GetListOfBranches"):
-                        branches = [b.GetName() for b in tree.GetListOfBranches()]
-                        nll_branch = "deltaNLL" if "deltaNLL" in branches else ("nll" if "nll" in branches else None)
-                        best_idx = 0
-                        best_val = float("inf")
-                        nentries = int(tree.GetEntries())
-                        for i in range(nentries):
-                            tree.GetEntry(i)
-                            if nll_branch is None:
-                                best_idx = 0
-                                break
-                            val = float(getattr(tree, nll_branch))
-                            if val < best_val:
-                                best_val = val
-                                best_idx = i
-                        tree.GetEntry(best_idx)
-                        try:
-                            tes_val = float(getattr(tree, f"tes_{r}"))
-                            tid_val = float(getattr(tree, f"tid_SF_{r}"))
-                        except Exception:
-                            tes_val, tid_val = 1.0, 1.0
-                        with open(param_file, "w") as pf:
-                            pf.write(f"tes_{r}: {tes_val:.6f}\n")
-                            pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
-                        f.Close()
-                        print(f"[DEBUG] Extracted fitted values: tes={tes_val:.6f}, tid_SF={tid_val:.6f}")
+                # if os.path.exists(fit_result_file):
+                import ROOT
+                f = ROOT.TFile.Open(fit_result_file)
+                tree = f.Get("limit") if f and not f.IsZombie() else None
+                if tree and hasattr(tree, "GetListOfBranches"):
+                    branches = [b.GetName() for b in tree.GetListOfBranches()]
+                    nll_branch = "deltaNLL"
+
+                    best_idx = 0
+                    best_val = float("inf")
+                    nentries = int(tree.GetEntries())
+
+                    tes_vals_in_1sigma = []
+                    tid_vals_in_1sigma = []
+
+                    # Parse ranges
+                    tes_min, tes_max = [float(x) for x in tes_range.split(',')]
+                    tid_min, tid_max = [float(x) for x in tid_SF_range.split(',')]
+
+                    # First pass: properly loop and fill 1σ arrays
+                    for i in range(nentries):
+                        tree.GetEntry(i)
+
+                        if 0 <= tree.deltaNLL <= 0.5:     
+                            val_tes = getattr(tree, f"tes_{r}")
+                            val_tid = getattr(tree, f"tid_SF_{r}")
+
+                            if (tes_min <= val_tes <= tes_max) and (tid_min <= val_tid <= tid_max):
+                                tes_vals_in_1sigma.append(val_tes)
+                                tid_vals_in_1sigma.append(val_tid)
+
+                    # Protect against empty lists
+                    if tes_vals_in_1sigma:
+                        tes_low  = min(tes_vals_in_1sigma)
+                        tes_high = max(tes_vals_in_1sigma)
                     else:
-                        print(f"[DEBUG] No valid tree found in fit result file.")
-                else:
-                    # create default parameter file if fit result missing
+                        tes_low = tes_high = None
+
+                    if tid_vals_in_1sigma:
+                        tid_low  = min(tid_vals_in_1sigma)
+                        tid_high = max(tid_vals_in_1sigma)
+                    else:
+                        tid_low = tid_high = None
+
+                    print(f"[DEBUG] TES 1-sigma range: {tes_low} - {tes_high}")
+                    print(f"[DEBUG] TauID SF 1-sigma range: {tid_low} - {tid_high}")
+
+                    # Second pass: find best-fit index
+                    for i in range(nentries):
+                        tree.GetEntry(i)
+                        val = float(getattr(tree, nll_branch))
+                        if val < best_val and val >= 0:
+                            best_val = val
+                            best_idx = i
+
+                    # Load best-fit entry
+                    tree.GetEntry(best_idx)
+                    tes_val = float(getattr(tree, f"tes_{r}"))
+                    tid_val = float(getattr(tree, f"tid_SF_{r}"))
+
+                    print(f"[DEBUG] Best fit entry index: {best_idx} with deltaNLL = {best_val}")
+                    print(f"tes_vals_in_1sigma: {tes_vals_in_1sigma}")
+                    print(f"tid_vals_in_1sigma: {tid_vals_in_1sigma}")
+                    print(f"[DEBUG] Best fit TES: tes_{r} = {tes_val}")
+                    print(f"[DEBUG] Best fit TauID SF: tid_SF_{r} = {tid_val}")
+
+                    print(f"[INFO] Extracted TES:   tes_{r} = {tes_val:.6f}")
+                    print(f"[INFO] Extracted TauID: tid_SF_{r} = {tid_val:.6f}")
+
+                    # except Exception:
+                    #     tes_val, tid_val = 1.0, 1.0
                     with open(param_file, "w") as pf:
-                        pf.write(f"tes_{r}: 1.000000\n")
-                        pf.write(f"tid_SF_{r}: 1.000000\n")
+                        pf.write(f"tes_{r}: {tes_val:.6f}\n")
+                        pf.write(f"tes_{r}_1sigma_low: {tes_low:.6f}\n")
+                        pf.write(f"tes_{r}_1sigma_high: {tes_high:.6f}\n")
+                        pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
+                        pf.write(f"tid_SF_{r}_1sigma_low: {tid_low:.6f}\n")
+                        pf.write(f"tid_SF_{r}_1sigma_high: {tid_high:.6f}\n")
+                    print(f"[INFO] Parameter values written to {param_file}")
+                    f.Close()
+
+                ###################
+                # from math import isnan
+                # import ROOT
+                # fit_result_file = f"multidimfit.{BINLABELoutput}.root" 
+                # f = ROOT.TFile.Open(fit_result_file)
+                # if not f or f.IsZombie():
+                #     print("[ERROR] Could not open fit result file.")
+                # else:
+                #     fit = f.Get("fit_mdf")
+                #     if not fit:
+                #         print("[ERROR] Could not find RooFitResult 'fit_mdf'.")
+                #     else:
+                #         # Build parameter names: tes_DM0, tid_SF_DM0 → using {r}
+                #         tes_name = f"tes_{r}"
+                #         tid_name = f"tid_SF_{r}"
+
+                #         pars = fit.floatParsFinal()
+
+                #         tes_var = pars.find(tes_name)
+                #         tid_var = pars.find(tid_name)
+
+                #         if not tes_var or not tid_var:
+                #             print(f"[ERROR] TES or TauID not found: {tes_name}, {tid_name}")
+                #         else:
+                #             tes_val, tes_err = tes_var.getVal(), tes_var.getError()
+                #             tid_val, tid_err = tid_var.getVal(), tid_var.getError()
+
+                #             # Write results to file
+                #             with open(param_file, "w") as pf:
+                #                 pf.write(f"{tes_name}: {tes_val:.6f}\n") #  +/- {tes_err:.6f}\n")
+                #                 pf.write(f"{tid_name}: {tid_val:.6f}\n") #  +/- {tid_err:.6f}\n")
+
+                #             print(f"[INFO] Extracted TES:   {tes_name} = {tes_val:.6f} ± {tes_err:.6f}")
+                #             print(f"[INFO] Extracted TauID: {tid_name} = {tid_val:.6f} ± {tid_err:.6f}")
+
+                #     f.Close()
+
+                ###################
+                else:
+                    continue
+
+                # os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs {POI2},{POI1} --setParameterRange {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1 --freezeParameters r ")  
+                # os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs {POI2},{POI1} --setParameterRange {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0")
+                # os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 -o impacts_{r}.json --redefineSignalPOIs {POI2},{POI1} --setParameterRange {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0") 
+                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts_{r}_{POI1} --POI {POI1}")
+                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts_{r}_{POI2} --POI {POI2}")
+
             finally:
                 os.chdir(cwd)
+
         ### Fit with combined datacards  tes_DM0,tes_DM1,tes_DM10,tes_DM11 
         ## Fit of tid_SF in its regions with tes_region and other tid_SF_regions as nuisance parameters    tes_DM0,tes_DM1,tes_DM10,tes_DM11
         elif option == '4': 
@@ -315,7 +429,7 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
         # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
-            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir}")
+            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
         # for r in setup["observables"]["m_vis"]["scanRegions"]:
         #     # Plot TES
         #     os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")
@@ -380,7 +494,8 @@ def main(args):
     setup['mumu_datacard_file'] = getattr(args, 'mumu_datacard_file', None)
 
     # Run the fit using combine with the different options 
-    run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag)
+    # FIX: Pass mumu_input_file explicitly in the kwargs
+    run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag, mumu_input_file=args.mumu_datacard_file)
 
     # Plots
     plotScan(setup, setup_mumu, era=era, config=config, config_mumu=config_mumu, option=option, indir=output_dir, extratag=extratag)

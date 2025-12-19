@@ -138,7 +138,7 @@ def main(args):
       bins.append(Sel("baseline", setup["baselineCuts"]))
     jetcut = map_PNetscores_to_wp["againstjet"][againstjet]
     electroncut = map_PNetscores_to_wp["againstelectron"][againstelectron]
-    setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSjet_2>=0.835', f'rawPNetVSjet_2>={jetcut}')
+    setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSjet_2>=0.8347', f'rawPNetVSjet_2>={jetcut}')
     setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSe_2>=0.387',   f'rawPNetVSe_2>={electroncut}')
     print('baselinecuts: ', jetcut, '\t', againstjet, '\t', electroncut, '\t', againstelectron, '\t', setup["baselineCuts"])
     if "regions" in setup:

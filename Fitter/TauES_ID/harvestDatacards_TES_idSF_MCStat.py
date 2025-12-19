@@ -16,7 +16,6 @@ The autoMCstat function is used to have bin-by-bin uncertainties for the sum of 
 import ROOT; ROOT.PyConfig.IgnoreCommandLineOptions = True
 import os, sys, re
 import yaml
-import logging
 import CombineHarvester.CombineTools.ch as ch
 from CombineHarvester.CombineTools.ch import CombineHarvester, MassesFromRange, SystMap, BinByBinFactory, CardWriter, SetStandardBinNames, AutoRebin
 import CombineHarvester.CombinePdfs.morphing as morphing
@@ -25,8 +24,6 @@ from CombineHarvester.CombinePdfs.morphing import BuildCMSHistFuncFactory
 
 import ROOT
 from ROOT import RooWorkspace, TFile, RooRealVar
-
-logger = logging.getLogger(__name__)
 
 def check_integral(filename, procs, name, region):
     from ROOT import TFile, TH1
@@ -52,7 +49,6 @@ def check_integral(filename, procs, name, region):
 
 def harvest(setup, year, obs, **kwargs):
     """Harvest cards."""
-    logger.info("---- Harvest function at harvestDatacards_TES_idSF_MCStat.py ")
 
     channel = setup["channel"].replace("mu","m").replace("tau","t")
     
@@ -187,20 +183,35 @@ def harvest(setup, year, obs, **kwargs):
         # Extract shapes: backgrounds normal, ZTT with TES mass templates, ZL/ZJ normal templates
         harvester.cp().channel([channel]).backgrounds().ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
         # ZTT: use TES templates if present
+        
+	############################
+	#HERE MIGHT BE PROBLEMATIC
         if ztt_signals:
             if("TESvariations" in setup):
-                harvester.cp().process(ztt_signals).ExtractShapes(filename, "$BIN/$PROCESS_TES$MASS", "$BIN/$PROCESS_TES$MASS_$SYSTEMATIC")
+                harvester.cp().process(ztt_signals).ExtractShapes(filename, "$BIN/$PROCESS_TES$MASS", "$BIN/$PROCESS_$SYSTEMATIC")  #$BIN/$PROCESS_TES$MASS_$SYSTEMATIC  #$BIN/$PROCESS_TES$MASS_$SYSTEMATIC
             else:
                 harvester.cp().process(ztt_signals).ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
-        # ZL/ZJ: regular templates (no TES)
+		# ZL/ZJ: regular templates (no TES)
         if other_z_signals:
             harvester.cp().process(other_z_signals).ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
+# ...existing code...
+        # backgrounds: normal templates (no TES)
+        # ZTT: use TES templates for the nominal, but read systematics from non‑TES names
+        # harvester.cp().process(ztt_signals).ExtractShapes(
+        #     filename,
+        #     "$BIN/$PROCESS_TES$MASS",   # e.g. DM0/ZTT_TES1.000
+        #     "$BIN/$PROCESS_$SYSTEMATIC" # e.g. DM0/ZTT_shape_dy_DM0Up
+        # )
+        # # ZL/ZJ: regular templates (no TES)
+        # harvester.cp().process(other_z_signals).ExtractShapes(filename, "$BIN/$PROCESS", "$BIN/$PROCESS_$SYSTEMATIC")
+# ...existing code...
+############################"$BIN/$PROCESS_TES$MASS", "$BIN/$PROCESS_$SYSTEMATIC")
 
 
-   
-        # ROOVAR
+       # ROOVAR
         workspace = RooWorkspace(analysis,analysis)
-        #print analysis
+        
+#print analysis
 
         # Adding TES as a POI the signal ZTT 
         tes_name = "tes"
@@ -262,6 +273,7 @@ def harvest(setup, year, obs, **kwargs):
         harvester.SetGroup( 'jtf',      [ ".*jTauFake.*"     ])
         harvester.SetGroup( 'ltf',      [ ".*mTauFake.*"     ])
         harvester.SetGroup( 'zpt',      [ ".*shape_dy.*"     ])
+        harvester.SetGroup( 'shape_ttbar', [ ".*shape_ttbar.*"  ])
         harvester.SetGroup( 'xsec',     [ ".*xsec.*"         ])
         harvester.SetGroup( 'norm',     [ ".*(lumi|Xsec|Norm|norm_qcd).*" ])
         harvester.SetGroup( 'tid',      [ ".*tid.*"          ])

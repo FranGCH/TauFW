@@ -121,7 +121,7 @@ def drawpostfit(fname,region,procs,**kwargs):
     ytitle     = "Events/10 GeV" # hardcoded for paper
     # pname_     = repkey(pname,FIT=fit,ERA=era)+region
     pname_ = fit + "_"+region
-    rmin, rmax = (0.28,1.52)
+    rmin, rmax = (0.85,1.15) #if fit=='postfit' else (0.80,1.20)
     print(" pname_ = %r"%(pname_))
 
    

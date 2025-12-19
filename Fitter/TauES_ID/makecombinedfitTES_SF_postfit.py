@@ -73,15 +73,17 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, mumu_input_fil
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     mumu_input_file = kwargs.get('mumu_input_file', None)
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"])))
-    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.5")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.70,1.2")
     extratag     = kwargs.get('extratag',     "_PNet")
-    algo         = kwargs.get('algo',         "--algo=grid --alignEdges=1  ")
-    npts_fit     = kwargs.get('npts_fit',     "--points=61")
-    fit_opts     = kwargs.get('fit_opts',     "--robustHesse=1   %s" %(npts_fit)) # --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.00001
+    algo         = kwargs.get('algo',         "--algo=singles   ") #--alignEdges=1") #--alignEdges=1 grid
+    npts_fit     = kwargs.get('npts_fit',     "")
+    fit_opts     = kwargs.get('fit_opts',     "--setRobustFitTolerance=0.001 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=0 --setRobustFitStrategy=1  --X-rtd MINIMIZER_analytic --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan") # --robustFit=1 --setRobustFitAlgo=Minuit2   --setRobustFitStrategy=1 --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO 
     xrtd_opts    = kwargs.get('xrtd_opts',    "") #--X-rtd FITTER_NEW_CROSSING_ALGO --X-rtd FITTER_NE
     cmin_opts    = kwargs.get('cmin_opts',    "") #--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --cminDefaultMinimizerStrategy 0
-    save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult")
+    save_opts    = kwargs.get('save_opts',    " --saveShapes")
     era          = kwargs.get('era',          "")
+    jet_wp       = kwargs.get('jet_wp',       "Medium")
+    ele_wp       = kwargs.get('ele_wp',       "VVLoose")
     config_mumu  = kwargs.get('config_mumu',  "")
     workspace = ""
 
@@ -128,10 +130,8 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     tes_range = "0.990,1.010"
                 elif r == "DM1" :
                     tes_range = "0.990,1.010"
-                elif r == "DM2" :
-                    tes_range = "0.985,1.010"
                 elif r == "DM10" :
-                    tes_range = "0.990,1.030"
+                    tes_range = "0.990,1.010"
                 elif r == "DM11":
                     tes_range = "0.990,1.010"
                 elif r == "DM0_pt1" :
@@ -150,12 +150,6 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     tes_range = "1.010,1.020"
                 elif r == "DM1_pt4" :
                     tes_range = "0.990,1.010"
-                elif r == "DM2_pt1" :
-                    tes_range = "0.995,1.005"
-                elif r == "DM2_pt2" :
-                    tes_range = "1.005,1.015"
-                elif r == "DM2_pt3" :
-                    tes_range = "1.010,1.020"
                 elif r == "DM10_pt1" :
                     tes_range = "0.985,1.000"
                 elif r == "DM10_pt2" :
@@ -220,62 +214,55 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             POI = f"tes_{r},tid_SF_{r}"
             tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
             # Set TES range based on region (same logic as option 1)
-            if r == "DM0":
+            if r == "DM022":
                 tes_range = "0.970,1.028"
-            elif r == "DM1":
-                tes_range = "0.970,1.028"
-            elif r == "DM2":
-                tes_range = "0.970,1.028"
-            elif r == "DM10":
-                tes_range = "0.970,1.028"
-            elif r == "DM11":
-                tes_range = "0.970,1.028"
-            elif r == "DM0_pt1":
-                tes_range = "0.980,1.030"
-            elif r == "DM0_pt2":
-                tes_range = "0.980,1.030"
-            elif r == "DM0_pt3":
-                tes_range = "0.980,1.020"
-            elif r == "DM0_pt4":
-                tes_range = "0.930,0.970"
-            elif r == "DM1_pt1":
-                tes_range = "0.980,1.020"
-            elif r == "DM1_pt2":
-                tes_range = "0.990,1.030"
-            elif r == "DM1_pt3":
-                tes_range = "0.990,1.030"
-            elif r == "DM1_pt4":
-                tes_range = "0.980,1.020"
-            elif r == "DM2_pt1":
-                tes_range = "0.980,1.020"
-            elif r == "DM2_pt2":
-                tes_range = "0.990,1.030"
-            elif r == "DM2_pt3":
-                tes_range = "0.990,1.030"
-            elif r == "DM10_pt1":
-                tes_range = "0.970,1.020"
-            elif r == "DM10_pt2":
-                tes_range = "0.990,1.030"
-            elif r == "DM10_pt3":
-                tes_range = "0.990,1.030"
-            elif r == "DM10_pt4":
-                tes_range = "0.970,1.030"
-            elif r == "DM11_pt1":
-                tes_range = "0.980,1.020"
-            elif r == "DM11_pt2":
-                tes_range = "0.990,1.030"
-            elif r == "DM11_pt3":
-                tes_range = "0.990,1.030"
-            elif r == "DM11_pt4":
-                tes_range = "1.000,1.040"
+            # elif r == "DM1":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM10":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM11":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM0_pt1":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM0_pt2":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM0_pt3":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM0_pt4":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM1_pt1":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM1_pt2":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM1_pt3":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM1_pt4":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM10_pt1":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM10_pt2":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM10_pt3":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM10_pt4":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM11_pt1":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM11_pt2":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM11_pt3":
+            #     tes_range = "0.970,1.028"
+            # elif r == "DM11_pt4":
+            #     tes_range = "0.970,1.028"
             else:
-                tes_range = "0.900,1.300"
+                tes_range = "0.950,1.050"
 
             # Load parameters from file
             param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt")
             param_file = param_file.replace("postfit", "output")
             if os.path.exists(param_file):
                 params = {}
+                errors = {}
                 with open(param_file, 'r') as f:
                     for line in f:
                         line = line.strip()
@@ -283,23 +270,44 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                             key, value = line.split(':', 1)
                             key = key.strip()
                             value = float(value.strip())
-                            if key.startswith('trackedParam_'):
-                                key = key[len('trackedParam_'):]
-                            params[key] = value
-                        else:
-                            print(f"Skipping invalid line: {line}")
+                            
+                            if key.endswith("_1sigma_low"):
+                                base = key.replace("_1sigma_low", "")
+                                errors.setdefault(base, {})["low"] = value
+                            elif key.endswith("_1sigma_high"):
+                                base = key.replace("_1sigma_high", "")
+                                errors.setdefault(base, {})["high"] = value
+                            else:
+                                # Central value
+                                params[key] = value
+                                errors.setdefault(key, {})["central"] = value
+
+                # Debug print safely
+                for p in errors:
+                    c = errors[p].get('central', 'N/A')
+                    l = errors[p].get('low', 'N/A')
+                    h = errors[p].get('high', 'N/A')
+                    print(f"  {p}: central={c}, low={l}, high={h}")
+
+                # Construct range options
+                range_opts_list = []
+                for k in errors:
+                    if 'low' in errors[k] and 'high' in errors[k]:
+                        range_opts_list.append(f"{k}={errors[k]['low']},{errors[k]['high']}")
+                range_opts = ":".join(range_opts_list)
+                
+                print("[DEBUG] --setParameterRanges:", range_opts)  
 
                 param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
                 print(f"Option 3 - param_opts: {param_opts}")
                 
-                # Set up FitDiagnostics options for 2D scan
-                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:r=0.95,1.05 --freezeParameters tes_{r},tid_SF_{r}"  #--freezeParameters r" # :sf_W_{r}=0.0,10.0
+                # Set up FitDiagnostics options for 2D scan ,{param_opts}
+                POI_OPTS_F = f"--saveNLL --setParameters r=1  --freezeParameters r "  # {fit_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}                                           tes_{r},tid_SF_{r},--setParameterRanges r=0.96,1.04 --freezeParameters tes_{r},tid_SF_{r}  tid_SF_{r}, --setParameterRanges r=0.9,1.1  --setParameterRanges r=0.96,1.04 ,r --freezeParameters tes_{r},tid_SF_{r} --freezeParameters r" # :sf_W_{r}=0.0,10.0
                 
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
-                print(f"[DEBUG] Option 3 - Workspace file: {workspace_file}")
-                # FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
-                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 "
+                # FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --redefineSignalPOIs tes_{r},tid_SF_{r} {save_opts}" #{xrtd_opts} {cmin_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}
+                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 --redefineSignalPOIs tes_{r},tid_SF_{r} --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO {save_opts}"
                 # print(f"[DEBUG] Option 3 - FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
                 # os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}") # --plots")
                 
@@ -313,12 +321,41 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 else:
                     # Without Z→μμ CR: redefine POIs for single region
                     print(f"[DEBUG] Using single region workspace - redefining POIs")
-                    os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}")
+                    os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts}")
                     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
                     print(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}")
                     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
                 print(f"FitDiagnostics for 2D scan {r} completed")
-                
+                os.system(f"mkdir -p impacts/VSjet{jet_wp}_VSele{ele_wp}/")
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r ")  
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0")
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 -o impacts_{r}.json --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0") 
+                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tid_SF_{r} --POI tid_SF_{r}")
+                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tes_{r} --POI tes_{r}")
+                ##################################################
+                try:
+                    import ROOT
+
+                    # open ROOT file
+                    f = ROOT.TFile.Open(f"fitDiagnostics.{BINLABELoutput}.root")
+
+                    # get the fit_s result
+                    fr = f.Get("fit_s")
+
+                    # get nuisance parameters
+                    tes = fr.floatParsFinal().find(f"tes_{r}")
+                    tid = fr.floatParsFinal().find(f"tid_SF_{r}")
+
+                    # write to txt file
+                    os.makedirs(f"FitDiagnosticsValues/VSjet{jet_wp}_VSele{ele_wp}/", exist_ok=True)
+                    with open(f"FitDiagnosticsValues/VSjet{jet_wp}_VSele{ele_wp}/{r}_fitdiagnostics_TES_TauID_values.txt", "w") as out:
+                        out.write(f"tes_{r} {tes.getVal()} {tes.getError()}\n")
+                        out.write(f"tid_SF_{r} {tid.getVal()} {tid.getError()}\n")
+
+                    print(f"Saved to FitDiagnosticsValues/VSjet{jet_wp}_VSele{ele_wp}/{r}_fitdiagnostics_TES_TauID_values.txt")
+                except Exception as e:
+                    print(f"[ERROR] FitDiagnostics output file fitDiagnostics.{BINLABELoutput}.root does not exist or could not be processed. Exception: {e}")
+                ####################################################
                 # Now run PostFitShapesFromWorkspace
                 outf_postfit = f"{postfit_outdir}/PostFitShape_{era}_{setup['tag']}_{r}.root"
                 outf_fit = f"fitDiagnostics.{BINLABELoutput}.root"
@@ -329,12 +366,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 
                 # Move files to postfit directory
                 os.system(f"mv {outf_fit} {postfit_outdir}/")
-                print(f"[DEBUG] mv {outf_fit} {postfit_outdir}/")
                 print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
-
-                if os.path.abspath(os.getcwd()) != fit_outdir:
-                    os.system("mv higgsCombine*root %s" %fit_outdir)
-
             else:
                 print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
                 print(f">>>>>>>>>>>>>>>>>[ERROR] Parameter file {param_file} does not exist. Skipping region {r}.")
@@ -350,7 +382,6 @@ def plotScan(setup, setup_mumu, option, **kwargs):
     if indir and not indir.rstrip('/').endswith(str(era)):
         indir = os.path.join(indir, str(era))
     indir_arg    = f"-i {indir}" if indir else ""
-    print(f"[INFO] indir_arg for plotting: {indir_arg} in plotScan")
     # Plot 
 
     if option == '2' or option == '4'  :
@@ -366,9 +397,9 @@ def plotScan(setup, setup_mumu, option, **kwargs):
     elif option == '3':
         print(">>> Plot 2D scans and uncertainty summaries....")
         
-        # Then create the individual region plots and parabolas
-        for r in setup["observables"]["m_vis"]["scanRegions"]:
-            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")
+        # # Then create the individual region plots and parabolas
+        # for r in setup["observables"]["m_vis"]["scanRegions"]:
+        #     os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} {indir_arg}")
             
         # # Keep the existing parabola plots
         # os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tid_SF -y {era} -e {extratag}  -s -a -c {config} {indir_arg}") # -y %s -e %s  -s -a -c %s"% (era, extratag, config))
@@ -432,6 +463,8 @@ if __name__ == '__main__':
     parser.add_argument('-cmm', '--config_mumu', dest='config_mumu', type=str, default='None', action='store', help="set config file containing sample & fit setup")
     parser.add_argument('--indir', dest='indir', type=str, required=False, help="Path to the input root file for mutau")
     parser.add_argument('--mumu_input_file', dest='mumu_input_file', type=str, required=False, help="Path to the input root file for mumu")
+    parser.add_argument('--jet_wp', dest='jet_wp', type=str, required=False, help="jet working point")
+    parser.add_argument('--ele_wp', dest='ele_wp', type=str, required=False, help="electron working point")
     args = parser.parse_args()
 
     main(args)
