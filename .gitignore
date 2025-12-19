@@ -27,3 +27,7 @@ Fitter/Zpt/weights
 Plotter/openCanvas.py
 Plotter/table*.tex
 Plotter/OG_tables
+Plotter/NewTables
+Fitter/fcasalin.cc
+Fitter/condor_logs
+Fitter/condor_*.log
