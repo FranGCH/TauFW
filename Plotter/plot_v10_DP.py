@@ -50,8 +50,8 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     Var('phi_1', "Muon phi",   30, -3,   3, ctitle={'etau':"Electron phi",'tautau':"Leading tau_h phi",'mumu':"Leading muon phi",'emu':"Electron phi"},ymargin=1.7,pos='T',ncols=2),
     Var('phi_2', "tau_h phi",  30, -3,   3, ctitle={'etau':"Electron phi",'tautau':"Subleading tau_h phi",'mumu':"Subleading muon phi",'emu':"Muon phi"},ymargin=1.7,pos='T',ncols=2),
     Var('mt_1',  "mt(mu,MET)", 40,  0, 200, ctitle={'etau':"mt(mu,MET)",'tautau':"mt(tau,MET)",'emu':"mt(e,MET)"},cbins={"nbtag\w*>":(50,0,250)}),
-    Var("jpt_1",  29,   10,  300, veto=[r"njets\w*==0"]),
-    Var("jpt_2",  29,   10,  300, veto=[r"njets\w*==0"]),
+    # Var("jpt_1",  29,   10,  300, veto=[r"njets\w*==0"]),
+    # Var("jpt_2",  29,   10,  300, veto=[r"njets\w*==0"]),
     Var("jeta_1", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
     Var("jeta_2", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
     Var('npv',    40,  0,  80),#, ymargin=1.3),
@@ -86,8 +86,8 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
       # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
       # Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
       # Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
-      Var("m_2",            30,  0,   3, title="m_tau",veto=["njet","nbtag","dm_2==0"]),
-      Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed HPS tau_h decay mode",veto=["rawUParTVS","rawPNetVS"],position="TMC",ymargin=1.5),
+      Var("m_2",            30,  0,   3, title="m_tau",position="RRT",ymargin=1.2,ncols=2,colsep=-0.06, veto=["njet","nbtag","dm_2==0"]),
+      # Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed HPS tau_h decay mode",veto=["rawUParTVS","rawPNetVS"],position="TMC",ymargin=1.5),
       Var("decayModePNet_2",           14,  0,  14, fname="decayModePNet_2",title="Reconstructed tau_h PNet decay mode",position="TMC",ymargin=1.7, veto=["rawUParTVS","DeepTau2018v2p5"]),
       
       Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
@@ -329,10 +329,6 @@ def main(args):
     outdir    = "plots/$ERA/$CHANNEL"
   if 'lxplus' in socket.gethostname():
     if elv25:
-      # if '2025' not in eras:
-      #   print("You asked for the 2025 samples, but you are not plotting for 2025. Exiting")
-      #   return
-      # else:
       dp = True
       fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
     else:
@@ -342,10 +338,7 @@ def main(args):
       outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA"
     else:
       outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
-    
 
-  #fname     =  "/nfs/user/pmastra/DeepTau2p5/analysis/$ERA/$CHANNEL/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
-   
   # LOOP over configs / channels
   for config in configs:
     if not config.endswith(".yml"): # config = channel name
@@ -362,7 +355,6 @@ def main(args):
       addsfs = [ ] #"getTauIDSF(dm_2,genmatch_2)"]
       rmsfs  = [ ] if (setup['channel']=='mumu' or not notauidsf) else ['idweight_2','ltfweight_2'] # remove tau ID SFs
       split  = ['DY'] if 'tau' in setup['channel'] else [ ] # split these backgrounds into tau components
-      print(fname)
       sampleset = getsampleset(setup['channel'],era,fname=fname,rmsf=rmsfs,addsf=addsfs,split=split)
       plot(sampleset,setup,parallel=parallel,tag=tag,extratext=extratext,outdir=outdir,era=era,
            varfilter=varfilter,selfilter=selfilter,fraction=fraction,pdf=pdf)

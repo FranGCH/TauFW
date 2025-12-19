@@ -382,11 +382,18 @@ def getsampleset(channel,era,**kwargs):
     else:
       LOG.throw(IOError,"Did not recognize channel %r!"%(channel))
     if 'DM' in split: # split DY by decay modes
-      samples.split('DY', [('ZTTDM0', ZTT+", h^{#pm}",                   GMR+" && dm_2==0"),
-                           ('ZTTDM1', ZTT+", h^{#pm}h^{0}",              GMR+" && dm_2==1"),
-                           ('ZTTDM10',ZTT+", h^{#pm}h^{#mp}h^{#pm}",     GMR+" && dm_2==10"),
-                           ('ZTTDM11',ZTT+", h^{#pm}h^{#mp}h^{#pm}h^{0}",GMR+" && dm_2==11"),
+      sampleset.split('DY', [('ZTT_DM0', ZTT+", h^{#pm}",                   GMR+" && gendm_2==0"),
+                           ('ZTT_DM1', ZTT+", h^{#pm}#pi^{0}",            GMR+" && gendm_2==1"),
+                           ('ZTT_DM2_9', ZTT+", h^{#pm}n#pi^{0} (n#geq2)",        GMR+" && gendm_2>=2 && gendm_2<=9"),   # 1-prong, múltiples π⁰
+                           ('ZTT_DM10',ZTT+", h^{#pm}h^{#mp}h^{#pm}",     GMR+" && gendm_2==10"),
+                           ('ZTT_DM11',ZTT+", h^{#pm}h^{#mp}h^{#pm}#pi^{0}",GMR+" && gendm_2==11"),
+                           ('ZTT_DM12_19', ZTT+", h^{#pm}h^{#mp}h^{#pm}n#pi^{0} (n#geq2)", GMR+" && gendm_2>=12 && gendm_2<=19"), # 3-prong, múltiples π⁰
                            ('ZL',GML),('ZJ',GMJ),])
+      # samples.split('DY', [('ZTTDM0', ZTT+", h^{#pm}",                   GMR+" && dm_2==0"),
+      #                      ('ZTTDM1', ZTT+", h^{#pm}h^{0}",              GMR+" && dm_2==1"),
+      #                      ('ZTTDM10',ZTT+", h^{#pm}h^{#mp}h^{#pm}",     GMR+" && dm_2==10"),
+      #                      ('ZTTDM11',ZTT+", h^{#pm}h^{#mp}h^{#pm}h^{0}",GMR+" && dm_2==11"),
+      #                      ('ZL',GML),('ZJ',GMJ),])
     elif 'DY' in split:
       sampleset.split('DY',[('ZTT',ZTT,GMR),('ZL',GML),('ZJ',GMJ),])
     if 'TT' in split:

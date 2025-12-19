@@ -71,6 +71,8 @@ class Variable(object):
     self.position     = kwargs.get('position',    self.position  ) # legend position
     self.ncols        = kwargs.get('ncol',        None           ) # number of legend columns
     self.ncols        = kwargs.get('ncols',       self.ncols     ) # number of legend columns
+    self.colsep       = kwargs.get('colsept',      None               )
+    self.colsep       = kwargs.get('colsep',      self.colsep     )
     #self.plot         = kwargs.get('plots',       True           )
     self.opts         = kwargs.get('opts',        { }            ) # general dictionary of extra user options
     self.only         = kwargs.get('only',        [ ]            ) # only plot for these patterns

@@ -102,6 +102,7 @@ class Plot(object):
       self.logyrange  = kwargs.get('logyrange',  variable.logyrange  )
       self.position   = kwargs.get('position',   variable.position   )
       self.ncols      = kwargs.get('ncols',      variable.ncols      )
+      self.colsep     = kwargs.get('colsep',     variable.colsep)
       self.latex      = kwargs.get('latex',      False               ) # already done by Variable.__init__
       self.dividebins = kwargs.get('dividebins', self.hasvarbins     ) # divide each histogram bins by it bin size
     else:
@@ -127,6 +128,7 @@ class Plot(object):
       self.logyrange  = kwargs.get('logyrange',  None                )
       self.position   = kwargs.get('position',   ""                  )
       self.ncols      = kwargs.get('ncols',      None                )
+      self.colsep     = kwargs.get('colsep', None)
       self.latex      = kwargs.get('latex',      True                )
       self.dividebins = kwargs.get('dividebins', False               ) # divide content / y values by bin size
     self.ytitle       = kwargs.get('ytitle', frame.GetYaxis().GetTitle() or None )
@@ -841,7 +843,8 @@ class Plot(object):
     margin      = kwargs.get('margin',      1.0            ) # scale legend margin
     ncols       = kwargs.get('ncol',        self.ncols     )
     ncols       = kwargs.get('ncols',       ncols          ) or 1 # number of legend columns
-    colsep      = kwargs.get('colsep',      0.06           ) # seperation between legend columns
+    colsep      = kwargs.get('colsept',     self.colsep)
+    colsep      = kwargs.get('colsep',      colsep           ) or 0.06 # seperation between legend columns
     bold        = kwargs.get('bold',        True           ) # bold legend header
     pad         = kwargs.get('panel',       1              ) # panel (top/main=1, bottom/ratio=2)
     pad         = kwargs.get('pad',         pad            ) # pad (top/main=1, bottom/ratio=2)
@@ -916,6 +919,8 @@ class Plot(object):
       height = theight*0.0643*(tsize/_lsize)*nlines
     x2 = 0.90; x1 = x2 - width
     y1 = 0.92; y2 = y1 - height
+    print("colsep: ", colsep)
+    print("position: ", position )
     
     # POSITION
     if position==None:

@@ -321,10 +321,6 @@ def main(args):
     outdir    = "plots/$ERA/$CHANNEL"
   if 'lxplus' in socket.gethostname():
     if elv25:
-      # if '2025' not in eras:
-      #   print("You asked for the 2025 samples, but you are not plotting for 2025. Exiting")
-      #   return
-      # else:
       dp = True
       fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
     else:
@@ -334,10 +330,7 @@ def main(args):
       outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA/"
     else:
       outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
-    
 
-  #fname     =  "/nfs/user/pmastra/DeepTau2p5/analysis/$ERA/$CHANNEL/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
-   
   # LOOP over configs / channels
   for config in configs:
     if not config.endswith(".yml"): # config = channel name

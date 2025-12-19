@@ -45,8 +45,8 @@ sample_titles = {
   'WJ':         "W + jets",
   'JTF':        "j -> tau_h fakes",
   'QCD':        "QCD multijet",
-  'Data':       "Observed",
-  'data_obs':   "Observed",
+  'Data':       "Data",#"Observed",
+  'data_obs':   "Data",#"Observed",
 }
 
 sample_colors = {
