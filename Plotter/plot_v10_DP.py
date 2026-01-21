@@ -43,13 +43,13 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
   
   # VARIABLES
   variables = [
-    Var('pt_1',  "Muon pt",    40,  0, 120, ctitle={'etau_pnet':"Electron pt",'tautau':"Leading tau_h pt",'mumu':"Leading muon pt",'emu':"Electron pt"},cbins={"nbtag\w*>":(40,0,200)}),
-    Var('pt_2',  "tau_h pt",   40,  0, 120, ctitle={'tautau':"Subleading tau_h pt",'mumu':"Subleading muon pt",'emu':"Muon pt"},cbins={"nbtag\w*>":(40,0,200)}),
+    Var('pt_1',  "Muon pt",    40,  26, 120, ctitle={'etau_pnet':"Electron pt",'tautau':"Leading tau_h pt",'mumu':"Leading muon pt",'emu':"Electron pt"},cbins={"nbtag\w*>":(40,0,200)}),
+    Var('pt_2',  "tau_h pt",   40,  20, 120, ctitle={'tautau':"Subleading tau_h pt",'mumu':"Subleading muon pt",'emu':"Muon pt"},cbins={"nbtag\w*>":(40,0,200)}),
     Var('eta_1', "Muon eta",   30, -3,   3, ctitle={'etau':"Electron eta",'tautau':"Leading tau_h eta",'mumu':"Leading muon eta",'emu':"Electron eta"},ymargin=1.7,pos='T',ncols=2),
     Var('eta_2', "tau_h eta",  30, -3,   3, ctitle={'etau':"Electron eta",'tautau':"Subleading tau_h eta",'mumu':"Subleading muon eta",'emu':"Muon eta"},ymargin=1.7,pos='T',ncols=2),
     Var('phi_1', "Muon phi",   30, -3,   3, ctitle={'etau':"Electron phi",'tautau':"Leading tau_h phi",'mumu':"Leading muon phi",'emu':"Electron phi"},ymargin=1.7,pos='T',ncols=2),
     Var('phi_2', "tau_h phi",  30, -3,   3, ctitle={'etau':"Electron phi",'tautau':"Subleading tau_h phi",'mumu':"Subleading muon phi",'emu':"Muon phi"},ymargin=1.7,pos='T',ncols=2),
-    Var('mt_1',  "mt(mu,MET)", 40,  0, 200, ctitle={'etau':"mt(mu,MET)",'tautau':"mt(tau,MET)",'emu':"mt(e,MET)"},cbins={"nbtag\w*>":(50,0,250)}),
+    Var('mt_1',  "mt(mu,MET)", 40,  0, 200, fname="mt_1" ,ctitle={'etau':"mt(mu,MET)",'tautau':"mt(tau,MET)",'emu':"mt(e,MET)"},cbins={"nbtag\w*>":(50,0,250)}),
     # Var("jpt_1",  29,   10,  300, veto=[r"njets\w*==0"]),
     # Var("jpt_2",  29,   10,  300, veto=[r"njets\w*==0"]),
     Var("jeta_1", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
@@ -66,7 +66,8 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
   ]
   if 'tau' in channel: # mutau, etau, tautau
     loadmacro("python/macros/mapDecayModes.C") # for mapRecoDM
-    dmlabels  = ["h^{#pm}","h^{#pm}h^{0}","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}h^{0}","Other"]
+    dmlabels_hps  = ["h^{#pm}","h^{#pm}#pi^{0}","h^{#pm}h^{#pm}(#pi^{0}s)","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}#pi^{0}"]  # For HPS: bin 2 = rare 2-prong modes
+    dmlabels_pnet = ["h^{#pm}","h^{#pm}#pi^{0}","h^{#pm}2#pi^{0}","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}#pi^{0}"]  # For PNet: bin 2 = multi-pi0 modes (mainly DM2)
     if '2024' in era:
       m_vis_ymax = 200*1e3
     elif '2025' in era:
@@ -88,32 +89,23 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
       # Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
       Var("m_2",            30,  0,   3, title="m_tau",position="RRT",ymargin=1.2,ncols=2,colsep=-0.06, veto=["njet","nbtag","dm_2==0"]),
       # Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed HPS tau_h decay mode",veto=["rawUParTVS","rawPNetVS"],position="TMC",ymargin=1.5),
-      Var("decayModePNet_2",           14,  0,  14, fname="decayModePNet_2",title="Reconstructed tau_h PNet decay mode",position="TMC",ymargin=1.7, veto=["rawUParTVS","DeepTau2018v2p5"]),
+      # Var("decayModePNet_2",           14,  0,  14, fname="decayModePNet_2",title="Reconstructed tau_h PNet decay mode",position="TMC",ymargin=1.7, veto=["rawUParTVS","DeepTau2018v2p5"]),
+      Var("mapRecoDM(dm_2)", 5,  0,  5,  fname="dm_2_label", title="Assigned tau_h HPS decay mode", labels=dmlabels_hps, veto="dm_2==",position="TL",ymargin=3.2,ncols=2,logy=False),
+      Var("mapRecoDM(decayModePNet_2)", 5,0,5, fname="decayModePNet_2_label", title="Assigned tau_h PNet decay mode", labels=dmlabels_pnet, veto="decayModePNet_2==",position="TL",ymargin=3.2,ncols=2,logy=False),
       
+
+
       Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
       Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, logy=True,cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML'), #veto=["rawUParTVS","DeepTau2018v2p5"]),
       Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', logy=True), #veto=["rawUParTVS","DeepTau2018v2p5"]),
-
-      # Var("rawPNetVSjet_2",  "Score_{PNetVSjet}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSjet_2_linear",cbins={"rawPNetVS":(50, 0.75,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
-      # Var("rawPNetVSe_2",  "Score_{PNetVSe}",100, -1.0, 1.05,ymin = 1e3, fname="rawPNetVSe_2_linear",cbins={"rawPNetVS":(50, 0.3,1.05)},pos='ML', veto=["rawUParTVS","DeepTau2018v2p5"]),
-      # Var("rawPNetVSmu_2",  "Score_{PNetVSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawPNetVS":(30, 0.78,1.05)},pos='ML', fname="rawPNetVSmu_2_linear", veto=["rawUParTVS","DeepTau2018v2p5"],ymargin=1.3),
 
       Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
       Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='ML',ncols=3 ,logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
       Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', logy=True, veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
 
-      # Var("rawDeepTau2018v2p5VSjet_2",  "Score_{DeepTau2018v2p5VSjet}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)},pos='ML', fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      # Var("rawDeepTau2018v2p5VSe_2",  "Score_{DeepTau2018v2p5VSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.2,1.05)}, pos='M' ,fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-      # Var("rawDeepTau2018v2p5VSmu_2",  "Score_{DeepTau2018v2p5VSmu}",100, -1.0, 1.05,ymin = 1e3,cbins={"DeepTau2018":(50, 0.8,1.05)}, fname="$VAR_linear", veto=["rawUParTVS","rawPNetVS"],ymargin=1.3),
-
-      # Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.1,1.05)},pos='C', fname="rawUParTVSe_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      # Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1, 1.05,ymin = 1e3,cbins={"rawUParTVS":(50, 0.6,1.05)},pos='ML', fname="rawUParTVSmu_2_linear",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-      # Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1, 1.05,ymin = 1e3, fname="rawUParTVSjet_2_linear",pos="ML",veto=["rawPNetVS","DeepTau2018v2p5"],ymargin=1.3),
-
       Var("rawUParTVSe_2",  "Score_{UParTVSe}",100, -1.0, 1.05,ymin = 1e3,cbins={"rawUParTVS":(75, 0.05,1.05)}, logy=True,fname="rawUParTVSe_2_log",pos="L",ncols=2,ymargin=1.3),
       Var("rawUParTVSmu_2",  "Score_{UParTVSmu}",100, -1.0, 1.05,ymin = 1e2,cbins={"rawUParTVS":(50, 0.75,1.05)},pos='ML', logy=True,fname="rawUParTVSmu_2_log",ncols=2,ymargin=1.3),
       Var("rawUParTVSjet_2",  "Score_{UParTVSjet}",100, -1.0, 1.05,ymin = 1e3, cbins={"rawUParTVS":(75, 0.25,1.05)},logy=True,fname="rawUParTVSjet_2_log",pos="TR",ncols=2,ymargin=1.3),
-
 
       Var("probDM0UParT_2", "Prob of DM_{UParT}=0", 21, 0, 1.05, fname="probDM0UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
       Var("probDM1UParT_2", "Prob of DM_{UParT}=1", 21, 0, 1.05, fname="probDM1UParT_2",logy=True, pos="R",veto=["rawPNetVS","DeepTau2018v2p5"]),
@@ -321,7 +313,6 @@ def main(args):
   extratext = args.text
   fraction  = args.fraction
   pdf       = args.pdf
-  dp        = args.DP
   elv25     = args.Elv25
   #default script
   #outdir    = "plots/$ERA/$CHANNEL"
@@ -329,16 +320,11 @@ def main(args):
     outdir    = "plots/$ERA/$CHANNEL"
   if 'lxplus' in socket.gethostname():
     if elv25:
-      dp = True
       fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
-    else:
-      fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
-
-    if dp:
       outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA"
     else:
-      outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
-
+      raise RuntimeError("Please use --Elv25 flag to use Elvira's 2025 samples on lxplus")
+    
   # LOOP over configs / channels
   for config in configs:
     if not config.endswith(".yml"): # config = channel name
@@ -364,7 +350,7 @@ def main(args):
 if __name__ == "__main__":
   from argparse import ArgumentParser, RawTextHelpFormatter
   start = time.time()
-  eras = ['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','2022_preEE','2022_postEE', '2023C', '2023D', '2024','2024_v15','2025']
+  eras = ['2016','2017','2018','UL2016_preVFP','UL2016_postVFP','UL2017','UL2018','2022_preEE','2022_postEE', '2023C', '2023D', '2024','2024_v15','2025','2023C_v12','2023D_v12']
   description = """Simple plotting script for pico analysis tuples"""
   parser = ArgumentParser(prog="plot",description=description,epilog="Good luck!")
   parser.add_argument('-y', '--era',     dest='eras', nargs='*', choices=eras, default=['2017'],
@@ -388,7 +374,6 @@ if __name__ == "__main__":
   parser.add_argument('-T', '--text',    default="", help="extra text on plot" )
   parser.add_argument('-v', '--verbose', dest='verbosity', type=int, nargs='?', const=1, default=0, action='store',
                                          help="set verbosity" )
-  parser.add_argument('--DP',           help="produce plots for the DP note", action='store_true')
   parser.add_argument('--Elv25',        help="to use the 2025 samples that Elvira produced", action='store_true')
   args = parser.parse_args()
   LOG.verbosity = args.verbosity

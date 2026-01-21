@@ -5,6 +5,7 @@ from TauFW.Plotter.sample.utils import LOG, STYLE, ensuredir, repkey, joincuts, 
                                        setera, getyear, loadmacro, Sel, Var
 from TauFW.Plotter.sample.utils import getsampleset as _getsampleset
 import json
+from ROOT import gROOT
 
 #f = open("../../PicoProducer/samples/nanoaod_sumw_2022_postEE.json")
 #nevts_json = json.load(f)
@@ -25,6 +26,12 @@ def getsampleset(channel,era,**kwargs):
   #tag      = kwargs.get('tag',      ""           ) # extra tag for sample file names
   table    = kwargs.get('table',    True         ) # print sample set table
   setera(era,cme=13.6) # set era for plot style and lumi-xsec normalization
+
+  gROOT.ProcessLine(".L python/corrections/pileup.C+O")
+  from ROOT import getPUWeight,readPUFile
+  indir = "../PicoProducer/data/pileup/"
+
+
   if 'TT' in split and 'Top' in join: # don't join TT & ST
     join.remove('Top')
     join += ['TT','ST']
@@ -35,17 +42,36 @@ def getsampleset(channel,era,**kwargs):
     
     kfactor_dy=6282.6/5455.0 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
     kfactor_dy_powheg = 6282.6/6731.99  # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
-    kfactor_wj= 0.93 if '2024' in era or '2025' in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
+    kfactor_wj= 0.93 if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era) and 'v12' not in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
     kfactor_ttbar=923.6/762.1 # NLO->NNLO k-factor computed for 13.6 TeV
     kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV fedf
     kfactor_zz=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
     kfactor_wz=1.414 # LO->NNLO+NLO_EW computed for 13.6 TeV 
 
-
     cme=13.6
 
+    if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era) and 'v12' not in era:
 
-    if '2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era:
+      mc_pu_file = indir+"MC_PileUp_2024.root"
+      if '2022_preEE' in era:
+        wj_norm = 0.6747
+        data_pu_file = indir+"Data_PileUp_2022_preEE.root"
+      elif '2022_postEE' in era:
+        wj_norm = 0.6577
+        data_pu_file = indir+"Data_PileUp_2022_postEE.root"
+      elif '2023C' in era:
+        wj_norm = 0.7261
+        data_pu_file = indir+"Data_PileUp_2023C_69p2.root"
+      elif '2023D' in era:
+        wj_norm = 0.7927
+        data_pu_file = indir+"Data_PileUp_2023D_69p2.root"
+      else:
+        wj_norm = 1
+        data_pu_file = indir+"Data_PileUp_2024_69p2.root"
+      
+      readPUFile(data_pu_file, mc_pu_file)
+
+
       expsamples = [ # table of MC samples to be converted to Sample objects
         # GROUP NAME                     TITLE                 XSEC      EXTRA OPTIONS
         ( 'DY', "DYto2Tau_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744.0*1.0, {'extraweight': dyweight }), # , 'nevts': 1459245, 'sumw':1338709.0} ), # LO times kfactor
@@ -82,11 +108,11 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2E_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy_powheg, {'extraweight': dyweight }), # , 'nevts': 145094, 'sumw':145094.0} ), # LO times kfactor
         
 
-        ( 'WJ', "WtoTauNu-2Jets",            "Wtau + jets",           22666.*kfactor_wj ), # LO times kfactor
+        ( 'WJ', "WtoTauNu-2Jets",            "Wtau + jets",           22666.*kfactor_wj*wj_norm ), # LO times kfactor
         # ( 'WJ', "WtoTauNu-2Jets_0J",            "W + 0J",           18586.*kfactor_wj ), # LO times kfactor
-        ( 'WJ', "WtoMuNu-2Jets",            "Wmu + jets",           22666.*kfactor_wj ), # LO times kfactor
+        ( 'WJ', "WtoMuNu-2Jets",            "Wmu + jets",           22666.*kfactor_wj*wj_norm ), # LO times kfactor
         # ( 'WJ', "WtoMuNu-2Jets_0J",            "W + 0J",           18586.*kfactor_wj ), # LO times kfactor
-        ( 'WJ', "WtoENu-2Jets",            "We + jets",           22666.*kfactor_wj ), # LO times kfactor
+        ( 'WJ', "WtoENu-2Jets",            "We + jets",           22666.*kfactor_wj*wj_norm ), # LO times kfactor
    
         ( 'VV', "WWto2L2Nu",             "WW 2l2#nu",                    11.79*kfactor_ww ), # LO times kfactor
         ( 'VV', "WWto4Q",             "WW 4q",                    50.79*kfactor_ww ), # LO times kfactor
@@ -109,7 +135,82 @@ def getsampleset(channel,era,**kwargs):
         ( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
         ( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
       ]  
+    
+    if '2023' in era and 'v12' in era:
 
+      if '2023C' in era:
+        data_pu_file = indir+"Data_PileUp_2023C_69p2.root"
+        mc_pu_file = indir+"MC_PileUp_2023C.root"
+        wj_norm = 1#0.5672
+      elif '2023D' in era:
+        data_pu_file = indir+"Data_PileUp_2023D_69p2.root"
+        mc_pu_file = indir+"MC_PileUp_2023D.root"
+        wj_norm = 1#0.0316
+      
+      readPUFile(data_pu_file, mc_pu_file)
+
+      expsamples = [ # table of MC samples to be converted to Sample objects
+        # GROUP NAME                     TITLE                 XSEC      EXTRA OPTIONS
+        #( 'DY', "DYJetsToLL_M-50",       "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
+        # ( 'DY', "DYto2L-4Jets_MLL-50",   "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight } ), # LO times kfactor
+        # ( 'DY', "DYto2L-4Jets_MLL-50_1J",      "Drell-Yan 1J 50",      978.3*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor currently not available
+        # ( 'DY', "DYto2L-4Jets_MLL-50_2J",      "Drell-Yan 2J 50",      315.1*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
+        # ( 'DY', "DYto2L-4Jets_MLL-50_3J",      "Drell-Yan 3J 50",      93.7*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
+        # ( 'DY', "DYto2L-4Jets_MLL-50_4J",      "Drell-Yan 4J 50",      45.4*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
+
+        ( 'DY', "DYto2Tau_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744.0*1.0),# {'extraweight': dyweight }), # , 'nevts': 1459245, 'sumw':1338709.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 2967285, 'sumw':2907117.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 1498536, 'sumw':1483110.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 876608, 'sumw': 872968.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 898556, 'sumw':897512.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 581254, 'sumw':581124.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 600000, 'sumw':599982.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 300000, 'sumw':299996.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 300000, 'sumw':299998.0} ), # LO times kfactor
+        ( 'DY', "DYto2Tau_Bin-MLL-6000_powheg",      "Drell-Yan 6000",          3.519e-8*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 146995, 'sumw':146995.0} ), # LO times kfactor
+
+        ( 'DY', "DYto2Mu_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744*1.0),# {'extraweight': dyweight }), # , 'nevts': 1418050, 'sumw':1301142} ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 2820937, 'sumw':2763691.0} ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 1453748, 'sumw':1438952.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 853443, 'sumw':849855.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 874240, 'sumw':873292.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 579560, 'sumw': 579456.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 590523, 'sumw':590493.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 299278, 'sumw':299274.0} ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 289200, 'sumw':289198.0}  ), # LO times kfactor
+        ( 'DY', "DYto2Mu_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy_powheg),# {'extraweight': dyweight}), # ,'nevts': 145002, 'sumw':145002.0}  ), # LO times kfactor
+
+        ( 'DY', "DYto2E_Bin-MLL-10to50_powheg",   "Drell-Yan 10 to 50",       6744*1.0),# {'extraweight': dyweight }), # , 'nevts': 1477950, 'sumw':1356076.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-50to120_powheg",  "Drell-Yan 50 to 120",      2219*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 2918148, 'sumw':2859284.0} ), # LO times kfactor  
+        ( 'DY', "DYto2E_Bin-MLL-120to200_powheg", "Drell-Yan 120 to 200",     21.65*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 1497870, 'sumw':1482424.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-200to400_powheg", "Drell-Yan 200 to 400",     3.058*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 867524, 'sumw':864092.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-400to800_powheg", "Drell-Yan 400 to 800",     0.2691*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 891121, 'sumw':890161.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-800to1500_powheg", "Drell-Yan 800 to 1500",   0.01915*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 600000, 'sumw':599902.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-1500to2500_powheg", "Drell-Yan 1500 to 2500", 0.001111*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 586690, 'sumw':586670.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-2500to4000_powheg", "Drell-Yan 2500 to 4000", 0.00005949*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 290480, 'sumw':290470.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-4000to6000_powheg", "Drell-Yan 4000 to 6000", 0.000001558*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 298948, 'sumw':298946.0} ), # LO times kfactor
+        ( 'DY', "DYto2E_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 145094, 'sumw':145094.0} ), # LO times kfactor
+
+        ( 'WJ', "WtoLNu-4Jets",            "W + jets",           55300.*kfactor_wj*wj_norm ), # LO times kfactor
+        ( 'WJ', "WtoLNu-4Jets_1J",           "W + 1J",              9128.*kfactor_wj*wj_norm), # LO times kfactor
+        ( 'WJ', "WtoLNu-4Jets_2J",           "W + 2J",              2922.*kfactor_wj*wj_norm  ), # LO times kfactor
+        ( 'WJ', "WtoLNu-4Jets_3J",           "W + 3J",               861.3*kfactor_wj*wj_norm ), # LO times kfactor
+        ( 'WJ', "WtoLNu-4Jets_4J",           "W + 4J",               415.4*kfactor_wj*wj_norm), # LO times kfactor
+   
+        ( 'VV', "WW",             "WW",                    80.23*kfactor_ww ), # LO times kfactor
+        ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
+        ( 'VV', "ZZ",             "ZZ",                    12.75*kfactor_zz ), # LO times kfactor
+
+        ( 'TT', "TTto2L2Nu",             "ttbar 2l2#nu",          80.9*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
+        ( 'TT', "TTto4Q",                "ttbar hadronic",       346.4*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
+        ( 'TT', "TTtoLNu2Q",             "ttbar semileptonic",   334.8*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
+        #( 'ST', "TBbarQ_t-channel",      "ST t-channel t",       123.8), # NLO
+        #( 'ST', "TbarBQ_t-channel",      "ST t-channel at",      75.47), # NLO
+        ( 'ST', "TWminustoLNu2Q",             "ST tW semileptonic",         15.8 ), # NLO (36.0) times LNu2Q BR
+        ( 'ST', "TWminusto2L2Nu",             "ST tW 2l2#nu",               3.8 ), # NLO (36.0) times 2L2Nu BR
+        #( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
+        #( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
+      ]
 
     # if '2024' in era:
     #   expsamples = [ # table of MC samples to be converted to Sample objects
@@ -184,36 +285,7 @@ def getsampleset(channel,era,**kwargs):
     #     ( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
     #     ( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
     #   ]  
-    
-    # if '2023' in era:
-    #   expsamples = [ # table of MC samples to be converted to Sample objects
-    #     # GROUP NAME                     TITLE                 XSEC      EXTRA OPTIONS
-    #     #( 'DY', "DYJetsToLL_M-50",       "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
-    #     ( 'DY', "DYto2L-4Jets_MLL-50",   "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight } ), # LO times kfactor
-    #     ( 'DY', "DYto2L-4Jets_MLL-50_1J",      "Drell-Yan 1J 50",      978.3*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor currently not available
-    #     ( 'DY', "DYto2L-4Jets_MLL-50_2J",      "Drell-Yan 2J 50",      315.1*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
-    #     ( 'DY', "DYto2L-4Jets_MLL-50_3J",      "Drell-Yan 3J 50",      93.7*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
-    #     ( 'DY', "DYto2L-4Jets_MLL-50_4J",      "Drell-Yan 4J 50",      45.4*kfactor_dy, {'extraweight': dyweight} ), # LO times kfactor
-    #     ( 'WJ', "WtoLNu-4Jets",            "W + jets",           55300.*kfactor_wj ), # LO times kfactor
-    #     ( 'WJ', "WtoLNu-4Jets_1J",           "W + 1J",              9128.*kfactor_wj), # LO times kfactor
-    #     ( 'WJ', "WtoLNu-4Jets_2J",           "W + 2J",              2922.*kfactor_wj  ), # LO times kfactor
-    #     ( 'WJ', "WtoLNu-4Jets_3J",           "W + 3J",               861.3*kfactor_wj ), # LO times kfactor
-    #     ( 'WJ', "WtoLNu-4Jets_4J",           "W + 4J",               415.4*kfactor_wj), # LO times kfactor
-   
-    #     ( 'VV', "WW",             "WW",                    80.23*kfactor_ww ), # LO times kfactor
-    #     ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
-    #     ( 'VV', "ZZ",             "ZZ",                    12.75*kfactor_zz ), # LO times kfactor
 
-    #     ( 'TT', "TTto2L2Nu",             "ttbar 2l2#nu",          80.9*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
-    #     ( 'TT', "TTto4Q",                "ttbar hadronic",       346.4*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
-    #     ( 'TT', "TTtoLNu2Q",             "ttbar semileptonic",   334.8*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
-    #     #( 'ST', "TBbarQ_t-channel",      "ST t-channel t",       123.8), # NLO
-    #     #( 'ST', "TbarBQ_t-channel",      "ST t-channel at",      75.47), # NLO
-    #     ( 'ST', "TWminustoLNu2Q",             "ST tW semileptonic",         15.8 ), # NLO (36.0) times LNu2Q BR
-    #     ( 'ST', "TWminusto2L2Nu",             "ST tW 2l2#nu",               3.8 ), # NLO (36.0) times 2L2Nu BR
-    #     #( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
-    #     #( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
-    #   ]
 
     # if '2022_preEE' in era:
     #   expsamples = [ # table of MC samples to be converted to Sample objects
@@ -314,12 +386,13 @@ def getsampleset(channel,era,**kwargs):
   if vetoes:
     expsamples = [s for s in expsamples if not any(v in s[0] for v in vetoes)]
   
+
   # SAMPLE SET
   if weight=="":
     weight = ""
   #elif channel in ['mutau','etau']:
   if 'mutau' in channel or 'etau' in channel:
-    weight = "genweight*trigweight*puweight*idisoweight_1*idweight_2*ltfweight_2"
+    weight = "genweight*trigweight*getPUWeight(npu_true)*idisoweight_1*idweight_2*ltfweight_2"
   elif channel in ['tautau','ditau']:
     weight = "genweight*trigweight*puweight*idweight_1*idweight_2*ltfweight_1*ltfweight_2"
   else: # mumu, emu, ...

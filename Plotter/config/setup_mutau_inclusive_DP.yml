@@ -24,9 +24,6 @@ regions:
    signalRegion: 
       definition: "mt_1<65"
       title: "signal region"
-   # upart_region:
-   #    definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.514 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
-   #    title: "UParT Identification"
    #  --------- No DM cuts -----------
    upart_region_new:
       definition: "mt_1<65 && rawUParTVSe_2>=0.268 && rawUParTVSjet_2>=0.251 && rawUParTVSmu_2>=0.915"
@@ -43,6 +40,9 @@ regions:
    upart_region_0p389:
       definition: "mt_1<65 && rawUParTVSe_2>=0.268 && rawUParTVSjet_2>=0.389 && rawUParTVSmu_2>=0.915"
       title: ""
+   upart_region_0ptest:
+      definition: "mt_1<65 && rawUParTVSe_2>=0.268 && rawUParTVSjet_2>=0.395 && rawUParTVSmu_2>=0.915"
+      title: ""
    # upart_region_hps_0p297:
    #    definition: "mt_1<65 && idDecayModeNewDMs_2 && rawUParTVSe_2>=0.268 && rawUParTVSjet_2>=0.297 && rawUParTVSmu_2>=0.915"
    #    title: "UParT Identification HPS"
@@ -55,6 +55,12 @@ regions:
    deepTau_region:
       definition: "mt_1<65 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4"
       title: ""
+   # deepTau_region_womt1:
+   #    definition: "idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4"
+   #    title: ""
+   # deepTau_region_highermt1:
+   #    definition: "mt_1>=65 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4"
+   #    title: ""
    pnet_region_new:
       definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.835 && rawPNetVSmu_2>=0.956"
       title: "PNet Identification"
@@ -64,11 +70,17 @@ regions:
    # pnet_hpscond_new:
    #    definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.835 && rawPNetVSmu_2>=0.956 && ( (idDecayModeNewDMs_2 && idDeepTau2018v2p5VSmu_2>=4) || !idDecayModeNewDMs_2) "
    #    title: "PNet Identification"
-   pnet_region_0p903:
-      definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.903 && rawPNetVSmu_2>=0.956"
+   # pnet_region_0p903:
+   #    definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.903 && rawPNetVSmu_2>=0.956"
+   #    title: ""
+   pnet_region_0p905:
+      definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.905 && rawPNetVSmu_2>=0.956"
       title: ""
-   pnet_region_0p9025:
-      definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.9025 && rawPNetVSmu_2>=0.956"
+   pnet_region_0ptest:
+      definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.905 && rawPNetVSmu_2>=0.956"
+      title: ""
+   pnet_hpscond_0p905:
+      definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.905 && rawPNetVSmu_2>=0.956 && ( (idDecayModeNewDMs_2 && idDeepTau2018v2p5VSmu_2>=4) || !idDecayModeNewDMs_2)"
       title: ""
    # pnet_hpscond_0p903:
    #    definition: "mt_1<65 && rawPNetVSe_2>=0.387 && rawPNetVSjet_2>=0.903 && rawPNetVSmu_2>=0.956 && ( (idDecayModeNewDMs_2 && idDeepTau2018v2p5VSmu_2>=4) || !idDecayModeNewDMs_2)"
