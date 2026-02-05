@@ -29,19 +29,22 @@ map_wp_to_int = OrderedDict([('againstjet',
                                              ('Loose', 4 )]))
                            ])
 
-
 map_PNetscores_to_wp = OrderedDict([('againstjet',
-          OrderedDict([('Loose',0.6857),
+          OrderedDict([
+                       ('VVLoose',0.1774),
+                       ('VLoose', 0.3810),
+                       ('Loose',0.6857),
                        ('Medium', 0.8347),
                        ('Tight', 0.9059),
                        ('VTight', 0.9494)])),
                        ('againstelectron',
           OrderedDict([('VVLoose',0.1266),
-                       ('VLoose',0.6997),
-                       ('Loose',0.9354),
-                       ('Medium',0.9791),
+                      #  ('VLoose',0.6997),
+                      #  ('Loose',0.9354),
+                      #  ('Medium',0.9791),
                        ('Tight',0.9897)]))
                        ])
+
 
 
 def main(args):
