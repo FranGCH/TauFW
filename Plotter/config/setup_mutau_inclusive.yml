@@ -13,8 +13,9 @@ channel: mutau # _inclusive
 # Tag can be used to differentiate between scenarios
 tag: ""
 
-#baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter " #  && rawPNetVSjet_2>=0.881 && rawPNetVSe_2>=0.4  && rawPNetVSmu_2>=0.99" # && !idDecayModeNewDMs_2" 
-baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && !lepton_vetoes_notau && metfilter && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4" #"q_1*q_2<0  && lepton_vetoes_notau==0 && metfilter==1 && mt_1<65 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=6 && idDeepTau2018v2p5VSmu_2>=4"
+baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSmu_2>=4 && !lepton_vetoes_notau && metfilter && (dm_2==0 || dm_2==1 || dm_2==10 || dm_2==11)" 
+
+# baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && !lepton_vetoes_notau && metfilter && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4" #"q_1*q_2<0  && lepton_vetoes_notau==0 && metfilter==1 && mt_1<65 && iso_1<0.15 && idDecayModeNewDMs_2 && idDeepTau2018v2p5VSjet_2>=5 && idDeepTau2018v2p5VSe_2>=6 && idDeepTau2018v2p5VSmu_2>=4"
 # These regions will be defined when creating inputs or making plots
 # At this point, they do not need to be exclusive; 
 # PLEASE NOTE:
@@ -25,18 +26,18 @@ regions:
    signalRegion: 
       definition: "mt_1<65"
       title: "signal region"
-   DM0: 
-        definition: "mt_1<65 && dm_2==0"
-        title: "h^{#pm}"
-   DM1: 
-        definition: "mt_1<65 && dm_2==1"
-        title: "h^{#pm}#pi^{0}"
-   DM10: 
-        definition: "mt_1<65 && dm_2==10"
-        title: "h^{#pm}h^{#mp}h^{#pm}"
-   DM11: 
-        definition: "mt_1<65 && dm_2==11"
-        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}"
+#    DM0: 
+#         definition: "mt_1<65 && dm_2==0"
+#         title: "h^{#pm}"
+#    DM1: 
+#         definition: "mt_1<65 && dm_2==1"
+#         title: "h^{#pm}#pi^{0}"
+#    DM10: 
+#         definition: "mt_1<65 && dm_2==10"
+#         title: "h^{#pm}h^{#mp}h^{#pm}"
+#    DM11: 
+#         definition: "mt_1<65 && dm_2==11"
+#         title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}"
    # upart_region:
    #    definition: "mt_1<65 && rawUParTVSe_2>=0.104 && rawUParTVSjet_2>=0.514 && rawUParTVSmu_2>=0.888 && (decayModeUParT_2==0 || decayModeUParT_2==1 || decayModeUParT_2==2 || decayModeUParT_2==10 || decayModeUParT_2==11 )"
    #    title: "UParT"
