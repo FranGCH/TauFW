@@ -46,6 +46,8 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     Var('eta_2', "tau_h eta",  30, -3,   3, ctitle={'etau':"Electron eta",'tautau':"Subleading tau_h eta",'mumu':"Subleading muon eta",'emu':"Muon eta"},ymargin=1.7,pos='T',ncols=2),
     Var('mt_1',  "mt(mu,MET)", 40,  0, 200, ctitle={'etau':"mt(mu,MET)",'tautau':"mt(tau,MET)",'emu':"mt(e,MET)"},cbins={"nbtag\w*>":(50,0,250)}),
     Var("jpt_1",  29,   10,  300, veto=[r"njets\w*==0"]),
+    Var('idDeepTau2018v2p5VSVjet_2',   "DeepTau2018v2p5VSjet",  8, 0, 7, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
+    Var('idDeepTau2018v2p5VSVSe_2',   "DeepTau2018v2p5VSe",  8, 0, 7, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
     Var("jpt_2",  29,   10,  300, veto=[r"njets\w*==0"]),
     Var("jeta_1", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
     Var("jeta_2", 53, -5.4,  5.2, ymargin=1.6,pos='T',ncols=2,veto=[r"njets\w*==0"]),
@@ -64,15 +66,20 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     dmlabels  = ["h^{#pm}","h^{#pm}h^{0}","h^{#pm}h^{#mp}h^{#pm}","h^{#pm}h^{#mp}h^{#pm}h^{0}","Other"]
     variables += [
       Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
-      Var('m_vis',          20,  0, 200, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
+      Var('m_vis',          20,  50, 150, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
       Var("m_2",            30,  0,   3, title="m_tau",veto=["njet","nbtag","dm_2==0"]),
       Var("dm_2",           14,  0,  14, fname="dm_2",title="Reconstructed tau_h decay mode",veto="dm_2==",position="TMC",ymargin=1.2),
       Var("mapRecoDM(dm_2)", 5,  0,   5, fname="dm_2_label",title="Reconstructed tau_h decay mode",veto="dm_2==",position="TT",labels=dmlabels,ymargin=1.2),
       #Var("pzetavis", 50,    0, 200 ),
-      Var('rawDeepTau2017v2p1VSjet_2', "rawDeepTau2017v2p1VSjet", 100, 0.0, 1, ncols=2,pos='L;y=0.85',logy=True,ymargin=1.5,cbins={"VSjet_2>":(60,0.4,1)}),
-      Var('rawDeepTau2017v2p1VSjet_2', "rawDeepTau2017v2p1VSjet", 20, 0.80, 1, fname="$VAR_zoom",ncols=2,pos='L;y=0.85'),
-      Var('rawDeepTau2017v2p1VSe_2',   "rawDeepTau2017v2p1VSe",   30, 0.70, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
-      Var('rawDeepTau2017v2p1VSmu_2',  "rawDeepTau2017v2p1VSmu",  20, 0.80, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=5,pos='L;y=0.85'),
+      Var('idDeepTau2018v2p5VSjet_2', "DeepTau2018v2p5VSjet", 8, 0, 7, fname="$VAR_zoom",ncols=2,pos='L;y=0.85'),
+      Var('idDeepTau2018v2p5VSVSe_2',   "DeepTau2018v2p5VSe",  8, 0, 7, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
+      Var('rawDeepTau2018v2p5VSmu_2',  "rawDeepTau2018v2p5VSmu",  40, -1, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=5,pos='L;y=0.85'),
+      Var('rawPNetVSjet_2', "rawPNetVSjet", 40, -1, 1, fname="$VAR_zoom",ncols=2,pos='L;y=0.85'),
+      Var('rawPNetVSe_2',   "rawPNetVSe",   40, -1, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
+      Var('rawPNetVSmu_2',  "rawPNetVSmu",  40, -1, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=5,pos='L;y=0.85'),
+      Var('rawUParTVSjet_2', "rawUParTVSjet", 40, -1, 1, fname="$VAR_zoom",ncols=2,pos='L;y=0.85'),
+      Var('rawUParTVSe_2',   "rawUParTVSe",   40, -1, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=4,pos='L;y=0.85'),
+      Var('rawUParTVSmu_2',  "rawUParTVSmu",  40, -1, 1, fname="$VAR_zoom",ncols=2,logy=True,logyrange=5,pos='L;y=0.85'),
     ]
   elif 'mumu' in channel:
     variables += [
@@ -80,6 +87,9 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
       Var('m_ll', "m_mumu", 40,  0,  200, fname="$VAR_log", logy=True, ymin=1e2, cbins={"m_vis>200":(40,200,1000)} ),
       Var('m_ll', "m_mumu", 40, 70,  110, fname="$VAR_Zmass", veto=["m_vis>200"] ),
       Var('m_ll', "m_mumu",  1, 70,  110, fname="$VAR_1bin", veto=["m_vis>200"] ),
+      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
+      Var('m_vis',          1,  0, 200, fname="mvis_1bin",ctitle={'mumu':"m_mumu",'emu':"m_emu"},cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
+
     ]
   variables  = filtervars(variables,varfilter)  # filter variable list with -V/--var flag
   

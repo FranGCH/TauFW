@@ -2,29 +2,32 @@
 ##
 
 channel: mumu
+tag: "_mumu"
 
 samples:
     filename: "$PICODIR/$SAMPLE_$CHANNEL$TAG.root"
     join: ["VV","TT","ST"]
     rename:
         WJ: "W"
-        DY: "ZLL"
+        DY: "ZTT"
     data: "data_obs"
 
 baselineCuts: "q_1*q_2<0 && iso_1<0.15 && iso_2<0.15 && !lepton_vetoes && metfilter"
 
-regions:
-    ZMM: 
-        definition: "q_1*q_2<0"
+# regions:
+#     ZMM: 
+#         definition: "q_1*q_2<0"
+#         title: "Z→μμ"
 
 observables:
     m_vis:
-        binning: [1, 60, 120]
+        binning: [18, 20, 200] 
         extra:
             ymargin: 1.6
             rrange: 0.08
+        fitRegions: ["baseline"]
 
-processes: ['ZLL','W','VV','ST','TT','QCD','data_obs']
+processes: ['ZTT','ZL', 'ZJ','W','VV','ST','TTT', 'TTL', 'TTJ','QCD','data_obs']
 
 systematics:
     lumi:

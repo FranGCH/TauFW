@@ -46,33 +46,18 @@ def ensureTFile(filename, option='READ'):
         sys.exit(1)
     return file
 
-def format_region_label(region):
+def format_region_label(region, setup=None):
     """Format region name to match CMS style (e.g., DM0, DM1_pt1 -> DM1, pt: 20-40)"""
+    # If setup is provided, use the title directly from config
+    if setup and 'regions' in setup and region in setup['regions']:
+        return setup['regions'][region].get('title', region)
+    
+    # Fallback to parsing the region name
     if '_pt' in region:
         dm_part, pt_part = region.split('_pt', 1)
-        pt_num = pt_part
-        # Map pt bins to actual pT ranges
-        pt_ranges = {
-            '1': '20-40',
-            '2': '40-60', 
-            '3': '60-200',
-            '4': '200+'
-        }
-        pt_range = pt_ranges.get(pt_num, pt_num)
-        
-        # Format decay mode 
-        if dm_part == 'DM0':
-            return f"{dm_part}, pt: {pt_range}"
-        elif dm_part == 'DM1':
-            return f"{dm_part}, pt: {pt_range}" 
-        elif dm_part == 'DM10':
-            return f"{dm_part}, pt: {pt_range}"
-        elif dm_part == 'DM11':
-            return f"{dm_part}, pt: {pt_range}"
-        else:
-            return f"{dm_part}, pt: {pt_range}"
+        # Generic fallback - just show the pt bin number
+        return f"{dm_part}, pt bin {pt_part}"
     else:
-        # Just DM labels
         return region
 
 def format_region_for_sorting(region):

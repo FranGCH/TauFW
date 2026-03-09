@@ -184,10 +184,10 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     dm_order = ["DM0", "DM1", "DM10", "DM11"]
 
     # Define pt edges for each pt bin (adjust these based on your actual pt ranges)
-    pt_bin_edges = {
-        "pt1": [20.0, 30.0],   # Adjust these ranges as needed
-        "pt2": [30.0, 40.0],   # Adjust these ranges as needed  
-        "pt3": [40.0, 200.0],  # Adjust these ranges as needed
+    pt_bin_edges = { # should be configurable in the yml file, but for now hardcoded based on typical pt binning
+        "pt1": [20.0, 40.0],   # Adjust these ranges as needed
+        "pt2": [40.0, 60.0],   # Adjust these ranges as needed  
+        "pt3": [60.0, 200.0],  # Adjust these ranges as needed
     }
 
     # Create a dictionary to store sf data

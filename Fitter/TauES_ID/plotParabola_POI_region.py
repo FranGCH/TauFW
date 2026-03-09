@@ -11,6 +11,8 @@ import math
 from array import array
 from argparse import ArgumentParser
 import ROOT; ROOT.PyConfig.IgnoreCommandLineOptions = True
+import shutil
+import os
 from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF1, TGraph, TGraph2D, TPolyMarker3D, TGraphAsymmErrors, TLine,\
                  kBlack, kBlue, kRed, kGreen, kYellow, kOrange, kMagenta, kTeal, kAzure, TMath
 from TauFW.Plotter.sample.utils import CMSStyle
@@ -780,7 +782,7 @@ def plotMeasurements(setup, measurements,binsOrder,**kwargs):
     legend = None
     if entries:
       legtextsize = 0.052*scale
-      height      = legtextsize*1.08*len([o for o in [title,text]+zip(graphs,entries) if o])
+      height = legtextsize*1.08*len([o for o in [title, text] + list(zip(graphs, entries)) if o])
       if 'out' in position:
         x1 = 0.008; x2 = x1+width
         y1 = 0.018; y2 = y1+height
@@ -898,22 +900,32 @@ def combineMeasurementsAsymm(measurements):
 #def sigmaPrime(sigmaM,sigmaP): return (sigmaM-sigmaP)/(sigmaP+sigmaM)
 
 def writeMeasurement(filename,categories,measurements,**kwargs):
-    """Write measurements to file."""
-    if ".txt" not in filename[-4]: filename += ".txt"
-    mformat = kwargs.get('format'," %10.4f %10.4f %10.4f") #" %10.6g %10.6g %10.6g"
-    sformat = re.sub(r"%(\d*).?\d*[a-z]",r"%\1s",mformat)
-    with open(filename,'w+') as file:
-      print(">>>   created txt file %s"%(filename))
-      startdate = time.strftime("%a %d/%m/%Y %H:%M:%S",time.gmtime())
-      file.write("%s\n"%(startdate))
-      for category, points in zip(categories,measurements):
-        file.write("%-10s"%category)
-        for point in points:
-          if point:
-            file.write(mformat%point)
-          else:
-            file.write(sformat%("-","-","-"))
-        file.write('\n')
+  # Write measurements to file
+  if not filename.endswith(".txt"):
+    filename += ".txt"
+  mformat = kwargs.get('format', " %10.4f %10.4f %10.4f")
+  sformat = re.sub(r"%(\d*).?\d*[a-z]", r"%\1s", mformat)
+  with open(filename, 'w+') as file:
+    print(f">>>   created txt file {filename}")
+    startdate = time.strftime("%a %d/%m/%Y %H:%M:%S", time.gmtime())
+    file.write(f"{startdate}\n")
+    for category, points in zip(categories, measurements):
+      file.write(f"{category:<10}")
+      for point in points:
+        if point:
+          file.write(mformat % point)
+        else:
+          file.write(sformat % ("-", "-", "-"))
+      file.write('\n')
+
+  # Always create a copy without the _fit_asymm suffix for summary plotting
+  base, ext = os.path.splitext(filename)
+  if '_fit_asymm' in base:
+    alt_filename = base.replace('_fit_asymm', '') + ext
+    try:
+      shutil.copyfile(filename, alt_filename)
+    except Exception as e:
+      print(f"Warning: Could not copy measurement file to {alt_filename}: {e}")
 
 def writeMeasurement_Json(setup,filename,categories,measurements,**kwargs):
     """Write measurements to file."""
@@ -940,80 +952,77 @@ def writeMeasurement_Json(setup,filename,categories,measurements,**kwargs):
             file.write('\n')
 
 def readMeasurement(filename,**kwargs):
-    """Read measurements from file."""
-    if ".txt" not in filename[-4]: filename += ".txt"
-    measurements = dict()
-    with open(filename,'r') as file:
-      print(">>>   reading txt file %s"%(filename))
-      startdate = time.strftime("%a %d/%m/%Y %H:%M:%S",time.gmtime())
-      next(file)
-      for line in file:
-        points  = [ ]
-        columns = line.split()
-        i = 1
-        while len(columns[i:])>=3:
-          try:
-            points.append((float(columns[i]),float(columns[i+1]),float(columns[i+2])))
-          except ValueError:
-            points.append(None)
-          i += 3
-        measurements[columns[0]] = points
-    return measurements
-    
+  """Read measurements from file."""
+  if not filename.endswith(".txt"):
+    filename += ".txt"
+  measurements = dict()
+  with open(filename, 'r') as file:
+    print(f">>>   reading txt file {filename}")
+    next(file)  # skip date line
+    for line in file:
+      points = []
+      columns = line.split()
+      i = 1
+      while len(columns[i:]) >= 3:
+        try:
+          points.append((float(columns[i]), float(columns[i+1]), float(columns[i+2])))
+        except ValueError:
+          points.append(None)
+        i += 3
+      measurements[columns[0]] = points
+  return measurements
 def writeText(*text,**kwargs):
-    """Write text on plot."""
-    
-    position = kwargs.get('position',     'topleft'       ).lower()
-    textsize = kwargs.get('textsize',     0.040           )
-    font     = 62 if kwargs.get('bold',   False           ) else 42
-    align    = 13
-    if len(text)==1 and isinstance(text[0],list):
-      text = text[0]
-    else:
-      text     = ensureList(text)
-    if not text or not any(t!="" for t in text):
-      return None
-    L, R     = gPad.GetLeftMargin(), gPad.GetRightMargin()
-    T, B     = gPad.GetTopMargin(),  gPad.GetBottomMargin()
-    
-    if 'right' in position:
-      x, align = 0.96, 30
-    else:
-      x, align = 0.04, 10
-    if 'bottom' in position:
-      y = 0.05; align += 1
-    else:
-      y = 0.95; align += 3
-    x = L + (1-L-R)*x
-    y = B + (1-T-B)*y
+  """Write text on plot."""
+  position = kwargs.get('position',     'topleft'       ).lower()
+  textsize = kwargs.get('textsize',     0.040           )
+  font     = 62 if kwargs.get('bold',   False           ) else 42
+  align    = 13
+  if len(text)==1 and isinstance(text[0],list):
+    text = text[0]
+  else:
+    text = ensureList(text)
+  if not text or not any(t!="" for t in text):
+    return None
+  L, R     = gPad.GetLeftMargin(), gPad.GetRightMargin()
+  T, B     = gPad.GetTopMargin(),  gPad.GetBottomMargin()
 
-    latex = TLatex()
-    latex.SetTextSize(textsize)
-    latex.SetTextAlign(align)
-    latex.SetTextFont(font)
-    #latex.SetTextColor(kRed)
-    latex.SetNDC(True)
-    for i, line in enumerate(text):
-      latex.DrawLatex(x,y-i*1.2*textsize,line)
-    
-    return latex
-    
+  if 'right' in position:
+    x, align = 0.96, 30
+  else:
+    x, align = 0.04, 10
+  if 'bottom' in position:
+    y = 0.05; align += 1
+  else:
+    y = 0.95; align += 3
+  x = L + (1-L-R)*x
+  y = B + (1-T-B)*y
+
+  latex = TLatex()
+  latex.SetTextSize(textsize)
+  latex.SetTextAlign(align)
+  latex.SetTextFont(font)
+  #latex.SetTextColor(kRed)
+  latex.SetNDC(True)
+  for i, line in enumerate(text):
+    latex.DrawLatex(x, y - i*1.2*textsize, line)
+  return latex
+
 
 
 def stringWidth(*strings0):
-    """Make educated guess on the maximum length of a string."""
-    strings = list(strings0)
-    for string in strings0:
-      matches = re.search(r"#splitline\{(.*?)\}\{(.*?)\}",string) # check splitline
-      if matches:
-        while string in strings: strings.pop(strings.index(string))
-        strings.extend([matches.group(1),matches.group(2)])
-      matches = re.search(r"[_^]\{(.*?)\}",string) # check subscript/superscript
-      if matches:
-        while string in strings: strings.pop(strings.index(string))
-        strings.append(matches.group(1))
-      string = string.replace('#','')
-    return max([len(s) for s in strings])
+  """Make educated guess on the maximum length of a string."""
+  strings = list(strings0)
+  for string in strings0:
+    matches = re.search(r"#splitline\{(.*?)\}\{(.*?)\}",string) # check splitline
+    if matches:
+      while string in strings: strings.pop(strings.index(string))
+      strings.extend([matches.group(1),matches.group(2)])
+    matches = re.search(r"[_^]\{(.*?)\}",string) # check subscript/superscript
+    if matches:
+      while string in strings: strings.pop(strings.index(string))
+      strings.append(matches.group(1))
+    string = string.replace('#','')
+  return max([len(s) for s in strings])
     
 def marginCenter(canvas,axis,side='left',shift=0,margin=None):
     """Calculate the center of the right margin in units of a given axis"""
@@ -1082,8 +1091,8 @@ def main(args):
     verbosity     = args.verbose
     poi           = args.poi
     year          = args.year
-    lumi          = 36.5 if year=='2016' else 41.4 if (year=='2017' or year=='UL2017') else 59.5 if (year=='2018' or year=='UL2018') else 19.5 if year=='UL2016_preVFP' else 16.8
-    indir         = args.indir
+    lumi          = 109
+    indir         = args.indir # if args.indir is not None else f"output_{args.year}"
     outdir        = indir.replace('output', 'plots')
     breakdown     = args.breakdown
     multiDimFit   = args.multiDimFit
