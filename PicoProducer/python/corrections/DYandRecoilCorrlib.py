@@ -95,5 +95,3 @@ class DYandRecoilCorrlib:
     return self.sftool_dyptll.evaluate(sf_era,order,pt,syst)
     
     
-
-  

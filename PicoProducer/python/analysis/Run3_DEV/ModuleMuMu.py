@@ -11,13 +11,13 @@ from TauFW.PicoProducer.corrections.TrigObjMatcher import loadTriggerDataFromJSO
 
 
 class ModuleMuMu(ModuleTauPair):
-  
+
   def __init__(self, fname, **kwargs):
     kwargs['channel'] = 'mumu'
     super(ModuleMuMu,self).__init__(fname,**kwargs)
     self.out     = TreeProducerMuMu(fname,self)
-    self.zwindow = kwargs.get('zwindow', False ) # stay between 70 and 110 GeV
-    
+    self.zwindow = kwargs.get('zwindow', True ) # stay between 70 and 110 GeV
+
     # TRIGGERS
     if self.year==2016:
       self.trigger    = lambda e: e.HLT_IsoMu22 or e.HLT_IsoMu22_eta2p1 or e.HLT_IsoTkMu22 or e.HLT_IsoTkMu22_eta2p1 #or e.HLT_IsoMu19_eta2p1_LooseIsoPFTau20_SingleL1
@@ -29,27 +29,27 @@ class ModuleMuMu(ModuleTauPair):
       self.muonCutEta = lambda e: 2.4
     elif self.year==2018:
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
-      self.muon1CutPt  = lambda e: 26
+      self.muon1CutPt  = lambda e: 25
       self.muonCutEta = lambda e: 2.4
-    elif self.year==2022 or self.year==2023 or self.year==2024:
+    elif self.year==2022 or self.year==2023 or self.year==2024 or self.year==2025:
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
       self.muon1CutPt  = lambda e: 26
       self.muonCutEta = lambda e: 2.4
     self.muon2CutPt  = 15
     self.tauCutPt     = 20
     self.tauCutEta    = 2.5 # 2.3 DeepTau2p1 and 2.5 for DeepTau2p5
-    
+
     # CORRECTIONS
     if self.ismc:
       self.muSFs   = MuonSFs(era=self.era,verb=self.verbosity) # muon id/iso/trigger SFs
 
     # TRIGGERS
     y_trig = self.year
-    if "2022" in self.era or "2023" in self.era or "2024" in self.era:
+    if "2022" in self.era or "2023" in self.era or "2024" in self.era or "2025" in self.era:
         y_trig = 2018
     jsonfile = os.path.join(datadir,"trigger/tau_triggers_%d.json"%(y_trig))
     self.trigger = TrigObjMatcher(jsonfile,trigger='SingleMuon',isdata=self.isdata)
-    
+
     # CUTFLOW
     self.out.cutflow.addcut('none',         "no cut"                     )
     self.out.cutflow.addcut('trig',         "trigger"                    )
@@ -64,7 +64,7 @@ class ModuleMuMu(ModuleTauPair):
     self.out.cutflow.addcut('weight_mutaufilter_NUP2', "no cut, weighted, mutau, 2 jets", 20 )
     self.out.cutflow.addcut('weight_mutaufilter_NUP3', "no cut, weighted, mutau, 3 jets", 21 )
     self.out.cutflow.addcut('weight_mutaufilter_NUP4', "no cut, weighted, mutau, 4 jets", 22 )
-  
+
   def beginJob(self):
     """Before processing any events or files."""
     super(ModuleMuMu,self).beginJob()
@@ -76,26 +76,26 @@ class ModuleMuMu(ModuleTauPair):
     print(">>> %-12s = %s"%('zwindow',    self.zwindow))
     print(">>> %-12s = %s"%('trigger',    self.trigger))
     pass
-    
-  
+
+
   def analyze(self, event):
     """Process and pre-select events; fill branches and return True if the events passes,
     return False otherwise."""
     sys.stdout.flush()
-    
-    
+
+
     ##### NO CUT #####################################
     if not self.fillhists(event):
       return False
-    
-    
+
+
     ##### TRIGGER ####################################
     #if not self.trigger(event):
     if not self.trigger.fired(event):
       return False
     self.out.cutflow.fill('trig')
-    
-    
+
+
     ##### MUON #######################################
     muons = [ ]
     for muon in Collection(event,'Muon'):
@@ -109,8 +109,8 @@ class ModuleMuMu(ModuleTauPair):
     if len(muons)==0:
       return False
     self.out.cutflow.fill('muon')
-    
-    
+
+
     ##### MUMU PAIR #################################
     dileps = [ ]
     ptcut  = self.muon1CutPt(event) # trigger dependent
@@ -127,24 +127,24 @@ class ModuleMuMu(ModuleTauPair):
     muon1.tlv    = muon1.p4()
     muon2.tlv    = muon2.p4()
     self.out.cutflow.fill('pair')
-    
+
     # ADDED FOR SF CROSS CHECKS!
     # Only keep events with leading muon triggered
-    if not self.trigger.match(event,muon1): 
+    if not self.trigger.match(event,muon1):
       return False
     self.out.cutflow.fill('leadTrig')
-    
+
     # VETOS
     extramuon_veto, extraelec_veto, dilepton_veto = getlepvetoes(event,[ ],[muon1,muon2],[ ],self.channel, era=self.era)
     self.out.extramuon_veto[0], self.out.extraelec_veto[0], self.out.dilepton_veto[0] = extramuon_veto, extraelec_veto, dilepton_veto
     self.out.lepton_vetoes[0]       = extramuon_veto or extraelec_veto or dilepton_veto
     self.out.lepton_vetoes_notau[0] = extramuon_veto or extraelec_veto or dilepton_veto
-    
-    
+
+
     # EVENT
     self.fillEventBranches(event)
-    
-    
+
+
     # MUON 1
     self.out.pt_1[0]       = muon1.pt
     self.out.eta_1[0]      = muon1.eta
@@ -159,8 +159,8 @@ class ModuleMuMu(ModuleTauPair):
     self.out.idMedium_1[0] = muon1.mediumId
     self.out.idTight_1[0]  = muon1.tightId
     self.out.idHighPt_1[0] = muon1.highPtId
-    
-    
+
+
     # MUON 2
     self.out.pt_2[0]       = muon2.pt
     self.out.eta_2[0]      = muon2.eta
@@ -175,8 +175,8 @@ class ModuleMuMu(ModuleTauPair):
     self.out.idMedium_2[0] = muon2.mediumId
     self.out.idTight_2[0]  = muon2.tightId
     self.out.idHighPt_2[0] = muon2.highPtId
-    
-    
+
+
     # TAU for jet -> tau fake rate measurement in mumu+tau events
     maxtau = None
     ptmax  = 20
@@ -186,7 +186,7 @@ class ModuleMuMu(ModuleTauPair):
       if muon2.DeltaR(tau)<0.5: continue
       if abs(tau.eta)>2.3: continue
       if abs(tau.dz)>0.2: continue
-      # if tau.decayMode not in [0,1,10,11]: continue
+      if tau.decayMode not in [0,1,10,11]: continue
       if abs(tau.charge)!=1: continue
       #if ord(tau.idDeepTau2017v2p1VSe)<1: continue # VLoose
       #if ord(tau.idDeepTau2017v2p1VSmu)<1: continue # VLoose
@@ -236,37 +236,38 @@ class ModuleMuMu(ModuleTauPair):
       if self.ismc:
         self.out.jpt_genmatch_3[0]         = -1
         self.out.genmatch_3[0]             = -1
-    
+
     # GENERATOR
     if self.ismc:
       self.out.genmatch_1[0] = muon1.genPartFlav
       self.out.genmatch_2[0] = muon2.genPartFlav
-    
-    
+
+
     # JETS
     jets, met, njets_vars, met_vars = self.fillJetBranches(event,muon1,muon2)
-    
-    
+
+
     # WEIGHTS
     if self.ismc:
       self.fillCommonCorrBranches(event,jets,met,njets_vars,met_vars)
       if muon1.pfRelIso04_all<0.50 and muon2.pfRelIso04_all<0.50:
         self.btagTool.fillEffMaps(jets,usejec=self.dojec)
-      
+
       # MUON WEIGHTS
-      if self.year==2024:
+      if self.year==2024 or self.year==2025:
         self.out.trigweight[0]    = 1.
+        self.out.idisoweight_1[0] = 1.
+        self.out.idisoweight_2[0] = 1.
       else:
         self.out.trigweight[0]    = self.muSFs.getTriggerSF(muon1.pt,muon1.eta) # assume leading muon was triggered on
+        self.out.idisoweight_1[0] = self.muSFs.getIdIsoSF(muon1.pt,muon1.eta)
+        self.out.idisoweight_2[0] = self.muSFs.getIdIsoSF(muon2.pt,muon2.eta)
 
-      self.out.idisoweight_1[0] = self.muSFs.getIdIsoSF(muon1.pt,muon1.eta)
-      self.out.idisoweight_2[0] = self.muSFs.getIdIsoSF(muon2.pt,muon2.eta)
 
-    
     # MET & DILEPTON VARIABLES
     self.fillMETAndDiLeptonBranches(event,muon1,muon2,met,met_vars)
-    
-    
+
+
     self.out.fill()
     return True
-    
+

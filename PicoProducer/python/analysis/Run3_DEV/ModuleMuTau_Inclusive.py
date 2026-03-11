@@ -31,7 +31,7 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
       self.muonCutPt  = lambda e: 26
       self.muonCutEta = lambda e: 2.4
-    elif self.year==2022 or self.year==2023 or self.year==2024:
+    elif self.year==2022 or self.year==2023 or self.year==2024 or self.year==2025:
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
       self.muonCutPt  = lambda e: 26
       self.muonCutEta = lambda e: 2.4
@@ -111,20 +111,12 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
     for tau in Collection(event,'Tau'):
       if abs(tau.eta)>self.tauCutEta: continue
       if abs(tau.dz)>0.2: continue
+      # if tau.decayModePNet not in [0,1,2,10,11]: continue
       if abs(tau.charge)!=1: continue
-
-      # cuts to reduce storage size
-      # DeepTau2p5 cuts
-      if tau.rawDeepTau2018v2p5VSe>=0.099 and tau.rawDeepTau2018v2p5VSmu>=0.2949 and tau.rawDeepTau2018v2p5VSjet>=0.4083: 
-        pass 
-      # PNet cuts
-      elif tau.rawPNetVSe>=0.148 and tau.rawPNetVSmu>=0.8 and tau.rawPNetVSjet>=0.114: 
-        pass 
-      # UParT cuts
-      elif tau.rawUParTVSe>=0.078 and tau.rawUParTVSmu>=0.7 and tau.rawUParTVSjet>=0.05:
-        pass 
-      else:
-        continue
+      #id cuts v2p5
+      if (tau.rawDeepTau2018v2p5VSjet < 0.403 or tau.rawDeepTau2018v2p5VSe < 0.099 or tau.rawDeepTau2018v2p5VSmu < 0.2949) and ( tau.rawPNetVSjet <0.094 or tau.rawPNetVSe <0.153 or tau.rawPNetVSmu <0.332 ) and (tau.rawUParTVSjet <0.006 or tau.rawUParTVSe <0.078 or tau.rawUParTVSmu <0.003): continue #id VSjet cuts
+      # if tau.rawDeepTau2018v2p5VSe < 0.099 and tau.rawPNetVSe <0.153 and tau.rawUParTVSe <0.078: continue #id VSe cut
+      # if tau.rawDeepTau2018v2p5VSmu < 0.2949 and tau.rawPNetVSmu <0.332 and tau.rawUParTVSmu <0.003: continue #id VSmu cut
       if self.ismc:
         tau.es   = 1 # store energy scale for propagating to MET
         genmatch = tau.genPartFlav
@@ -174,10 +166,6 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
     self.out.lepton_vetoes_notau[0] = extramuon_veto or extraelec_veto or dilepton_veto
     
 
-    if self.dotight: # do not save all events to reduce disk space
-      if (self.tes not in [1,None] or self.tessys!=None) and (tau.genPartFlav!=5):
-        return False
-    
     #cutflow on veto
     if self.out.lepton_vetoes[0] and self.out.lepton_vetoes_notau[0]: return False
     self.out.cutflow.fill('lepvetoes')
@@ -216,6 +204,9 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
     self.out.q_2[0]                        = tau.charge
     self.out.dm_2[0]                       = tau.decayMode
     self.out.iso_2[0]                      = tau.rawIso
+    # self.out.rawDeepTau2017v2p1VSe_2[0]    = tau.rawDeepTau2017v2p1VSe
+    # self.out.rawDeepTau2017v2p1VSmu_2[0]   = tau.rawDeepTau2017v2p1VSmu
+    # self.out.rawDeepTau2017v2p1VSjet_2[0]  = tau.rawDeepTau2017v2p1VSjet
     
     self.out.rawDeepTau2018v2p5VSe_2[0]    = tau.rawDeepTau2018v2p5VSe
     self.out.rawDeepTau2018v2p5VSmu_2[0]   = tau.rawDeepTau2018v2p5VSmu
@@ -223,6 +214,9 @@ class ModuleMuTau_Inclusive(ModuleTauPair):
 
     self.out.idDecayMode_2[0]              = tau.idDecayMode
     self.out.idDecayModeNewDMs_2[0]        = tau.idDecayModeNewDMs
+    # self.out.idDeepTau2017v2p1VSe_2[0]     = tau.idDeepTau2017v2p1VSe
+    # self.out.idDeepTau2017v2p1VSmu_2[0]    = tau.idDeepTau2017v2p1VSmu
+    # self.out.idDeepTau2017v2p1VSjet_2[0]   = tau.idDeepTau2017v2p1VSjet
 
     self.out.idDeepTau2018v2p5VSe_2[0]     = tau.idDeepTau2018v2p5VSe
     self.out.idDeepTau2018v2p5VSmu_2[0]    = tau.idDeepTau2018v2p5VSmu

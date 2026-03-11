@@ -167,4 +167,3 @@ class TreeProducerTauPair(TreeProducer):
         self.addBranch('m_moth',          'f', -1, title="generator mother mass (Z boson, W boson, top quark, ...)")
         self.addBranch('pt_moth',         'f', -1, title="generator mother pT (Z boson, W boson, top quark, ...)")
     
-

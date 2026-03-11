@@ -29,7 +29,7 @@ class ModuleMuTau(ModuleTauPair):
       self.muonCutEta = lambda e: 2.4
     elif self.year==2018:
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
-      self.muonCutPt  = lambda e: 26
+      self.muonCutPt  = lambda e: 25
       self.muonCutEta = lambda e: 2.4
     elif self.year==2022 or self.year==2023 or self.year==2024:
       self.trigger    = lambda e: e.HLT_IsoMu24 or e.HLT_IsoMu27#e.HLT_IsoMu27 #or e.HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
@@ -215,6 +215,17 @@ class ModuleMuTau(ModuleTauPair):
     self.out.rawDeepTau2018v2p5VSmu_2[0]   = tau.rawDeepTau2018v2p5VSmu
     self.out.rawDeepTau2018v2p5VSjet_2[0]  = tau.rawDeepTau2018v2p5VSjet
 
+    self.out.rawPNetVSe_2[0]                = tau.rawPNetVSe
+    self.out.rawPNetVSmu_2[0]               = tau.rawPNetVSmu
+    self.out.rawPNetVSjet_2[0]              = tau.rawPNetVSjet
+
+    # self.out.rawUParTVSe_2[0]                = tau.rawUParTVSe
+    # self.out.rawUParTVSmu_2[0]               = tau.rawUParTVSmu
+    # self.out.rawUParTVSjet_2[0]              = tau.rawUParTVSjet
+
+    # self.out.decayModePNet_2[0]          = tau.decayModePNet
+    # self.out.decayModeUParT_2[0]          = tau.decayModeUParT
+
     self.out.idDecayMode_2[0]              = tau.idDecayMode
     self.out.idDecayModeNewDMs_2[0]        = tau.idDecayModeNewDMs
     self.out.idDeepTau2017v2p1VSe_2[0]     = tau.idDeepTau2017v2p1VSe
@@ -260,7 +271,6 @@ class ModuleMuTau(ModuleTauPair):
       else:
         self.out.trigweight[0]          = self.muSFs.getTriggerSF(muon.pt,muon.eta) # assume leading muon was triggered on
         self.out.idisoweight_1[0]       = self.muSFs.getIdIsoSF(muon.pt,muon.eta)
-
       
       #print("eta: ", muon.eta)
       #print("pt: ",  muon.pt)
@@ -286,6 +296,10 @@ class ModuleMuTau(ModuleTauPair):
         self.out.idweightDown_dm_2[0] = 1.
         self.out.ltfweightUp_2[0]     = 1.
         self.out.ltfweightDown_2[0]   = 1.
+
+      # TAU WEIGHTS
+      if tau.genPartFlav==5: # real tau
+       self.out.idweight_2[0]              = 0.8
       
       # WEIGHTS
 
