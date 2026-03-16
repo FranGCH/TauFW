@@ -61,7 +61,7 @@ class ModuleTauPair(Module):
     self.bjetCutEta = 2.4 if self.year==2016 else 2.5
     self.isUL       = 'UL' in self.era
     
-    assert self.year in [2016,2017,2018,2022,2023,2024], "Did not recognize year %s! Please choose from 2016, 2017 and 2018."%self.year
+    assert self.year in [2016,2017,2018,2022,2023,2024,2025], "Did not recognize year %s! Please choose from 2016, 2017 and 2018."%self.year
     assert self.dtype in ['mc','data','embed'], "Did not recognize data type '%s'! Please choose from 'mc', 'data' and 'embed'."%self.dtype
     
     # YEAR-DEPENDENT IDs
@@ -80,7 +80,7 @@ class ModuleTauPair(Module):
       self.btagTool    = BTagWeightTool('DeepJet','medium',era=self.era,channel=self.channel,maxeta=self.bjetCutEta) #,loadsys=not self.dotight
       if self.dozpt:
         self.zptTool  = ZptCorrectionTool(era=self.era)
-        if self.year in [2022,2023,2024]: # Run 3
+        if self.year in [2022,2023,2024,2025]: # Run 3
           self.zptTool_json =DYandRecoilCorrlib(era=self.era)
       #if self.dorecoil:
       #  self.recoilTool   = RecoilCorrectionTool(year=self.year)
@@ -481,7 +481,7 @@ class ModuleTauPair(Module):
       self.out.m_moth[0]      = zboson.M()
       self.out.pt_moth[0]     = zboson.Pt()
       self.out.zptweight[0]   = self.zptTool.getZptWeight(zboson.Pt(),zboson.M())
-      if self.year in [2022,2023,2024]: # Run 3
+      if self.year in [2022,2023,2024,2025]: # Run 3
         self.out.zptweight_lo[0] = self.zptTool_json.getDYpTCorr(self.era,zboson.Pt())
         self.out.zptweight_nlo[0] = self.zptTool_json.getDYpTCorr(self.era,zboson.Pt(),order='NLO')
         self.out.zptweight_nnlo[0] = self.zptTool_json.getDYpTCorr(self.era,zboson.Pt(),order='NNLO')

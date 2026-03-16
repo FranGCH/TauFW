@@ -558,7 +558,7 @@ def checkchunks(sample,**kwargs):
       bad        = False # count each chunk only once: bad, else missing
       for fname in chunkfiles: # check bad (corrupted) or missing
         LOG.insist(fname not in resubfiles,"Found file for chunk '%d' more than once: %s "%(ichunk,fname)+
-                                           " Possible overcounting or conflicting job output file format! Check %s"%(oldcfgname))
+                                           "Possible overcounting or conflicting job output file format! Check %s"%(oldcfgname))
         if fname in goodfiles: # good file, do not resubmit
           keepfiles.append(fname)
         else:
@@ -1018,5 +1018,5 @@ def main_status(args):
       
       if not found:
         print_no_samples(dtypes,filters,vetoes,[channel],jobdir_,jobcfgs)
-  
+
 

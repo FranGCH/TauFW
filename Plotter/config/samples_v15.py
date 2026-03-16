@@ -30,12 +30,12 @@ def getsampleset(channel,era,**kwargs):
     join += ['TT','ST']
   
   # SM BACKGROUND MC SAMPLES
-  if '2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era: # so far same samples and cross sections are used for preEE and postEE, if event numbers are set elsewhere then we don't need to add seperate numbers for both eras
+  if '2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era: # so far same samples and cross sections are used for preEE and postEE, if event numbers are set elsewhere then we don't need to add seperate numbers for both eras
     # for now nevts is set to 1 so it isn't taken into account in the scaling of the samples as this will be done elsewhere
     
     kfactor_dy=6282.6/5455.0 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
     kfactor_dy_powheg = 6282.6/6731.99  # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
-    kfactor_wj= 0.93 if '2024' in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
+    kfactor_wj= 0.93 if '2024' in era or '2025' in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
     kfactor_ttbar=923.6/762.1 # NLO->NNLO k-factor computed for 13.6 TeV
     kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
     kfactor_zz=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
@@ -44,7 +44,7 @@ def getsampleset(channel,era,**kwargs):
 
     cme=13.6
 
-    if '2024' in era:
+    if '2024' in era or '2025' in era:
       expsamples = [ # table of MC samples to be converted to Sample objects
         # GROUP NAME                     TITLE                 XSEC      EXTRA OPTIONS
         # ( 'DY', "DYto2Tau-2Jets_Bin-MLL-50",       "Drell-Yan 50",        1818.3*kfactor_dy, {'extraweight': dyweight }), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
@@ -140,12 +140,12 @@ def getsampleset(channel,era,**kwargs):
         ( 'TT', "TTto2L2Nu",             "ttbar 2l2#nu",          80.9*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
         ( 'TT', "TTto4Q",                "ttbar hadronic",       346.4*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
         ( 'TT', "TTtoLNu2Q",             "ttbar semileptonic",   334.8*kfactor_ttbar, {'extraweight': ttweight} ), # NLO times BR times kfactor
-        #( 'ST', "TBbarQ_t-channel",      "ST t-channel t",       123.8), # NLO
-        #( 'ST', "TbarBQ_t-channel",      "ST t-channel at",      75.47), # NLO
+        ( 'ST', "TBbarQ_t-channel",      "ST t-channel t",       123.8), # NLO
+        ( 'ST', "TbarBQ_t-channel",      "ST t-channel at",      75.47), # NLO
         ( 'ST', "TWminustoLNu2Q",             "ST tW semileptonic",         15.8 ), # NLO (36.0) times LNu2Q BR
         ( 'ST', "TWminusto2L2Nu",             "ST tW 2l2#nu",               3.8 ), # NLO (36.0) times 2L2Nu BR
-        #( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
-        #( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
+        ( 'ST', "TbarWplustoLNu2Q",         "ST atW semileptonic",          15.9 ), # NLO (36.1) times LNu2Q BR
+        ( 'ST', "TbarWplusto2L2Nu",         "ST atW 2l2#nu",                3.8 ), # NLO (36.1) times 2L2Nu BR
       ]
 
     if '2022_preEE' in era:
@@ -227,13 +227,13 @@ def getsampleset(channel,era,**kwargs):
       #dataset = "SingleMuon_Run%d?"%year # need this one as well for C
       # TODO: need to somehow handle that we need SingleMuonC, MuonC, and MuonD for preEE
     elif era=='2022_postEE': dataset = "Muon_Run%d?"%year
-    elif '2023' in era or '2024' in era: dataset = "Muon*"
+    elif '2023' in era or '2024' in era or '2025' in era: dataset = "Muon*"
     else: dataset = "SingleMuon_Run%d?"%year
     
   elif 'etau' in channel or 'ee' in channel: 
     if (year==2018 or year==2022):
       dataset = "EGamma_Run%d?"%year
-    elif '2023' in era or '2024' in era: dataset = "EGamma*"
+    elif '2023' in era or '2024' in era or '2025' in era: dataset = "EGamma*"
     else: "SingleElectron_Run%d?"%year
 
   elif 'emu'    in channel: dataset = "SingleMuon_Run%d?"%year
@@ -257,6 +257,16 @@ def getsampleset(channel,era,**kwargs):
     weight = "genweight*trigweight*puweight*idweight_1*idweight_2*ltfweight_1*ltfweight_2"
   else: # mumu, emu, ...
     weight = "genweight*trigweight*puweight*idisoweight_1*idisoweight_2"
+  
+  # Apply luminosity-based PU reweighting for 2025 (2024 MC -> 2025 data)
+  if '2025' in era:
+    # Luminosity ratio: 2025_lumi / 2024_lumi
+    lumi_2024 = 112.7  # fb^-1 for now
+    lumi_2025 = 114.85  # fb^-1 for now 
+    lumi_ratio = lumi_2025 / lumi_2024
+    pu_correction = f"puweight*{lumi_ratio}"
+    weight = weight.replace("puweight", pu_correction)
+  
   for sf in rmsfs: # remove (old) SFs, e.g. for SF measurement
     weight = weight.replace(sf,"").replace("**","*").strip('*')
   for sf in addsfs:  # add extra SFs, e.g. for SF measurement
@@ -285,7 +295,7 @@ def getsampleset(channel,era,**kwargs):
   #     sampleset.stitch("DYto2L-4Jets_MLL-50*", incl='DYto2L-4Jets_MLL-50_ext1', name="DY_M50", cme=cme) # Drell-Yan, M > 50 GeV
   # JOIN
   sampleset.join('DY', name='DY' ) # Drell-Yan, M < 50 GeV + M > 50 GeV
-  if '2024' in era:
+  if '2024' in era or '2025' in era:
     sampleset.join('Wto*Nu-2Jets', name='WJ' ) # W + jets (NLO), merge different decay modes samples
   if 'VV' in join:
     sampleset.join('VV','WZ','WW','ZZ', name='VV' ) # Diboson
@@ -333,4 +343,4 @@ def getsampleset(channel,era,**kwargs):
     sampleset.printtable(merged=True,split=True)
   print(">>> common weight: %r"%(weight))
   return sampleset
-  
+
