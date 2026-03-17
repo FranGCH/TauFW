@@ -22,5 +22,5 @@ PicoProducer/data/jsonpog
 Plotter/plots
 Plotter/tutorial/plots
 Fitter/*/*plots*
-Fitter/*/log
+Fitter/*.log
 Fitter/Zpt/weights
