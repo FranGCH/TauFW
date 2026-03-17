@@ -23,4 +23,6 @@ Plotter/plots
 Plotter/tutorial/plots
 Fitter/*/*plots*
 Fitter/*.log
+Fitter/output*
+Fitter/*.out
 Fitter/Zpt/weights
