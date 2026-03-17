@@ -19,9 +19,9 @@ def main(args):
 
         else:
             print(">>>   Region: %s"%(region))
-            era = "2024" ## Hardcoded
+            era = "%s" % args.year  ## Use the year from command line arguments
             # Define the parameters
-            fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_2024__mutau_%s.root' %(againstjet, againstelectron, era,region)
+            fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_%s__mutau_%s.root' %(againstjet, againstelectron, era, era,region)
             # bin = 'DM0'  # This should match the bin name in your ROOT file
             procs = setup["processes"]  # Replace with the actual processes in your file
             # procs = ["ZTT","ZL","ZJ","W","VV","ST","TTT","TTL","TTJ","QCD","data_obs"]  # Replace with the actual processes in your file
@@ -33,7 +33,7 @@ def main(args):
             drawpostfit(fname, region, procs,
                          outdir='output_plots/jet_%s_ele_%s/'%(args.againstjet,args.againstelectron), pname='$FIT.png', ratio=True, era=era, text=text)
             if args.include_cr:
-                fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_2024__mutau_%s.root' %(againstjet, againstelectron, era,region)    
+                fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_%s__mutau_%s.root' %(againstjet, againstelectron, era, era,region)    
                 
                 procs = ['ZL', 'ZTT', 'ZJ', 'W','VV','ST', 'TT','QCD','data_obs']
 
@@ -71,6 +71,8 @@ if __name__ == "__main__":
                                          help="control-region directory prefix in ROOT file (default='Zmm')" )
     parser.add_argument('-j', '--jet', dest='againstjet', default='Tight', help="against jet WP")
     parser.add_argument('-e', '--electron', dest='againstelectron', default='Tight', help="against electron WP")
+    parser.add_argument('-y', '--year', dest='year', default='2024', help="year for plotting")
+
     args = parser.parse_args()
   
     main(args)

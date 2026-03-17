@@ -10,13 +10,13 @@ import argparse
 import re
 from ROOT import TCanvas, TGraph, TGraphAsymmErrors, TLatex, TLegend, TLine, kBlue, kRed, kGreen, kMagenta, kBlack, kOrange, kGray
 
-def load_measurements(ele_wp="tight", jet_wp="medium"):
+def load_measurements(ele_wp="tight", jet_wp="medium", year="2024"):
     """Load measurements from 2D measurement files and FitDiagnostics"""
     
     measurements = []
     
     # --- 1. Load MultiDimFit (2D Scan) files ---
-    pattern_multidim = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/2024/FitparameterValues__mutau_DeepTau_2024-13TeV_*.txt"
+    pattern_multidim = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_*.txt"
     files_multidim = glob.glob(pattern_multidim)
     print(f"Found {len(files_multidim)} MultiDimFit files")
     
@@ -409,10 +409,12 @@ def main():
     parser = argparse.ArgumentParser(description="Combine prefit, postfit, and optional scan plots.")
     parser.add_argument('--jet_wp', type=str, default="Medium", help="Jet working point (not used in this script)")
     parser.add_argument('--ele_wp', type=str, default="Tight", help="Electron working point (not used in this script)")
+    parser.add_argument('--year', type=str, default="2024", help="Year for plotting (not used in this script)")
+
     args = parser.parse_args()
     # Load measurements
     os.makedirs(f"Measurements/VSjet{args.jet_wp}_VSele{args.ele_wp}/", exist_ok=True)
-    measurements = load_measurements(ele_wp=args.ele_wp, jet_wp=args.jet_wp)
+    measurements = load_measurements(ele_wp=args.ele_wp, jet_wp=args.jet_wp, year=args.year)
     
     if not measurements:
         print("No measurements found!")

@@ -1,8 +1,8 @@
 # Define working points
-J_VALUES=("VTight" "VVLoose" "VLoose" "Loose" "Medium" "Tight")
-E_VALUES=("VVLoose"  "Tight")
+J_VALUES=("VTight") # "VVLoose" "VLoose" "Loose" "Medium" "Tight")
+E_VALUES=( "Tight") #"VVLoose")
 
-YEAR="2024"
+YEAR="2025"
 CONFIG_TT="TauES_ID/config/config_coarse_TT.yml"
 CONFIG_MM="TauES/config/FitSetup_mumu.yml"
 
@@ -30,10 +30,10 @@ for JET_WP in "${J_VALUES[@]}"; do
       -cmm $CONFIG_MM --jet_wp ${JET_WP} --ele_wp ${ELE_WP} 2>&1 | tee step2_postfit_${JET_WP}_${ELE_WP}.log
 
     echo "=== Step 3: Running Plots ==="
-    python3 python/plot/runpostfit.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} --include-cr \
+    python3 python/plot/runpostfit.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -y $YEAR --include-cr \
       2>&1 | tee step3_plots_${JET_WP}_${ELE_WP}.log
     python3 pre_post_plot_combiner.py --scan_dir ${BASE_PLOTS}/$YEAR/ --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
-    python3 plot_measurements.py --jet_wp ${JET_WP} --ele_wp ${ELE_WP}
+    python3 plot_measurements.py --jet_wp ${JET_WP} --ele_wp ${ELE_WP} --year $YEAR
 
     echo "=== Step 4: Correction File Generation ==="
     python3 createroot_TES.py -c $CONFIG_TT -j ${JET_WP} -e ${ELE_WP} -f root
@@ -45,7 +45,7 @@ for JET_WP in "${J_VALUES[@]}"; do
 done
 # Merge all JSON correction files
 echo "=== Merging all JSON correction files ==="
-python3 merge_tau_jsons.py --type both -o tau_sf/TauCorrections_2024.json
+python3 merge_tau_jsons.py --type both -o tau_sf/TauCorrections_$YEAR.json
 
 echo "All workflows completed successfully!"
 

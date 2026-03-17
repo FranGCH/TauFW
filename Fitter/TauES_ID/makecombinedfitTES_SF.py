@@ -508,7 +508,7 @@ if __name__ == '__main__':
     argv = sys.argv
     extratag = ""
     parser = ArgumentParser(prog="makeTESfit", description="execute all steps to run TES fit")
-    parser.add_argument('-y', '--era', dest='era', default=['2024'], action='store', help="set era")
+    parser.add_argument('-y', '--era', dest='era', default=['2025'], action='store', help="set era")
     parser.add_argument('-c', '--config', dest='config', type=str, default='TauES_ID/config/defaultFitSetupTES_mutau.yml', action='store', help="set config file containing sample & fit setup")
     parser.add_argument('-o', '--option', dest='option', choices=['1', '2', '3', '4', '5','6'], default='1', action='store',
                         help="set option : Scan of tes and tid SF is profiled (-o 1) ;  Scan of tid SF and tes is profiled (-o 2) ; 2D scan of tes and tid SF (-o 3) \
