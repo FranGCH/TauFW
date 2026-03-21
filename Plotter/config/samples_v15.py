@@ -53,7 +53,7 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2Mu_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ), #alias
         ( 'DY', "DYto2Mu_Bin-MLL-50to120",  "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Mu_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Mu_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Mu_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Mu_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Mu_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Mu_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
@@ -64,7 +64,7 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2Tau_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2Tau_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2Tau_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2Tau_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Tau_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Tau_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2Tau_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
@@ -75,7 +75,7 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2E_Bin-MLL-10to50",    "Drell-Yan 10-50",      6744.0*1.0, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-50to120",    "Drell-Yan 50-120",      2219*kfactor_dy_powheg, {'extraweight': dyweight} ),
         ( 'DY', "DYto2E_Bin-MLL-120to200",  "Drell-Yan 120-200",      21.65*kfactor_dy_powheg, {'extraweight': dyweight} ),
-        ( 'DY', "DYto2E_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
+        # ( 'DY', "DYto2E_Bin-MLL-200to400",  "Drell-Yan 200-400",       3.058*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2E_Bin-MLL-400to800",  "Drell-Yan 400-800",      0.2691*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2E_Bin-MLL-800to1500", "Drell-Yan 800-1500",     0.01915*kfactor_dy_powheg, {'extraweight': dyweight} ),
         # ( 'DY', "DYto2E_Bin-MLL-1500to2500", "Drell-Yan 1500-2500",     0.001111*kfactor_dy_powheg, {'extraweight': dyweight} ),
@@ -261,8 +261,8 @@ def getsampleset(channel,era,**kwargs):
   # Apply luminosity-based PU reweighting for 2025 (2024 MC -> 2025 data)
   if '2025' in era:
     # Luminosity ratio: 2025_lumi / 2024_lumi
-    lumi_2024 = 112.7  # fb^-1 for now
-    lumi_2025 = 114.85  # fb^-1 for now 
+    lumi_2024 = 104.67  # fb^-1 for now
+    lumi_2025 = 110.18  # fb^-1 for now 
     lumi_ratio = lumi_2025 / lumi_2024
     pu_correction = f"puweight*{lumi_ratio}"
     weight = weight.replace("puweight", pu_correction)

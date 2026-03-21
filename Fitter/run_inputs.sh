@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 J_VALUES=("VTight") #"VVLoose" "VLoose" "Loose" "Medium" "Tight")
-E_VALUES=("Tight" "VVLoose")
+E_VALUES=("Tight") #"VVLoose")
 
-YEAR=2024
+YEAR=2025
 CONFIG="TauES_ID/config/config_coarse_TT.yml"
 CONFIG_MM="TauES/config/FitSetup_mumu.yml" #CR config
 
