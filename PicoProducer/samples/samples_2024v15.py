@@ -231,7 +231,7 @@ samples  = [
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
 
   D('Data','Muon1_Run2024I',
-    # "/Muon1/Run2024I-MINIv6NANOv15-v1/NANOAOD",
+    "/Muon1/Run2024I-MINIv6NANOv15-v1/NANOAOD",
     "/Muon1/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD",
     store=storage,url=url,files=filelist,opts=opts,channels=["skim*",'mutau*','mumu*','emu','mumutau','mumettau']),
 
