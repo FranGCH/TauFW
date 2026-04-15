@@ -508,6 +508,68 @@ def main(args):
             ( 'VV', "WZ"                    ),
             ( 'VV', "ZZ"                    ),
           ]
+      elif era=='2025':
+          samples = [
+            # DY -> ee (MLL bins)
+            ( 'DY', "DYto2E_Bin-MLL-10to50"     ),
+            ( 'DY', "DYto2E_Bin-MLL-50to120"    ),
+            ( 'DY', "DYto2E_Bin-MLL-120to200"   ),
+            ( 'DY', "DYto2E_Bin-MLL-200to400"   ),
+            ( 'DY', "DYto2E_Bin-MLL-400to800"   ),
+            ( 'DY', "DYto2E_Bin-MLL-800to1500"  ),
+            ( 'DY', "DYto2E_Bin-MLL-1500to2500" ),
+            ( 'DY', "DYto2E_Bin-MLL-2500to4000" ),
+            ( 'DY', "DYto2E_Bin-MLL-4000to6000" ),
+            ( 'DY', "DYto2E_Bin-MLL-6000"       ),
+            # DY -> mumu
+            ( 'DY', "DYto2Mu_Bin-MLL-10to50"     ),
+            ( 'DY', "DYto2Mu_Bin-MLL-50to120"    ),
+            ( 'DY', "DYto2Mu_Bin-MLL-120to200"   ),
+            ( 'DY', "DYto2Mu_Bin-MLL-200to400"   ),
+            ( 'DY', "DYto2Mu_Bin-MLL-400to800"   ),
+            ( 'DY', "DYto2Mu_Bin-MLL-800to1500"  ),
+            ( 'DY', "DYto2Mu_Bin-MLL-1500to2500" ),
+            ( 'DY', "DYto2Mu_Bin-MLL-2500to4000" ),
+            ( 'DY', "DYto2Mu_Bin-MLL-4000to6000" ),
+            ( 'DY', "DYto2Mu_Bin-MLL-6000"       ),
+            # DY -> tautau
+            ( 'DY', "DYto2Tau_Bin-MLL-10to50"     ),
+            ( 'DY', "DYto2Tau_Bin-MLL-50to120"    ),
+            ( 'DY', "DYto2Tau_Bin-MLL-120to200"   ),
+            ( 'DY', "DYto2Tau_Bin-MLL-200to400"   ),
+            ( 'DY', "DYto2Tau_Bin-MLL-400to800"   ),
+            ( 'DY', "DYto2Tau_Bin-MLL-800to1500"  ),
+            ( 'DY', "DYto2Tau_Bin-MLL-1500to2500" ),
+            ( 'DY', "DYto2Tau_Bin-MLL-2500to4000" ),
+            ( 'DY', "DYto2Tau_Bin-MLL-4000to6000" ),
+            ( 'DY', "DYto2Tau_Bin-MLL-6000"       ),
+            # TTbar
+            ( 'TT', "TTto2L2Nu" ),
+            ( 'TT', "TTtoLNu2Q" ),
+            ( 'TT', "TTto4Q"    ),
+            # W+Jets
+            ( 'WJ', "WtoTauNu-2Jets" ),
+            ( 'WJ', "WtoMuNu-2Jets"  ),
+            ( 'WJ', "WtoENu-2Jets"   ),
+            # Single top
+            ( 'ST', "TBbarQ_t-channel"  ),
+            ( 'ST', "TbarBQ_t-channel"  ),
+            ( 'ST', "TWminustoLNu2Q"    ),
+            ( 'ST', "TWminusto2L2Nu"    ),
+            ( 'ST', "TbarWplustoLNu2Q"  ),
+            ( 'ST', "TbarWplusto2L2Nu"  ),
+            # Diboson
+            ( 'VV', "WWto2L2Nu" ),
+            ( 'VV', "WWto4Q"    ),
+            ( 'VV', "WWtoLNu2Q" ),
+            ( 'VV', "WZto2L2Q"  ),
+            ( 'VV', "WZ"        ),
+            ( 'VV', "ZZto2L2Nu" ),
+            ( 'VV', "ZZto2L2Q"  ),
+            ( 'VV', "ZZto2Nu2Q" ),
+            ( 'VV', "ZZto4L"    ),
+            ( 'VV', "ZZ"        ),
+          ]
       else:
         if 'UL' in era:
           campaign = "Summer19"

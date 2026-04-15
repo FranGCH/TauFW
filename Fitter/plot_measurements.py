@@ -191,7 +191,7 @@ def create_correlation_plot(measurements, jet_wp, ele_wp):
         
         if meas['pt_bin'] == 'inclusive': label = meas['dm']
         else:
-            pt_ranges = {'pt1': '20-30 GeV', 'pt2': '30-40 GeV', 'pt3': '40-60 GeV', 'pt4': '60-100 GeV', 'pt5': '100-200 GeV'}
+            pt_ranges = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
             pt_range = pt_ranges.get(meas['pt_bin'], meas['pt_bin'])
             label = f"{meas['dm']} {pt_range}"
         y_labels.append(label)
