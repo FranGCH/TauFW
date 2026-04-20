@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 """
 Script to add pileup weight branches to MC ROOT files in EOS.
-
-Author: Script for TauFW MC pileup reweighting
-Date: 2025
+Date: April 2026
 
 Description:
     Loops over all MC ROOT files in EOS directories (DY, ST, TT, VV, WJ),
