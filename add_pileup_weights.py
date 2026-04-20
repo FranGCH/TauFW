@@ -59,10 +59,10 @@ WEIGHT_DTYPE = 'f'  # ROOT float type for branches
 
 # Output weight branch names
 WEIGHT_BRANCHES = OrderedDict([
-    ('80p0',      'puweight_2025_80p0'),
-    ('72p3832',   'puweight_2025_72p3832'),
-    ('69p2',      'puweight_2025_69p2'),
-    ('66p0168',   'puweight_2025_66p0168'),
+    ('80p0',      'puweight_2025_80p0_v2'),
+    ('72p3832',   'puweight_2025_72p3832_v2'),
+    ('69p2',      'puweight_2025_69p2_v2'),
+    ('66p0168',   'puweight_2025_66p0168_v2'),
 ])
 
 # Options
@@ -220,9 +220,9 @@ def get_pileup_weight(npu_true, data_hist, mc_hist):
     # Calculate weight with safety checks
     if mc_content > 0:
         weight = data_content / mc_content
-        # Clamp weight to reasonable range (prevent extreme outliers)
-        if weight > 5.0:
-            weight = 5.0
+        # Clamp only pathological outliers (preserve legitimate high weights in data-peak bins)
+        if weight > 100.0:
+            weight = 100.0
         return weight
     else:
         # Empty MC bin: return unity weight (no reweighting)
