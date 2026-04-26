@@ -37,7 +37,7 @@ def load_measurements(ele_wp="tight", jet_wp="medium", year="2024"):
             
             if pt_bin == "inclusive": region_name = f"{dm} inclusive"
             else:
-                pt_ranges = {'pt1': '20-30 GeV', 'pt2': '30-40 GeV', 'pt3': '40-60 GeV', 'pt4': '60-100 GeV', 'pt5': '100-200 GeV'}
+                pt_ranges = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
                 pt_label = pt_ranges.get(pt_bin, pt_bin)
                 region_name = f"{dm} {pt_label}"
             
@@ -129,7 +129,7 @@ def load_measurements(ele_wp="tight", jet_wp="medium", year="2024"):
 
             if pt_bin == "inclusive": region_name = f"{dm} inclusive"
             else:
-                pt_ranges = {'pt1': '20-30 GeV', 'pt2': '30-40 GeV', 'pt3': '40-60 GeV', 'pt4': '60-100 GeV', 'pt5': '100-200 GeV'}
+                pt_ranges = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
                 pt_label = pt_ranges.get(pt_bin, pt_bin)
                 region_name = f"{dm} {pt_label}"
 
@@ -288,12 +288,12 @@ def create_tes_plot(measurements, jet_wp, ele_wp):
         x_max = max(v + e for v, e in zip(tes_values, tes_errors)) * 1.02
         gr_multi.GetXaxis().SetRangeUser(x_min, x_max)
     
-    gr_multi.GetYaxis().SetRangeUser(-0.5, n_points - 0.5)
+    gr_multi.GetYaxis().SetRangeUser(-0.5, n_points - 0.5 + 0.25 * n_points)
     gr_multi.GetYaxis().SetLabelSize(0); gr_multi.GetYaxis().SetTickLength(0)
-    
+
     gr_multi.Draw("AP")
     gr_fitdiag.Draw("P SAME")
-    
+
     # Labels
     for i, label in enumerate(y_labels):
         text = TLatex()
@@ -307,14 +307,14 @@ def create_tes_plot(measurements, jet_wp, ele_wp):
     leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
     leg.Draw()
     
-    line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5)
+    line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5 + 0.25 * n_points)
     line_unity.SetLineStyle(2); line_unity.SetLineColor(ROOT.kGray+1); line_unity.Draw()
-    
+
     # Add CMS label
     cms_label = TLatex(); cms_label.SetNDC(); cms_label.SetTextFont(61); cms_label.SetTextSize(0.05); cms_label.DrawLatex(0.26, 0.92, "CMS")
     cms_internal = TLatex(); cms_internal.SetNDC(); cms_internal.SetTextFont(52); cms_internal.SetTextSize(0.04); cms_internal.DrawLatex(0.35, 0.92, "Internal")
     lumi_text = TLatex(); lumi_text.SetNDC(); lumi_text.SetTextFont(42); lumi_text.SetTextSize(0.035); lumi_text.DrawLatex(0.65, 0.92, "109 fb^{-1} (13.6 TeV)")
-    
+
     c2.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tes_measurements.png")
     c2.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tes_measurements.pdf")
     c2.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tes_measurements.root")
@@ -373,12 +373,12 @@ def create_tauID_plot(measurements, jet_wp, ele_wp):
         x_max = max(v + e for v, e in zip(tid_values, tid_errors)) * 1.05
         gr_multi.GetXaxis().SetRangeUser(x_min, x_max)
     
-    gr_multi.GetYaxis().SetRangeUser(-0.5, n_points - 0.5)
+    gr_multi.GetYaxis().SetRangeUser(-0.5, n_points - 0.5 + 0.25 * n_points)
     gr_multi.GetYaxis().SetLabelSize(0); gr_multi.GetYaxis().SetTickLength(0)
-    
+
     gr_multi.Draw("AP")
     gr_fitdiag.Draw("P SAME")
-    
+
     for i, label in enumerate(y_labels):
         text = TLatex()
         text.SetTextSize(0.035); text.SetTextAlign(32)
@@ -390,14 +390,14 @@ def create_tauID_plot(measurements, jet_wp, ele_wp):
     leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
     leg.Draw()
     
-    line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5)
+    line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5 + 0.25 * n_points)
     line_unity.SetLineStyle(2); line_unity.SetLineColor(ROOT.kGray+1); line_unity.Draw()
-    
+
     # Add CMS label
     cms_label = TLatex(); cms_label.SetNDC(); cms_label.SetTextFont(61); cms_label.SetTextSize(0.05); cms_label.DrawLatex(0.26, 0.92, "CMS")
     cms_internal = TLatex(); cms_internal.SetNDC(); cms_internal.SetTextFont(52); cms_internal.SetTextSize(0.04); cms_internal.DrawLatex(0.35, 0.92, "Internal")
     lumi_text = TLatex(); lumi_text.SetNDC(); lumi_text.SetTextFont(42); lumi_text.SetTextSize(0.035); lumi_text.DrawLatex(0.65, 0.92, "109 fb^{-1} (13.6 TeV)")
-    
+
     c3.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tauID_measurements.png")
     c3.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tauID_measurements.pdf")
     c3.SaveAs(f"Measurements/VSjet{jet_wp}_VSele{ele_wp}/tauID_measurements.root")
