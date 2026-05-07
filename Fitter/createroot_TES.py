@@ -196,8 +196,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     # Loop over SFs and years
     for sf in sfs:
         sf_dict[sf] = {}
-        # Use 2024 instead of hardcoded 2023C, 2023D
-        for year in ['2024']:
+        for year in [args.year]:
             sf_dict[sf][year] = {}
             
             for dm in dm_order:
@@ -309,9 +308,9 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                 else:
                     name = 'TauID'
                     
-                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_2024_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
-                
-                for year in ['2024']:
+                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
+
+                for year in [args.year]:
                     for dm in dm_order:
                         # Build the function strings
                         funcstr = '(x<=20)*0'
@@ -395,12 +394,12 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                         dm_num = int(dm.replace('DM', ''))  # Convert DM0 -> 0, DM11 -> 11
                         key = f'{dm}_{current_jet_wp}'
                         
-                        if key in sf_dict[sf]['2024'] and len(sf_dict[sf]['2024'][key]["content"]) > 0:
+                        if key in sf_dict[sf][args.year] and len(sf_dict[sf][args.year][key]["content"]) > 0:
                             # Use actual data for all variations
-                            edges = sf_dict[sf]['2024'][key]["edges"]
-                            nom_content = sf_dict[sf]['2024'][key]["content"]
-                            up_content = sf_dict[sf]['2024'][key]["up"]
-                            down_content = sf_dict[sf]['2024'][key]["down"]
+                            edges = sf_dict[sf][args.year][key]["edges"]
+                            nom_content = sf_dict[sf][args.year][key]["content"]
+                            up_content = sf_dict[sf][args.year][key]["up"]
+                            down_content = sf_dict[sf][args.year][key]["down"]
                             
                             # Ensure content length is len(edges) - 1 for correctionlib
                             for content_name, content in [("nom", nom_content), ("up", up_content), ("down", down_content)]:
@@ -505,7 +504,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                         corrections=[corr]
                     )
                     
-                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_2024_VSjet{current_jet_wp}_VSele{ele_wp}.json"
+                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
                     with open(json_filename, "w") as fout:
                         print(f">>> Writing JSON: {json_filename}")
                         fout.write(cset.json())
@@ -611,6 +610,7 @@ def main(args):
     form          = args.form
     ele_wp        = args.ele_wp
     jet_wp        = args.jet_wp
+    year          = args.year
     #CMSStyle.setCMSEra(year)
 
     plot_dm_graph(setup, form, ele_wp, jet_wp, tag=tag)
@@ -627,6 +627,7 @@ if __name__ == '__main__':
   parser.add_argument('-f', '--form', dest='form', choices=['json', 'root'], type=str, default='root', action='store', help="select format")
   parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
   parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
+  parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
   args = parser.parse_args()
   main(args)
   print(">>>\n>>> done\n")
