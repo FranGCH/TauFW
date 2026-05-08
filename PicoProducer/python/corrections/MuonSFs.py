@@ -85,6 +85,8 @@ class MuonSFs:
       elif '2024' in era:
         fname_id = pathMUO + "Run2024/muon_Z_2024.json.gz"
         #abseta = False
+      elif '2025' in era:
+        fname_id = pathMUO + "Run2025/muon_Z.json.gz"
     
     # DEFAULTS
     if sf_id==None:
@@ -116,6 +118,12 @@ class MuonSFs:
       self.sftool_trig = ScaleFactorHTT(fname_trig,'ZMass',sf_trig,verb=verb) # HTT ROOT
     elif '2024' in era:
       self.sftool_trig = 1.0 # no trigger SF in 2024 at the moment
+    elif '2025' in era:
+      if sf_trig in corrset.keys():
+        self.sftool_trig = corrset[sf_trig]
+      else:
+        LOG.warning("MuonSFs: trigger SF key %r not found in Run2025 JSON, using 1.0"%sf_trig)
+        self.sftool_trig = 1.0
     else: # load correctionlib JSON: HLT_IsoMu24, HLT_IsoMu27, etc.
       self.sftool_trig = corrset[sf_trig] # correctionlib JSON
     
