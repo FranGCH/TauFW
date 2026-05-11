@@ -18,6 +18,52 @@ import os
 import yaml
 from argparse import ArgumentParser
 
+
+def find_boost_params(fit_result_file, poi1_name, poi2_name, threshold=0):
+    """If pass-1's MultiDimFit tree has min(deltaNLL) below `threshold`
+    (i.e. a grid scan point sits in a deeper basin than combine's initial
+    free-POI fit converged to), return a `--setParameters` string built from
+    that entry's POI values (POIs only, nuisances left at defaults).
+    Otherwise return None. Used to seed a pass-2 scan that escapes the local minimum."""
+    import ROOT
+    if not os.path.exists(fit_result_file):
+        return None
+    f = ROOT.TFile.Open(fit_result_file)
+    if not f or f.IsZombie():
+        return None
+    tree = f.Get("limit")
+    if not tree:
+        f.Close()
+        return None
+    nentries = int(tree.GetEntries())
+    if nentries == 0:
+        f.Close()
+        return None
+
+    best_idx, best_nll = -1, float("inf")
+    for i in range(nentries):
+        tree.GetEntry(i)
+        v = float(tree.deltaNLL)
+        if v < best_nll:
+            best_nll = v
+            best_idx = i
+
+    if best_nll >= threshold:
+        print(f"[BOOST] Pass-1 min(deltaNLL)={best_nll:.6f} >= {threshold} — no boost needed")
+        f.Close()
+        return None
+
+    tree.GetEntry(best_idx)
+    parts = []
+    for b in (poi1_name, poi2_name):
+        try:
+            parts.append("%s=%.6g" % (b, float(getattr(tree, b))))
+        except Exception:
+            pass
+    f.Close()
+    print(f"[BOOST] Pass-1 deepest point: deltaNLL={best_nll:.6f} at entry {best_idx} (POIs only: {', '.join(parts)})")
+    return ",".join(parts) if parts else None
+
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):
     print(' >>>>>> Generating datacards for mutau channel')
@@ -213,10 +259,15 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             os.system(f"plotImpacts.py -i tid_impacts_{r}.json -o impacts_tid_SF_{r}")
 
         # 2D Fit of tes_DM and tid_SF_DM by DM, both are pois
-        elif option == '3':  
+        elif option == '3':
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
+            # DM11 (3-prong + π0): tid_SF wants to go below the default 0.7 floor —
+            # widen the range so the grid scan finds a real interior minimum instead
+            # of pegging at the boundary.
+            if r.startswith("DM11"):
+                tid_SF_range = "0.5,1.2"
             POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # :r=0.96,1.04 %s=1,%s=1, ,POI2, POI1  --freezeParameters r
             # POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=0.8,%s=1.025 --redefineSignalPOIs %s,%s  --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1, POI2,POI1) # %s=1,%s=1, ,POI2, POI1  --freezeParameters r  --freezeParameters r
             MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --cminFallbackAlgo Minuit2,Migrad,0:0.001
@@ -232,8 +283,23 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
                 print("COMMAND: combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
 
-                # Extract actual parameter values from the fit result
+                # --- Boost pass: if pass-1's grid found a deeper basin than the
+                # initial free-POI fit, seed a pass-2 scan from those parameter
+                # values so the new initial fit lands in the true minimum.
+                # Pass-2 reuses the same -n tag, so it overwrites the pass-1 file. ---
                 fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
+                boost = find_boost_params(fit_result_file, f"tes_{r}", f"tid_SF_{r}")
+                if boost:
+                    boosted_opts = MultiDimFit_opts_local.replace(
+                        "--setParameters r=1",
+                        "--setParameters r=1,%s" % boost
+                    )
+                    print("[BOOST] Re-running scan with seeded parameters (pass 2)")
+                    print("2D MultidimFit (pass-2 boosted) %s : " % (r), '\t', boosted_opts)
+                    os.system("combine -M MultiDimFit  %s" %(boosted_opts))
+                    print("[BOOST] Pass-2 complete — overwrote %s" % fit_result_file)
+
+                # Extract actual parameter values from the fit result
                 param_file = f"FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt"
                 print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
                 print(f"[DEBUG] Creating parameter file: {param_file}")
@@ -308,6 +374,25 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
                     # except Exception:
                     #     tes_val, tid_val = 1.0, 1.0
+                    # Extract nuisance values from entry 0 (the free-POI converged fit).
+                    # These seed FitDiagnostics in step 2 so Migrad starts at MultiDimFit's
+                    # minimum, not at datacard defaults — needed for low-stats high-pt regions
+                    # where defaults put FitDiag in a different basin and Hesse fails silently.
+                    tree.GetEntry(0)
+                    skip_branches = {"deltaNLL", "quantileExpected", "iToy", "limit", "limitErr",
+                                     "mh", "syst", "iSeed", "t_cpu", "t_real", "r",
+                                     f"tes_{r}", f"tid_SF_{r}"}
+                    nuis_seeds = []
+                    for b in tree.GetListOfBranches():
+                        bname = b.GetName()
+                        if bname in skip_branches: continue
+                        try:
+                            v = float(getattr(tree, bname))
+                        except Exception:
+                            continue
+                        if abs(v) > 1e3: continue  # guard against junk
+                        nuis_seeds.append((bname, v))
+
                     with open(param_file, "w") as pf:
                         pf.write(f"tes_{r}: {tes_val:.6f}\n")
                         pf.write(f"tes_{r}_1sigma_low: {tes_low:.6f}\n")
@@ -315,7 +400,9 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                         pf.write(f"tid_SF_{r}: {tid_val:.6f}\n")
                         pf.write(f"tid_SF_{r}_1sigma_low: {tid_low:.6f}\n")
                         pf.write(f"tid_SF_{r}_1sigma_high: {tid_high:.6f}\n")
-                    print(f"[INFO] Parameter values written to {param_file}")
+                        for bname, v in nuis_seeds:
+                            pf.write(f"{bname}: {v:.6f}\n")
+                    print(f"[INFO] Parameter values written to {param_file} ({len(nuis_seeds)} nuisances seeded)")
                     f.Close()
 
                 ###################
