@@ -60,8 +60,26 @@ def find_boost_params(fit_result_file, poi1_name, poi2_name, threshold=0):
             parts.append("%s=%.6g" % (b, float(getattr(tree, b))))
         except Exception:
             pass
+    # Also seed nuisances from the deepest grid entry — pass-1 saved them via
+    # --saveSpecifiedNuis all. Without this, pass-2 starts at the right POI
+    # corner but with all nuisances at datacard defaults, and in low-stats
+    # bins it drifts straight back into the local basin pass-1 was stuck in.
+    skip = {"deltaNLL", "quantileExpected", "iToy", "limit", "limitErr",
+            "mh", "syst", "iSeed", "t_cpu", "t_real", "r",
+            poi1_name, poi2_name}
+    n_nuis = 0
+    for b in tree.GetListOfBranches():
+        bname = b.GetName()
+        if bname in skip: continue
+        try:
+            v = float(getattr(tree, bname))
+        except Exception:
+            continue
+        if abs(v) > 1e3: continue
+        parts.append("%s=%.6g" % (bname, v))
+        n_nuis += 1
     f.Close()
-    print(f"[BOOST] Pass-1 deepest point: deltaNLL={best_nll:.6f} at entry {best_idx} (POIs only: {', '.join(parts)})")
+    print(f"[BOOST] Pass-1 deepest point: deltaNLL={best_nll:.6f} at entry {best_idx} (POIs + {n_nuis} nuisances seeded)")
     return ",".join(parts) if parts else None
 
 # Generating the datacards for mutau channel
@@ -149,7 +167,7 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir, mu
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
     algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
     npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
@@ -283,21 +301,29 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 os.system("combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
                 print("COMMAND: combine -M MultiDimFit  %s" %(MultiDimFit_opts_local))
 
-                # --- Boost pass: if pass-1's grid found a deeper basin than the
-                # initial free-POI fit, seed a pass-2 scan from those parameter
-                # values so the new initial fit lands in the true minimum.
-                # Pass-2 reuses the same -n tag, so it overwrites the pass-1 file. ---
+                # --- Iterative boost: each pass, if the grid found a deeper basin
+                # than the converged free-POI fit (entry 0), reseed from the deepest
+                # grid point's POIs + profiled nuisances and re-run. Stops when entry
+                # 0 is the deepest point or after MAX_BOOST_ITER iterations. Each
+                # pass reuses the same -n tag, overwriting the previous file. ---
                 fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
-                boost = find_boost_params(fit_result_file, f"tes_{r}", f"tid_SF_{r}")
-                if boost:
+                MAX_BOOST_ITER = 3
+                for boost_iter in range(1, MAX_BOOST_ITER + 1):
+                    boost = find_boost_params(fit_result_file, f"tes_{r}", f"tid_SF_{r}")
+                    if not boost:
+                        if boost_iter > 1:
+                            print(f"[BOOST] Converged after {boost_iter - 1} extra pass(es)")
+                        break
                     boosted_opts = MultiDimFit_opts_local.replace(
                         "--setParameters r=1",
                         "--setParameters r=1,%s" % boost
                     )
-                    print("[BOOST] Re-running scan with seeded parameters (pass 2)")
-                    print("2D MultidimFit (pass-2 boosted) %s : " % (r), '\t', boosted_opts)
+                    print(f"[BOOST] Re-running scan with seeded parameters (pass {boost_iter + 1})")
+                    print("2D MultidimFit (pass-%d boosted) %s : " % (boost_iter + 1, r), '\t', boosted_opts)
                     os.system("combine -M MultiDimFit  %s" %(boosted_opts))
-                    print("[BOOST] Pass-2 complete — overwrote %s" % fit_result_file)
+                    print(f"[BOOST] Pass-{boost_iter + 1} complete — overwrote {fit_result_file}")
+                else:
+                    print(f"[BOOST] Reached MAX_BOOST_ITER={MAX_BOOST_ITER} without entry 0 becoming global min — accepting current result")
 
                 # Extract actual parameter values from the fit result
                 param_file = f"FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt"
