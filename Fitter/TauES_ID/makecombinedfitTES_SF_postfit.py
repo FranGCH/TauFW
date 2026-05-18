@@ -73,7 +73,7 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, mumu_input_fil
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     mumu_input_file = kwargs.get('mumu_input_file', None)
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"])))
-    tid_SF_range = kwargs.get('tid_SF_range', "0.70,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.50,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
     algo         = kwargs.get('algo',         "--algo=singles   ") #--alignEdges=1") #--alignEdges=1 grid
     npts_fit     = kwargs.get('npts_fit',     "")
@@ -212,7 +212,11 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         elif option == '3':
             # Option 3: 2D scan - need to run FitDiagnostics first
             POI = f"tes_{r},tid_SF_{r}"
-            tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+            tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
+            # DM11 (3-prong + π0): widen tid_SF range; the default 0.7 floor was
+            # being hit and the seed at boundary crashed FitDiagnostics' Hesse step.
+            if r.startswith("DM11"):
+                tid_SF_range = "0.5,1.2"
             # Set TES range based on region (same logic as option 1)
             if r == "DM022":
                 tes_range = "0.970,1.028"
@@ -298,16 +302,27 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 
                 print("[DEBUG] --setParameterRanges:", range_opts)  
 
-                param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
+                # Strip combine's diagnostic branches — they were saved by
+                # --saveSpecifiedNuis all / --saveNLL in step 1 but are NOT real
+                # workspace parameters. combineTool Impacts chokes on them
+                # (ReferenceError: null-pointer in prefit_from_workspace).
+                _bad_keys = {"iChannel", "nll", "nll0"}
+                param_opts = ",".join([f"{key}={value}" for key, value in params.items() if key not in _bad_keys])
                 print(f"Option 3 - param_opts: {param_opts}")
                 
-                # Set up FitDiagnostics options for 2D scan ,{param_opts}
-                POI_OPTS_F = f"--saveNLL --setParameters r=1  --freezeParameters r "  # {fit_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}                                           tes_{r},tid_SF_{r},--setParameterRanges r=0.96,1.04 --freezeParameters tes_{r},tid_SF_{r}  tid_SF_{r}, --setParameterRanges r=0.9,1.1  --setParameterRanges r=0.96,1.04 ,r --freezeParameters tes_{r},tid_SF_{r} --freezeParameters r" # :sf_W_{r}=0.0,10.0
-                
+                # Set up FitDiagnostics options for 2D scan
+                # Seed POIs + saved nuisances from MultiDimFit best-fit (param_opts) so
+                # FitDiagnostics doesn't start from defaults and get stuck in a local min.
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --freezeParameters r"
+
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
-                # FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --redefineSignalPOIs tes_{r},tid_SF_{r} {save_opts}" #{xrtd_opts} {cmin_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}
-                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 --redefineSignalPOIs tes_{r},tid_SF_{r} --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO {save_opts} --trackParameters tid_SF_{r}"
+                # robustFit + strategy=2 needed for DM10 stability (was hitting negative
+                # eigenvalues in Hesse because Migrad hadn't fully converged).
+                # Aligned with MultiDimFit (step 1, option 3) so the two fits land in
+                # the same basin: robustFit with Minuit2/strategy=1/tol=0.001, default
+                # minimizer strategy=0, analytic derivatives. robustHesse kept for stable errors.
+                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} -n .{BINLABELoutput} --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1 --setRobustFitTolerance=0.001 --cminDefaultMinimizerStrategy=0 --X-rtd MINIMIZER_analytic --robustHesse=1 --redefineSignalPOIs tes_{r},tid_SF_{r} --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan {save_opts} --trackParameters tid_SF_{r}"
                 # print(f"[DEBUG] Option 3 - FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
                 # os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}") # --plots")
                 
@@ -326,12 +341,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}")
                     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
                 print(f"FitDiagnostics for 2D scan {r} completed")
-                # os.system(f"mkdir -p impacts/VSjet{jet_wp}_VSele{ele_wp}/")
-                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r ")  
-                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0")
-                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 -o impacts_{r}.json --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0") 
-                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tid_SF_{r} --POI tid_SF_{r}")
-                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tes_{r} --POI tes_{r}")
+                os.system(f"mkdir -p impacts/VSjet{jet_wp}_VSele{ele_wp}/")
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1,{param_opts} --freezeParameters r ")
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1,{param_opts} --freezeParameters r -v 0")
+                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 -o impacts_{r}.json --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1,{param_opts} --freezeParameters r -v 0")
+                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tid_SF_{r} --POI tid_SF_{r}")
+                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tes_{r} --POI tes_{r}")
                 ##################################################
                 try:
                     import ROOT
@@ -374,7 +389,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
     extratag     = kwargs.get('extratag',     "_DeepTau")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -465,6 +480,8 @@ if __name__ == '__main__':
     parser.add_argument('--mumu_input_file', dest='mumu_input_file', type=str, required=False, help="Path to the input root file for mumu")
     parser.add_argument('--jet_wp', dest='jet_wp', type=str, required=True, help="jet working point")
     parser.add_argument('--ele_wp', dest='ele_wp', type=str, required=True, help="electron working point")
+    parser.add_argument('--impacts', dest='impacts', action='store_true', default=False, help="also run combineTool -M Impacts per region after FitDiagnostics (slow)")
+    parser.add_argument('--impacts-parallel', dest='impacts_parallel', type=int, default=8, help="--parallel value for combineTool Impacts --doFits")
     args = parser.parse_args()
 
     main(args)
