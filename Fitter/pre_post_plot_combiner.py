@@ -4,12 +4,19 @@ from PIL import Image
 
 def main():
     parser = argparse.ArgumentParser(description="Combine prefit, postfit, and optional scan plots.")
-    parser.add_argument('--img_dir', type=str, default="./output_plots/", help="Directory containing prefit/postfit PNGs")
-    parser.add_argument('--out_dir', type=str, default="./combined_pre_post/", help="Output directory")
+    parser.add_argument('--img_dir', type=str, default=None, help="Directory containing prefit/postfit PNGs (defaults depend on --variant)")
+    parser.add_argument('--out_dir', type=str, default=None, help="Output directory (defaults depend on --variant)")
     parser.add_argument('--scan_dir', type=str, default=None, help="Directory containing scan plots (optional)")
     parser.add_argument('--jet_wp', type=str, default="medium", help="Jet working point (not used in this script)")
     parser.add_argument('--ele_wp', type=str, default="tight", help="Electron working point (not used in this script)")
+    parser.add_argument('--variant', choices=['uncorr','corr'], default='uncorr',
+                        help="uncorr: per-region 2D scan plot; corr: per-DM 4-panel scan plot")
     args = parser.parse_args()
+    # Variant defaults
+    if args.img_dir is None:
+        args.img_dir = "./output_plots_corrTES/" if args.variant == 'corr' else "./output_plots/"
+    if args.out_dir is None:
+        args.out_dir = "./combined_pre_post_corrTES/" if args.variant == 'corr' else "./combined_pre_post/"
     
     IMG_DIR = args.img_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
     OUT_DIR = args.out_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
@@ -37,16 +44,25 @@ def main():
             # Check for scan plot if directory is provided
             if SCAN_DIR:
                 tag = key.replace(".png", "") # e.g. DM0_pt1
-                # Construct scan filename based on pattern:
-                # scan_2D_tes_{TAG}_tid_SF_{TAG}_mt_{TAG}_mutaumultidimfit.png
-                scan_filename = f"scan_2D_tes_{tag}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"
-                scan_path = os.path.join(SCAN_DIR, scan_filename)
-                
-                if os.path.exists(scan_path):
+                if args.variant == 'corr':
+                    # corrTES: tes_<DM> (no pT suffix) + tid_SF_<region>
+                    dm_part = tag.split('_')[0]  # DM0_pt1 -> DM0
+                    candidates = [
+                        os.path.join(SCAN_DIR,
+                            f"scan_2D_tes_{dm_part}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"),
+                    ]
+                else:
+                    # uncorr: 2D scan per (DM, pT) with both POIs region-tagged
+                    candidates = [
+                        os.path.join(SCAN_DIR,
+                            f"scan_2D_tes_{tag}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"),
+                    ]
+                scan_path = next((p for p in candidates if os.path.exists(p)), None)
+                if scan_path:
                     scan_img = Image.open(scan_path)
                     images_to_combine.append(scan_img)
                 else:
-                    print(f"Warning: Scan plot not found for {tag} at {scan_path}")
+                    print(f"Warning: Scan plot not found for {tag} (tried: {candidates})")
 
             images_to_combine.append(post_img)
 

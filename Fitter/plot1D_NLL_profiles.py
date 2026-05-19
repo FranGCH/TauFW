@@ -1,14 +1,18 @@
 #! /usr/bin/env python3
-"""Project the 2D MultiDimFit grid onto each POI axis as a profile NLL.
+"""Project MultiDimFit NLL scans onto each POI axis.
 
-Two output modes:
-  * per-fit:   one PNG per 2D fit, two side-by-side panels (TES, TauID SF).
-  * overlay:   one PNG per (WP combo, DM), overlaying the 3 pT bins' TES profiles
-               to check pT-bin consistency before correlating TES across pT.
+Two fit variants are supported via --variant:
+  * uncorr  (default): one 2D scan per (DM, pT) region — 2-panel per-fit
+                       plots (TES, TauID SF) and TES/TauID overlays across pT.
+  * corr  : per-DM joint fits with TES correlated across pT. Inputs are 3 2D
+            scans per DM (one per pT bin) on the same combined workspace; each
+            scans (tes_DM, tid_SF_DM_pt<N>) with the other 2 TauID POIs profiled.
+            Per-fit gives a 4-panel plot per DM with 3 overlaid TES projections
+            (sanity check — should agree) and 3 TauID panels.
 
-The overlay mode also writes a CSV summary with best-fit ± 1σ per pT bin and
-pairwise σ-discrepancies between pT bins (useful to decide if correlating TES
-across pT is safe)."""
+The overlay mode writes a CSV summary with best-fit ± 1σ per pT bin and
+pairwise σ-discrepancies (mainly useful for the uncorr variant to decide
+whether to correlate TES across pT)."""
 import os, glob, argparse, csv
 from array import array
 from collections import defaultdict
@@ -258,21 +262,171 @@ def summarize_consistency(profiles, jet_wp, ele_wp, dm, csv_writer=None):
   return worst
 
 
+# ---------- corrTES: collect 1D scans per DM (1 TES + 3 TauID) ----------
+
+def _read_profile(filepath, poi):
+  """Open fit-result file, return profile-NLL dict {'poi','xs','ys','bf','err_dn','err_up'}
+     or None if anything missing."""
+  if not os.path.exists(filepath):
+    return None
+  f = ROOT.TFile.Open(filepath)
+  t = f.Get('limit') if f else None
+  if not t:
+    if f: f.Close()
+    return None
+  prof = profile_nll(t, poi)
+  f.Close()
+  if not prof:
+    return None
+  xs = [p[0] for p in prof]
+  ys = [2*p[1] for p in prof]
+  ymin = min(ys); ys = [y - ymin for y in ys]
+  bf, dn, up = best_fit_with_errors(xs, ys)
+  return {'poi': poi, 'xs': xs, 'ys': ys, 'bf': bf, 'err_dn': dn, 'err_up': up}
+
+
+def _profile_from_2d(filepath, scan_poi, other_poi):
+  """For a 2D scan file (branches scan_poi + other_poi + deltaNLL), project min(deltaNLL)
+     onto `scan_poi`. Returns profile dict or None."""
+  if not os.path.exists(filepath):
+    return None
+  f = ROOT.TFile.Open(filepath)
+  t = f.Get('limit') if f else None
+  if not t:
+    if f: f.Close()
+    return None
+  prof = profile_nll(t, scan_poi)
+  f.Close()
+  if not prof:
+    return None
+  xs = [p[0] for p in prof]
+  ys = [2*p[1] for p in prof]
+  ymin = min(ys); ys = [y - ymin for y in ys]
+  bf, dn, up = best_fit_with_errors(xs, ys)
+  return {'poi': scan_poi, 'xs': xs, 'ys': ys, 'bf': bf, 'err_dn': dn, 'err_up': up}
+
+
+def collect_profiles_corr(indir, year, jet_wp, ele_wp, dm):
+  """corrTES (3 2D scans per DM) — read each 2D scan file and project:
+       * TES axis (tes_<dm>) — gives 3 projections per DM (one per pT-bin scan),
+         which should all overlay since the marginal TES likelihood is unique.
+       * TauID axis (tid_SF_<dm>_pt<N>) — 3 separate per-pT projections.
+     Returns {'tes': [<profile per pt_idx>], 'tid': [<profile per pt_idx>]}."""
+  combo_dir = os.path.join(indir, f'againstjet_{jet_wp}',
+                           f'againstelectron_{ele_wp}', year)
+  out = {'tes': [], 'tid': []}
+  for pt_idx in (1, 2, 3):
+    region = f'{dm}_pt{pt_idx}'
+    tes_poi = f'tes_{dm}'
+    tid_poi = f'tid_SF_{region}'
+    fname = f"higgsCombine.mt_m_vis-{region}_mutau_DeepTau-{year}-13TeV.MultiDimFit.mH90.root"
+    fpath = os.path.join(combo_dir, fname)
+    # TES projection from this 2D scan
+    p_tes = _profile_from_2d(fpath, tes_poi, tid_poi)
+    if p_tes:
+      p_tes['pt_idx'] = pt_idx
+      out['tes'].append(p_tes)
+    # TauID projection from this 2D scan
+    p_tid = _profile_from_2d(fpath, tid_poi, tes_poi)
+    if p_tid:
+      p_tid['pt_idx'] = pt_idx
+      out['tid'].append(p_tid)
+  return out
+
+
+def plot_per_dm_corr(prof_dict, outdir, jet_wp, ele_wp, dm):
+  """4-panel per-DM plot: TES (top-left, 3 projections overlaid) + 3 TauID SF panels."""
+  if not (prof_dict['tes'] or prof_dict['tid']):
+    return None
+  c = ROOT.TCanvas('c', '', 1400, 1100)
+  c.Divide(2, 2)
+  title = f"{dm}  (VSjet={jet_wp}, VSe={ele_wp})"
+  keep = []
+  # Panel 1: TES with all 3 projections overlaid (sanity: should agree)
+  if prof_dict['tes']:
+    keep.append(draw_overlay_panel(c.cd(1), prof_dict['tes'],
+                                   'TES (3 projections)',
+                                   f'tes_{dm}', dm, jet_wp, ele_wp))
+  # Panels 2..4: TauID per pT bin
+  for ipad, p in zip((2, 3, 4), prof_dict['tid']):
+    keep.append(draw_profile(c.cd(ipad), p['xs'], p['ys'], p['poi'],
+                             title + f"  TauID pt{p['pt_idx']}"))
+  os.makedirs(outdir, exist_ok=True)
+  out = os.path.join(outdir, f"nll1d_corr_{dm}.png")
+  c.SaveAs(out)
+  return out
+
+
+def plot_overlay_corr(prof_dict, outdir, jet_wp, ele_wp, dm):
+  """2-panel overlay for corrTES: TES (3 projections overlaid) + TauID (3 pT curves)."""
+  if not (prof_dict['tes'] or prof_dict['tid']):
+    return None
+  c = ROOT.TCanvas('c', '', 1600, 700)
+  c.Divide(2, 1)
+  keep1 = draw_overlay_panel(c.cd(1), prof_dict['tes'],
+                             'TES (correlated, 3 projections)',
+                             f'tes_{dm}', dm, jet_wp, ele_wp)
+  keep2 = draw_overlay_panel(c.cd(2), prof_dict['tid'], 'TauID SF',
+                             f'tid_SF_{dm}_pt*', dm, jet_wp, ele_wp)
+  os.makedirs(outdir, exist_ok=True)
+  out = os.path.join(outdir, f'overlay_corr_{dm}.png')
+  c.SaveAs(out)
+  return out
+
+
 # ---------- Main ----------
 
 def main():
   ap = argparse.ArgumentParser(description=__doc__)
-  ap.add_argument('--indir',  default='output_pt_less_region')
-  ap.add_argument('--outdir', default='plots_pt_less_region')
+  ap.add_argument('--variant', default='uncorr', choices=['uncorr','corr'],
+                  help="uncorr = 2D fit per (DM,pT); corr = per-DM joint fit with correlated TES")
+  ap.add_argument('--indir',  default=None,
+                  help="defaults: output_pt_less_region (uncorr) / output_pt_less_region_corrTES (corr)")
+  ap.add_argument('--outdir', default=None,
+                  help="defaults: plots_pt_less_region (uncorr) / plots_pt_less_region_corrTES (corr)")
   ap.add_argument('--year',   default='2025')
   ap.add_argument('--jet_wp', default=None)
   ap.add_argument('--ele_wp', default=None)
   ap.add_argument('--mode',   default='both', choices=['per-fit','overlay','both'])
   args = ap.parse_args()
 
+  # Variant-aware defaults
+  if args.indir is None:
+    args.indir = 'output_pt_less_region_corrTES' if args.variant == 'corr' else 'output_pt_less_region'
+  if args.outdir is None:
+    args.outdir = 'plots_pt_less_region_corrTES' if args.variant == 'corr' else 'plots_pt_less_region'
+
   jet_glob = args.jet_wp if args.jet_wp else '*'
   ele_glob = args.ele_wp if args.ele_wp else '*'
 
+  # ----- corrTES variant: per-DM joint fit outputs -----
+  if args.variant == 'corr':
+    jet_dirs = sorted(glob.glob(os.path.join(args.indir, f'againstjet_{jet_glob}')))
+    n_per_fit = n_overlay = 0
+    for jd in jet_dirs:
+      jet_wp = os.path.basename(jd).replace('againstjet_', '')
+      ele_dirs = sorted(glob.glob(os.path.join(jd, f'againstelectron_{ele_glob}')))
+      for ed in ele_dirs:
+        ele_wp = os.path.basename(ed).replace('againstelectron_', '')
+        print(f">>> [corr] {jet_wp} x {ele_wp}")
+        for dm in ('DM0','DM1','DM10','DM11'):
+          prof_dict = collect_profiles_corr(args.indir, args.year, jet_wp, ele_wp, dm)
+          if not (prof_dict['tes'] or prof_dict['tid']):
+            continue
+          out_sub = os.path.join(args.outdir, f'againstjet_{jet_wp}',
+                                 f'againstelectron_{ele_wp}', args.year)
+          if args.mode in ('per-fit', 'both'):
+            if plot_per_dm_corr(prof_dict, os.path.join(out_sub, 'nll_1d'),
+                                jet_wp, ele_wp, dm):
+              n_per_fit += 1
+          if args.mode in ('overlay', 'both'):
+            if plot_overlay_corr(prof_dict, os.path.join(out_sub, 'nll_1d_overlay'),
+                                 jet_wp, ele_wp, dm):
+              n_overlay += 1
+    print(f">>> [corr] Wrote {n_per_fit} per-DM plots, {n_overlay} overlays")
+    return
+
+  # ----- uncorr variant (original 2D scans) -----
   # Per-fit two-panel plots
   if args.mode in ('per-fit', 'both'):
     pattern = os.path.join(args.indir, f'againstjet_{jet_glob}',

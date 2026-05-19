@@ -1197,15 +1197,18 @@ def main(args):
     
     if args.poi1 and args.poi2:
         # Single region mode
-        poi1_name = args.poi1  # e.g., "tes_DM0"
-        poi2_name = args.poi2  # e.g., "tid_SF_DM0"
-        
-        # Extract region from POI name (assuming format like "tes_DM0")
-        if '_' in poi1_name:
+        poi1_name = args.poi1  # e.g., "tes_DM0" (corrTES) or "tes_DM0_pt1" (uncorr)
+        poi2_name = args.poi2  # e.g., "tid_SF_DM0_pt1"
+
+        # Region: prefer explicit -r (correct for corrTES where tes_<DM> has no pT),
+        # else derive from poi1.
+        if args.region:
+            region = args.region
+        elif '_' in poi1_name:
             region = poi1_name.split('_', 1)[1]
         else:
-            region = args.region if args.region else "DM0"
-            
+            region = "DM0"
+
         regions_to_process = [region]
     else:
         # Multiple regions mode - get from config

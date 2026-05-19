@@ -65,7 +65,8 @@ def load_sf_measurements(setup, year, **kwargs):
     jet_wp  = kwargs.get('jet_wp',      "Tight"         )
     ele_wp  = kwargs.get('ele_wp',      "Tight"         )
     sf      = kwargs.get('sf',          "tes"         )
-    
+    variant = kwargs.get('variant',     "uncorr"        )
+
     region = []
     tes_values = []
     tid_values = []
@@ -73,11 +74,13 @@ def load_sf_measurements(setup, year, **kwargs):
     tes_errlo = []
     tid_errhi = []
     tid_errlo = []
-    
-    print(f"[DEBUG] Looking for {sf} measurements in year {year}")
-    
+
+    print(f"[DEBUG] Looking for {sf} measurements in year {year} (variant={variant})")
+
+    # Variant-aware input root
+    input_root = "output_pt_less_region_corrTES" if variant == "corr" else "output_pt_less_region"
     # Use glob to find all measurement files
-    pattern = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_*.txt"
+    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_*.txt"
     #f"plots_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/measurement_2D_tes_*_tid_SF_*_mt_*_mutau.txt"
     all_files = glob.glob(pattern)
     print(f"[DEBUG] Found {len(all_files)} measurement files")
@@ -170,6 +173,7 @@ def load_sf_measurements(setup, year, **kwargs):
 
 def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     tag = kwargs.get('tag', "")
+    variant = kwargs.get('variant', "uncorr")
     jet_wps = [jet_wp]  # Use only the specified jet working point
     sfs = ['tes', 'tid_SF']
     pt_avg_list, pt_error_list = load_pt_values(setup)
@@ -207,7 +211,8 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                     print(f'jet_wp: {current_jet_wp}')
                     # Load measurements
                     region, tes, tes_errhi, tes_errlo = load_sf_measurements(
-                        setup, year, tag=tag, jet_wp=current_jet_wp, ele_wp=ele_wp, sf=sf
+                        setup, year, tag=tag, jet_wp=current_jet_wp, ele_wp=ele_wp, sf=sf,
+                        variant=variant
                     )
                     
                     # Filter elements with current DM (exact match to avoid DM1 matching DM10, DM11)
@@ -308,7 +313,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                 else:
                     name = 'TauID'
                     
-                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
+                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{('_corrTES' if variant == 'corr' else '')}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
 
                 for year in [args.year]:
                     for dm in dm_order:
@@ -504,7 +509,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                         corrections=[corr]
                     )
                     
-                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
+                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{('_corrTES' if variant == 'corr' else '')}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
                     with open(json_filename, "w") as fout:
                         print(f">>> Writing JSON: {json_filename}")
                         fout.write(cset.json())
@@ -613,7 +618,7 @@ def main(args):
     year          = args.year
     #CMSStyle.setCMSEra(year)
 
-    plot_dm_graph(setup, form, ele_wp, jet_wp, tag=tag)
+    plot_dm_graph(setup, form, ele_wp, jet_wp, tag=tag, variant=args.variant)
     
 
 
@@ -628,6 +633,8 @@ if __name__ == '__main__':
   parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
   parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
   parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
+  parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
+                      help="uncorr: per-region param files, TES per (DM,pT); corr: per-DM param files, TES per DM only")
   args = parser.parse_args()
   main(args)
   print(">>>\n>>> done\n")

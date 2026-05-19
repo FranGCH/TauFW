@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Combine scan_2D_*.png files into a 4x3 grid (rows=DM, cols=pt) per WP combo."""
+"""Combine 2D-scan PNGs into a 4x3 grid (rows=DM, cols=pt) per WP combo.
+
+Both variants produce 12 scan_2D_*.png files; only the POI names in the
+filename differ. The --variant flag picks the right name pattern.
+"""
 import argparse
 import os
 import sys
@@ -10,13 +14,21 @@ PTS = ["pt1", "pt2", "pt3"]
 
 
 def find_scan(folder, dm, pt):
+    """uncorr: tes_<dm>_<pt> + tid_SF_<dm>_<pt>."""
     name = f"scan_2D_tes_{dm}_{pt}_tid_SF_{dm}_{pt}_mt_{dm}_{pt}_mutaumultidimfit.png"
     path = os.path.join(folder, name)
     return path if os.path.isfile(path) else None
 
 
-def build_grid(folder, out_path, title=None):
-    cells = [[find_scan(folder, dm, pt) for pt in PTS] for dm in DMS]
+def find_corr_scan(folder, dm, pt):
+    """corrTES: tes_<dm> (no pT) + tid_SF_<dm>_<pt>."""
+    name = f"scan_2D_tes_{dm}_tid_SF_{dm}_{pt}_mt_{dm}_{pt}_mutaumultidimfit.png"
+    path = os.path.join(folder, name)
+    return path if os.path.isfile(path) else None
+
+
+def build_grid(folder, out_path, title=None, finder=find_scan):
+    cells = [[finder(folder, dm, pt) for pt in PTS] for dm in DMS]
     found = [p for row in cells for p in row if p]
     if not found:
         print(f"  no scans found in {folder}, skipping")
@@ -96,20 +108,25 @@ def walk_wps(root):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default="plots_pt_less_region",
-                    help="root dir containing <jetWP>/<eleWP>/<year>/scan_*.png")
+    ap.add_argument("--root", default=None,
+                    help="root dir (defaults depend on --variant)")
+    ap.add_argument("--variant", choices=["uncorr", "corr"], default="uncorr")
     args = ap.parse_args()
+
+    if args.root is None:
+        args.root = "plots_pt_less_region_corrTES" if args.variant == "corr" else "plots_pt_less_region"
 
     if not os.path.isdir(args.root):
         sys.exit(f"root not found: {args.root}")
 
+    finder = find_corr_scan if args.variant == "corr" else find_scan
     n = 0
     for jet_wp, ele_wp, year, folder in walk_wps(args.root):
-        title = f"{jet_wp} | {ele_wp} | {year}"
-        out_name = f"grid_{jet_wp}_{ele_wp}_{year}.png"
+        title = f"{jet_wp} | {ele_wp} | {year} ({args.variant})"
+        out_name = f"grid_{args.variant}_{jet_wp}_{ele_wp}_{year}.png"
         out_path = os.path.join(folder, out_name)
         print(f"[{jet_wp} / {ele_wp} / {year}]")
-        if build_grid(folder, out_path, title=title):
+        if build_grid(folder, out_path, title=title, finder=finder):
             n += 1
     print(f"done: {n} grid(s) written")
 

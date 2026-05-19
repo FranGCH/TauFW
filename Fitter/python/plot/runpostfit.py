@@ -6,9 +6,19 @@ def main(args):
     againstjet = args.againstjet
     againstelectron = args.againstelectron
 
+    # Variant-aware paths:
+    #   uncorr (default): PostFitShape file per region (e.g. ..._DM0_pt1.root)
+    #   corr            : PostFitShape file per DM    (e.g. ..._DM0.root, holds 3 pT channels)
+    if args.variant == 'corr':
+        postfit_root = './postfit_pt_less_region_corrTES'
+        outroot      = 'output_plots_corrTES'
+    else:
+        postfit_root = './postfit_pt_less_region'
+        outroot      = 'output_plots'
+
     for config in configs:
         if not config.endswith(".yml"): # config = channel name
-            config = "config/setup_%s.yml"%(config) # assume this file name pattern
+            config = "config/setup_%s.yml"%(config)
         print(">>> Using configuration file: %s"%config)
         with open(config, 'r') as file:
             setup = yaml.safe_load(file)
@@ -17,45 +27,46 @@ def main(args):
     for region in setup["regions"]:
         if region == "baseline": continue
 
+        print(">>>   Region: %s"%(region))
+        era = "%s" % args.year
+
+        # Map region -> PostFitShape file: corr variant uses per-DM file.
+        if args.variant == 'corr':
+            dm_part = region.split('_')[0]  # e.g. DM0_pt1 -> DM0
+            shape_label = dm_part
         else:
-            print(">>>   Region: %s"%(region))
-            era = "%s" % args.year  ## Use the year from command line arguments
-            # Define the parameters
-            fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_%s__mutau_%s.root' %(againstjet, againstelectron, era, era,region)
-            # bin = 'DM0'  # This should match the bin name in your ROOT file
-            procs = setup["processes"]  # Replace with the actual processes in your file
-            # procs = ["ZTT","ZL","ZJ","W","VV","ST","TTT","TTL","TTJ","QCD","data_obs"]  # Replace with the actual processes in your file
-            text = setup["regions"][region]["title"]
-            print(">>>   Title: %s"%(text))
+            shape_label = region
 
+        fname = '%s/againstjet_%s/againstelectron_%s/%s/PostFitShape_%s__mutau_%s.root' % (
+                postfit_root, againstjet, againstelectron, era, era, shape_label)
+        procs = setup["processes"]
+        text  = setup["regions"][region]["title"]
+        print(">>>   Title: %s"%(text))
 
-            # Call the function
-            drawpostfit(fname, region, procs,
-                         outdir='output_plots/jet_%s_ele_%s/'%(args.againstjet,args.againstelectron), pname='$FIT.png', ratio=True, era=era, text=text)
-            if args.include_cr:
-                fname = './postfit_pt_less_region/againstjet_%s/againstelectron_%s/%s/PostFitShape_%s__mutau_%s.root' %(againstjet, againstelectron, era, era,region)    
-                
-                procs = ['ZL', 'ZTT', 'ZJ', 'W','VV','ST', 'TT','QCD','data_obs']
-
-                # Try CR directory names that include the DM region so each DM gets its own CR plot
-                import ROOT
-                froot = ROOT.TFile.Open(fname)
-                cr_candidates = [f"{args.cr_name}_{region}", f"{region}_{args.cr_name}", args.cr_name]
-                found = False
-                for cr_region in cr_candidates:
-                    # drawpostfit expects directories named "<region>_prefit" / "<region>_postfit"
-                    if froot and not froot.IsZombie() and froot.Get(f"{cr_region}_postfit"):
-                        pname_cr = f"{region}_{cr_region}_$FIT_CR.png"
-                        drawpostfit(fname, cr_region, procs,
-                                     outdir='output_plots/jet_%s_ele_%s/'%(args.againstjet,args.againstelectron), pname=pname_cr, ratio=True, era=era, text="Z#rightarrow#mu#mu CR")
-                        found = True
-                        break
-                if not found:
-                    # fallback: draw with the plain CR name (still include region in filename)
-                    drawpostfit(fname, args.cr_name, procs,
-                                 outdir='output_plots/jet_%s_ele_%s/'%(args.againstjet,args.againstelectron), pname=f"{region}_{args.cr_name}_$FIT_CR.png", ratio=True, era=era, text="Z#rightarrow#mu#mu CR")
-                if froot:
-                    froot.Close()
+        drawpostfit(fname, region, procs,
+                     outdir='%s/jet_%s_ele_%s/' % (outroot, againstjet, againstelectron),
+                     pname='$FIT.png', ratio=True, era=era, text=text)
+        if args.include_cr:
+            cr_procs = ['ZL', 'ZTT', 'ZJ', 'W','VV','ST', 'TT','QCD','data_obs']
+            import ROOT
+            froot = ROOT.TFile.Open(fname)
+            cr_candidates = [f"{args.cr_name}_{region}", f"{region}_{args.cr_name}", args.cr_name]
+            found = False
+            for cr_region in cr_candidates:
+                if froot and not froot.IsZombie() and froot.Get(f"{cr_region}_postfit"):
+                    pname_cr = f"{region}_{cr_region}_$FIT_CR.png"
+                    drawpostfit(fname, cr_region, cr_procs,
+                                 outdir='%s/jet_%s_ele_%s/' % (outroot, againstjet, againstelectron),
+                                 pname=pname_cr, ratio=True, era=era, text="Z#rightarrow#mu#mu CR")
+                    found = True
+                    break
+            if not found:
+                drawpostfit(fname, args.cr_name, cr_procs,
+                             outdir='%s/jet_%s_ele_%s/' % (outroot, againstjet, againstelectron),
+                             pname=f"{region}_{args.cr_name}_$FIT_CR.png", ratio=True, era=era,
+                             text="Z#rightarrow#mu#mu CR")
+            if froot:
+                froot.Close()
 if __name__ == "__main__":
     from argparse import ArgumentParser, RawTextHelpFormatter
     description = """Simple plotting script for postfit plots"""
@@ -72,6 +83,8 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--jet', dest='againstjet', default='Tight', help="against jet WP")
     parser.add_argument('-e', '--electron', dest='againstelectron', default='Tight', help="against electron WP")
     parser.add_argument('-y', '--year', dest='year', default='2024', help="year for plotting")
+    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
+                                         help="fit variant: uncorr (per-region postfit files) or corr (per-DM)")
 
     args = parser.parse_args()
   

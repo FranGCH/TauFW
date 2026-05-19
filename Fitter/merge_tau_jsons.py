@@ -37,13 +37,13 @@ def extract_genmatch_data(data_node):
         return None
 
 
-def create_combined_correction(input_dir, output_filename, correction_type="tes"):
+def create_combined_correction(input_dir, output_filename, correction_type="tes", variant="uncorr"):
     """Create a single correction with variation parameter from individual JSON files."""
-    
-    print(f"Creating {correction_type.upper()} correction file...")
-    
+
+    print(f"Creating {correction_type.upper()} correction file (variant={variant})...")
+
     # Create the correction
-    combined_corr = create_single_correction(input_dir, correction_type)
+    combined_corr = create_single_correction(input_dir, correction_type, variant=variant)
     
     if not combined_corr:
         print(f"ERROR: Could not create {correction_type.upper()} correction!")
@@ -126,18 +126,18 @@ def test_correction(filename, combined_corr):
         traceback.print_exc()
 
 
-def create_combined_both_corrections(input_dir, output_filename):
+def create_combined_both_corrections(input_dir, output_filename, variant="uncorr"):
     """Create a single file with both TES and TauIdSF corrections."""
-    
-    print("Creating combined file with both TES and TauIdSF corrections...")
-    
+
+    print(f"Creating combined file with both TES and TauIdSF corrections (variant={variant})...")
+
     # Create TES correction
     print("\n=== Creating TES correction ===")
-    tes_corr = create_single_correction(input_dir, "tes")
-    
-    # Create TauIdSF correction  
+    tes_corr = create_single_correction(input_dir, "tes", variant=variant)
+
+    # Create TauIdSF correction
     print("\n=== Creating TauIdSF correction ===")
-    id_corr = create_single_correction(input_dir, "id")
+    id_corr = create_single_correction(input_dir, "id", variant=variant)
     
     corrections_list = []
     if tes_corr:
@@ -169,26 +169,30 @@ def create_combined_both_corrections(input_dir, output_filename):
         test_correction(output_filename, corr)
 
 
-def create_single_correction(input_dir, correction_type):
+def create_single_correction(input_dir, correction_type, variant="uncorr"):
     """Helper function to create a single correction with all WP combinations merged."""
-    
+
     # Settings based on type
     if correction_type == "tes":
         pattern_base = "TauES"
-        final_name = "TauES_2024"
-        description = "Tau Energy Scale corrections with all WP combinations"
+        final_name = "TauES_2024" + ("_corrTES" if variant == "corr" else "")
+        description = f"Tau Energy Scale corrections with all WP combinations ({variant} variant)"
     else:
         pattern_base = "TauID"
-        final_name = "TauIdSF_2024"
-        description = "Tau ID Scale Factor corrections with all WP combinations"
-    
+        final_name = "TauIdSF_2024" + ("_corrTES" if variant == "corr" else "")
+        description = f"Tau ID Scale Factor corrections with all WP combinations ({variant} variant)"
+
     # Regex to find files and extract WPs from filename
-    # Matches: TauES_SF_dm_DeepTau2018v2p5_2024_VSjetMedium_VSeleVVLoose.json
+    # Matches: TauES_SF_dm_DeepTau2018v2p5_2024[_corrTES]_VSjetMedium_VSeleVVLoose.json
     wp_regex = re.compile(r".*VSjet(?P<jet>[a-zA-Z]+)_VSele(?P<ele>[a-zA-Z]+)\.json$")
-    
-    # Find all potential files
+
+    # Find all potential files; filter by variant on the filename
     search_pattern = os.path.join(input_dir, f"*{pattern_base}*.json")
     all_files = glob.glob(search_pattern)
+    if variant == "corr":
+        all_files = [f for f in all_files if "_corrTES_" in os.path.basename(f)]
+    else:
+        all_files = [f for f in all_files if "_corrTES_" not in os.path.basename(f)]
     all_files.sort()
     
     if not all_files:
@@ -337,7 +341,9 @@ Examples:
                         help="List corrections in a specific JSON file")
     parser.add_argument('--list-all', dest='list_all', action='store_true',
                         help="List corrections in all found JSON files")
-    
+    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
+                        help="uncorr (default) or corr: filter per-WP input files by '_corrTES_' tag")
+
     args = parser.parse_args()
     
     if args.list_file:
@@ -352,11 +358,11 @@ Examples:
     
     # Create corrections based on type
     if args.correction_type == "tes":
-        create_combined_correction(args.input_dir, args.output_file, "tes")
+        create_combined_correction(args.input_dir, args.output_file, "tes", variant=args.variant)
     elif args.correction_type == "id":
-        create_combined_correction(args.input_dir, args.output_file, "id")
+        create_combined_correction(args.input_dir, args.output_file, "id", variant=args.variant)
     else:  # both - create single file with both corrections
-        create_combined_both_corrections(args.input_dir, args.output_file)
+        create_combined_both_corrections(args.input_dir, args.output_file, variant=args.variant)
 
 
 if __name__ == '__main__':

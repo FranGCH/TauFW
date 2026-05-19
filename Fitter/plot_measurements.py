@@ -10,11 +10,109 @@ import argparse
 import re
 from ROOT import TCanvas, TGraph, TGraphAsymmErrors, TLatex, TLegend, TLine, kBlue, kRed, kGreen, kMagenta, kBlack, kOrange, kGray
 
-def load_measurements(ele_wp="tight", jet_wp="medium", year="2024"):
-    """Load measurements from 2D measurement files and FitDiagnostics"""
-    
+def load_measurements_corr(ele_wp, jet_wp, year):
+    """corrTES loader: one param/fitdiag file per DM contains 4 POIs (1 TES + 3 TauID);
+       expand each into 3 measurement records (one per pT bin) sharing the TES value."""
+    PT_RANGES = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
     measurements = []
-    
+
+    # ---- MultiDimFit: per-DM param files ----
+    pattern = f"output_pt_less_region_corrTES/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_DM*.txt"
+    files = glob.glob(pattern)
+    print(f"[corr] Found {len(files)} per-DM MultiDimFit param files")
+    for filename in files:
+        if os.path.getsize(filename) == 0:
+            continue
+        dm_match = re.search(r'_(DM\d+)\.txt$', filename)
+        if not dm_match:
+            continue
+        dm = dm_match.group(1)
+        # Parse: tes_DM<X> + tid_SF_DM<X>_pt{1,2,3} (+ _1sigma_low/_high)
+        tes = {'val': None, 'low': None, 'high': None}
+        tid = {p: {'val': None, 'low': None, 'high': None} for p in ('pt1','pt2','pt3')}
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()
+                if not line or ':' not in line:
+                    continue
+                key, sval = line.split(':', 1)
+                key = key.strip()
+                try:
+                    val = float(sval.strip())
+                except ValueError:
+                    continue
+                # TES
+                if key == f'tes_{dm}': tes['val'] = val
+                elif key == f'tes_{dm}_1sigma_low': tes['low'] = val
+                elif key == f'tes_{dm}_1sigma_high': tes['high'] = val
+                # TauID per pT
+                for pt in ('pt1','pt2','pt3'):
+                    if key == f'tid_SF_{dm}_{pt}': tid[pt]['val'] = val
+                    elif key == f'tid_SF_{dm}_{pt}_1sigma_low': tid[pt]['low'] = val
+                    elif key == f'tid_SF_{dm}_{pt}_1sigma_high': tid[pt]['high'] = val
+        tes_err_d = (abs(tes['val'] - tes['low'])  if tes['val'] is not None and tes['low']  is not None else None)
+        tes_err_u = (abs(tes['high'] - tes['val']) if tes['val'] is not None and tes['high'] is not None else None)
+        for pt in ('pt1','pt2','pt3'):
+            t = tid[pt]
+            if t['val'] is None or tes['val'] is None:
+                continue
+            tid_err_d = abs(t['val'] - t['low'])  if t['low']  is not None else None
+            tid_err_u = abs(t['high'] - t['val']) if t['high'] is not None else None
+            measurements.append({
+                'type': 'MultiDimFit', 'region': f"{dm} {PT_RANGES[pt]}",
+                'dm': dm, 'pt_bin': pt, 'jet_wp': jet_wp, 'ele_wp': ele_wp,
+                'tes_val': tes['val'], 'tes_err_down': tes_err_d, 'tes_err_up': tes_err_u,
+                'tid_val': t['val'],   'tid_err_down': tid_err_d, 'tid_err_up': tid_err_u,
+                'correlation': 0.0,
+            })
+
+    # ---- FitDiagnostics: per-DM files in FitDiagnosticsValues/ ----
+    fd_pattern = f"./FitDiagnosticsValues/VSjet{jet_wp}_VSele{ele_wp}/DM*_fitdiagnostics_TES_TauID_values.txt"
+    fd_files = glob.glob(fd_pattern)
+    print(f"[corr] Found {len(fd_files)} per-DM FitDiagnostics files")
+    for filename in fd_files:
+        if os.path.getsize(filename) == 0:
+            continue
+        m = re.match(r'(DM\d+)_fitdiagnostics', os.path.basename(filename))
+        if not m: continue
+        dm = m.group(1)
+        tes_val = tes_err = None
+        tid_per_pt = {}
+        with open(filename) as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 3: continue
+                k = parts[0]
+                try:
+                    v = float(parts[1]); e = float(parts[2])
+                except ValueError:
+                    continue
+                if k == f'tes_{dm}':
+                    tes_val, tes_err = v, e
+                else:
+                    pm = re.match(rf'tid_SF_{dm}_(pt\d+)$', k)
+                    if pm:
+                        tid_per_pt[pm.group(1)] = (v, e)
+        for pt, (tv, te) in tid_per_pt.items():
+            if tes_val is None: continue
+            measurements.append({
+                'type': 'FitDiagnostics', 'region': f"{dm} {PT_RANGES.get(pt, pt)}",
+                'dm': dm, 'pt_bin': pt, 'jet_wp': jet_wp, 'ele_wp': ele_wp,
+                'tes_val': tes_val, 'tes_err_down': tes_err, 'tes_err_up': tes_err,
+                'tid_val': tv,      'tid_err_down': te,      'tid_err_up': te,
+                'correlation': 0.0,
+            })
+    print(f"[corr] Loaded {len(measurements)} measurements total")
+    return measurements
+
+
+def load_measurements(ele_wp="tight", jet_wp="medium", year="2024", variant="uncorr"):
+    """Load measurements from 2D measurement files and FitDiagnostics"""
+    if variant == "corr":
+        return load_measurements_corr(ele_wp, jet_wp, year)
+
+    measurements = []
+
     # --- 1. Load MultiDimFit (2D Scan) files ---
     pattern_multidim = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_*.txt"
     files_multidim = glob.glob(pattern_multidim)
@@ -410,11 +508,14 @@ def main():
     parser.add_argument('--jet_wp', type=str, default="Medium", help="Jet working point (not used in this script)")
     parser.add_argument('--ele_wp', type=str, default="Tight", help="Electron working point (not used in this script)")
     parser.add_argument('--year', type=str, default="2024", help="Year for plotting (not used in this script)")
+    parser.add_argument('--variant', choices=['uncorr','corr'], default='uncorr',
+                        help="uncorr: per-region inputs; corr: per-DM inputs (TES shared across pT)")
 
     args = parser.parse_args()
     # Load measurements
     os.makedirs(f"Measurements/VSjet{args.jet_wp}_VSele{args.ele_wp}/", exist_ok=True)
-    measurements = load_measurements(ele_wp=args.ele_wp, jet_wp=args.jet_wp, year=args.year)
+    measurements = load_measurements(ele_wp=args.ele_wp, jet_wp=args.jet_wp,
+                                     year=args.year, variant=args.variant)
     
     if not measurements:
         print("No measurements found!")
