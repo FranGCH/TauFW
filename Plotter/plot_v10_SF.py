@@ -313,18 +313,14 @@ def main(args):
   extratext = args.text
   fraction  = args.fraction
   pdf       = args.pdf
-  elv25     = args.Elv25
   #default script
   #outdir    = "plots/$ERA/$CHANNEL"
   if 'ingrid' in socket.gethostname(): #this is the default
     outdir    = "plots/$ERA/$CHANNEL"
   if 'lxplus' in socket.gethostname():
-    if elv25:
-      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA/"
-      fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
-    else:
-      fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
-      outdir    = "plots/$ERA/$CHANNEL"
+
+    fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
+    outdir    = "plots/$ERA/$CHANNEL"
 
   # LOOP over configs / channels
   for config in configs:
@@ -376,7 +372,6 @@ if __name__ == "__main__":
   parser.add_argument('-T', '--text',    default="", help="extra text on plot" )
   parser.add_argument('-v', '--verbose', dest='verbosity', type=int, nargs='?', const=1, default=0, action='store',
                                          help="set verbosity" )
-  parser.add_argument('--Elv25',        help="to use the 2025 samples that Elvira produced", action='store_true')
   args = parser.parse_args()
   LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity
