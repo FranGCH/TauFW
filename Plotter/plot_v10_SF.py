@@ -9,7 +9,7 @@
 #>>>>Run with --serial option if using py3:
 #   ./plot_v10.py -y 2018 -c mutau --serial
 
-from config.samples_v15 import *
+from config.samples_v15_SF import *
 from TauFW.Plotter.plot.string import filtervars
 from TauFW.Plotter.plot.utils import LOG as PLOG
 from TauFW.Plotter.plot.Plot import Plot, deletehist
@@ -74,7 +74,7 @@ def plot(sampleset,setup,parallel=True,tag="",extratext="",outdir="plots",era=""
     else:
       m_vis_ymax = 100*1e3
     variables += [
-      Var('m_vis',          40,  0, 200, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),# ymargin=1.3),ymax = m_vis_ymax),
+      Var('m_vis',          22,  40, 150, fname="mvis",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),# ymargin=1.3),ymax = m_vis_ymax),
       # Var('m_vis',          40,  0, 200,ymax = 222*1e3, fname="mvis_nodata",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(50,0,250),"nbtag\w*>":(60,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}, ymargin=1.3),
       # Var('m_vis',  1, 60,  120, fname="$VAR_1bin", veto=["m_vis>200"] ),
       # Var('m_vis',          11,  60, 120, fname="mvis_coarse",ctitle={'mumu':"m_mumu",'emu':"m_emu"},logy=False, cbins={"pt_\d>":(25,0,250),"nbtag\w*>":(30,0,300)},cpos={"pt_\d>[1678]0":'LL;y=0.88'}),
@@ -313,7 +313,6 @@ def main(args):
   extratext = args.text
   fraction  = args.fraction
   pdf       = args.pdf
-  dp        = args.DP
   elv25     = args.Elv25
   #default script
   #outdir    = "plots/$ERA/$CHANNEL"
@@ -321,15 +320,11 @@ def main(args):
     outdir    = "plots/$ERA/$CHANNEL"
   if 'lxplus' in socket.gethostname():
     if elv25:
-      dp = True
+      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA/"
       fname = "/eos/user/e/emartinv/analysis/$ERA/$GROUP/$SAMPLE_$CHANNEL$TAG.root"
     else:
       fname     = "$PICODIR/$SAMPLE_$CHANNEL$TAG.root" #OG
-
-    if dp:
-      outdir   ="/eos/user/f/fcasalin/www/TauPOG/TauFW/DP_note/Elviras_$ERA/"
-    else:
-      outdir    = "/eos/user/f/fcasalin/TauFW_230425/Plotter_out/plots/$ERA/$CHANNEL"
+      outdir    = "plots/$ERA/$CHANNEL"
 
   # LOOP over configs / channels
   for config in configs:
@@ -381,7 +376,6 @@ if __name__ == "__main__":
   parser.add_argument('-T', '--text',    default="", help="extra text on plot" )
   parser.add_argument('-v', '--verbose', dest='verbosity', type=int, nargs='?', const=1, default=0, action='store',
                                          help="set verbosity" )
-  parser.add_argument('--DP',           help="produce plots for the DP note", action='store_true')
   parser.add_argument('--Elv25',        help="to use the 2025 samples that Elvira produced", action='store_true')
   args = parser.parse_args()
   LOG.verbosity = args.verbosity
