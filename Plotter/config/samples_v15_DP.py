@@ -37,12 +37,12 @@ def getsampleset(channel,era,**kwargs):
     join += ['TT','ST']
   
   # SM BACKGROUND MC SAMPLES
-  if '2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era: # so far same samples and cross sections are used for preEE and postEE, if event numbers are set elsewhere then we don't need to add seperate numbers for both eras
+  if '2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era or '2026' in era: # so far same samples and cross sections are used for preEE and postEE, if event numbers are set elsewhere then we don't need to add seperate numbers for both eras
     # for now nevts is set to 1 so it isn't taken into account in the scaling of the samples as this will be done elsewhere
     
     kfactor_dy=6282.6/5455.0 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
     kfactor_dy_powheg = 6282.6/6731.99  # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV [https://twiki.cern.ch/twiki/bin/viewauth/CMS/MATRIXCrossSectionsat13p6TeV]
-    kfactor_wj= 0.93 if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era) and 'v12' not in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
+    kfactor_wj= 0.93 if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era or '2026' in era) and 'v12' not in era else 63425.1/55300 # LO->NNLO+NLO_EW k-factor computed for 13.6 TeV
     kfactor_ttbar=923.6/762.1 # NLO->NNLO k-factor computed for 13.6 TeV
     kfactor_ww=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV fedf
     kfactor_zz=1.524 # LO->NNLO+NLO_EW computed for 13.6 TeV
@@ -50,7 +50,7 @@ def getsampleset(channel,era,**kwargs):
 
     cme=13.6
 
-    if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era) and 'v12' not in era:
+    if ('2022_preEE' in era or '2022_postEE' in era or '2023'in era or '2024' in era or '2025' in era or '2026' in era) and 'v12' not in era:
 
       mc_pu_file = indir+"MC_PileUp_2024.root"
       if '2022_preEE' in era:
@@ -60,16 +60,24 @@ def getsampleset(channel,era,**kwargs):
         wj_norm = 0.6577
         data_pu_file = indir+"Data_PileUp_2022_postEE.root"
       elif '2023C' in era:
-        wj_norm = 0.7261
+        wj_norm = 1#0.7261
         data_pu_file = indir+"Data_PileUp_2023C_69p2.root"
       elif '2023D' in era:
-        wj_norm = 0.7927
+        wj_norm = 1#0.7927
         data_pu_file = indir+"Data_PileUp_2023D_69p2.root"
+      elif '2025' in era:
+        wj_norm = 1
+        data_pu_file = indir+"Data_PileUp_2025_69p2.root"
+      elif '2026' in era:
+        wj_norm = 1
+        data_pu_file = indir+"Data_PileUp_2026_69p2.root"
       else:
         wj_norm = 1
         data_pu_file = indir+"Data_PileUp_2024_69p2.root"
       
       readPUFile(data_pu_file, mc_pu_file)
+      print(f'Using dy_kfactor={kfactor_dy}, wj_kfactor={kfactor_wj}, ttbar_kfactor={kfactor_ttbar} for era {era} '
+            f'with wjnorm={wj_norm}')
 
 
       expsamples = [ # table of MC samples to be converted to Sample objects
@@ -141,14 +149,16 @@ def getsampleset(channel,era,**kwargs):
       if '2023C' in era:
         data_pu_file = indir+"Data_PileUp_2023C_69p2.root"
         mc_pu_file = indir+"MC_PileUp_2023C.root"
-        wj_norm = 1#0.5672
+        wj_norm = 1#1.1121
       elif '2023D' in era:
         data_pu_file = indir+"Data_PileUp_2023D_69p2.root"
         mc_pu_file = indir+"MC_PileUp_2023D.root"
-        wj_norm = 1#0.0316
+        wj_norm = 1#1.1182
       
       readPUFile(data_pu_file, mc_pu_file)
-
+      print(f'Using dy_kfactor={kfactor_dy}, wj_kfactor={kfactor_wj}, ttbar_kfactor={kfactor_ttbar} for era {era} '
+            f'with wjnorm={wj_norm}')
+      
       expsamples = [ # table of MC samples to be converted to Sample objects
         # GROUP NAME                     TITLE                 XSEC      EXTRA OPTIONS
         #( 'DY', "DYJetsToLL_M-50",       "Drell-Yan 50",        5455.0*kfactor_dy, {'extraweight': dyweight }),#, "nevts":nevts_json["DYJetsToLL_M-50"]} ), # LO times kfactor, commenting this one out as it is the same as the one below but in principle it should be possible to conbine this sample with the inclusive one below 
@@ -192,10 +202,10 @@ def getsampleset(channel,era,**kwargs):
         ( 'DY', "DYto2E_Bin-MLL-6000_powheg",      "Drell-Yan 6000",           3.519e-8*kfactor_dy_powheg),# {'extraweight': dyweight }), # , 'nevts': 145094, 'sumw':145094.0} ), # LO times kfactor
 
         ( 'WJ', "WtoLNu-4Jets",            "W + jets",           55300.*kfactor_wj*wj_norm ), # LO times kfactor
-        ( 'WJ', "WtoLNu-4Jets_1J",           "W + 1J",              9128.*kfactor_wj*wj_norm), # LO times kfactor
-        ( 'WJ', "WtoLNu-4Jets_2J",           "W + 2J",              2922.*kfactor_wj*wj_norm  ), # LO times kfactor
-        ( 'WJ', "WtoLNu-4Jets_3J",           "W + 3J",               861.3*kfactor_wj*wj_norm ), # LO times kfactor
-        ( 'WJ', "WtoLNu-4Jets_4J",           "W + 4J",               415.4*kfactor_wj*wj_norm), # LO times kfactor
+        # ( 'WJ', "WtoLNu-4Jets_1J",           "W + 1J",              9128.*kfactor_wj*wj_norm), # LO times kfactor
+        # ( 'WJ', "WtoLNu-4Jets_2J",           "W + 2J",              2922.*kfactor_wj*wj_norm  ), # LO times kfactor
+        # ( 'WJ', "WtoLNu-4Jets_3J",           "W + 3J",               861.3*kfactor_wj*wj_norm ), # LO times kfactor
+        # ( 'WJ', "WtoLNu-4Jets_4J",           "W + 4J",               415.4*kfactor_wj*wj_norm), # LO times kfactor
    
         ( 'VV', "WW",             "WW",                    80.23*kfactor_ww ), # LO times kfactor
         ( 'VV', "WZ",             "WZ",                    29.1*kfactor_wz), # LO times kfactor
@@ -366,13 +376,13 @@ def getsampleset(channel,era,**kwargs):
       #dataset = "SingleMuon_Run%d?"%year # need this one as well for C
       # TODO: need to somehow handle that we need SingleMuonC, MuonC, and MuonD for preEE
     elif era=='2022_postEE': dataset = "Muon_Run%d?"%year
-    elif '2023' in era or '2024' in era or '2025' in era: dataset = "Muon*"
+    elif '2023' in era or '2024' in era or '2025' in era or '2026' in era: dataset = "Muon*"
     else: dataset = "SingleMuon_Run%d?"%year
     
   elif 'etau' in channel or 'ee' in channel: 
     if (year==2018 or year==2022):
       dataset = "EGamma_Run%d?"%year
-    elif '2023' in era or '2024' in era or '2025' in era: dataset = "EGamma*"
+    elif '2023' in era or '2024' in era or '2025' in era or '2026' in era: dataset = "EGamma*"
     else: "SingleElectron_Run%d?"%year
 
   elif 'emu'    in channel: dataset = "SingleMuon_Run%d?"%year
@@ -392,7 +402,7 @@ def getsampleset(channel,era,**kwargs):
     weight = ""
   #elif channel in ['mutau','etau']:
   if 'mutau' in channel or 'etau' in channel:
-    weight = "genweight*trigweight*getPUWeight(npu_true)*idisoweight_1*idweight_2*ltfweight_2"
+    weight = "genweight*trigweight*getPUWeight(npu_true)*idisoweight_1*idweight_2*ltfweight_2" if '2026' not in era else "genweight*trigweight*puweight*idweight_2*ltfweight_2"
   elif channel in ['tautau','ditau']:
     weight = "genweight*trigweight*puweight*idweight_1*idweight_2*ltfweight_1*ltfweight_2"
   else: # mumu, emu, ...
