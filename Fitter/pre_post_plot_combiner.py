@@ -9,14 +9,15 @@ def main():
     parser.add_argument('--scan_dir', type=str, default=None, help="Directory containing scan plots (optional)")
     parser.add_argument('--jet_wp', type=str, default="medium", help="Jet working point (not used in this script)")
     parser.add_argument('--ele_wp', type=str, default="tight", help="Electron working point (not used in this script)")
-    parser.add_argument('--variant', choices=['uncorr','corr'], default='uncorr',
-                        help="uncorr: per-region 2D scan plot; corr: per-DM 4-panel scan plot")
+    parser.add_argument('--variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                        help="uncorr: per-region 2D scan; corr: per-DM TES scan; fullcorr: per-DM TES+TauID scan")
     args = parser.parse_args()
     # Variant defaults
+    _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
     if args.img_dir is None:
-        args.img_dir = "./output_plots_corrTES/" if args.variant == 'corr' else "./output_plots/"
+        args.img_dir = f"./output_plots{_suffix}/"
     if args.out_dir is None:
-        args.out_dir = "./combined_pre_post_corrTES/" if args.variant == 'corr' else "./combined_pre_post/"
+        args.out_dir = f"./combined_pre_post{_suffix}/"
     
     IMG_DIR = args.img_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
     OUT_DIR = args.out_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
@@ -50,6 +51,14 @@ def main():
                     candidates = [
                         os.path.join(SCAN_DIR,
                             f"scan_2D_tes_{dm_part}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"),
+                    ]
+                elif args.variant == 'fullcorr':
+                    # fullcorr: 1 scan per DM (no pT bin in scan name).
+                    # Use the DM-only scan plot for every pT region of that DM.
+                    dm_part = tag.split('_')[0]
+                    candidates = [
+                        os.path.join(SCAN_DIR,
+                            f"scan_2D_tes_{dm_part}_tid_SF_{dm_part}_mt_{dm_part}_mutaumultidimfit.png"),
                     ]
                 else:
                     # uncorr: 2D scan per (DM, pT) with both POIs region-tagged

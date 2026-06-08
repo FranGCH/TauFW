@@ -1,14 +1,18 @@
 #! /usr/bin/env python3
 """Project MultiDimFit NLL scans onto each POI axis.
 
-Two fit variants are supported via --variant:
-  * uncorr  (default): one 2D scan per (DM, pT) region — 2-panel per-fit
-                       plots (TES, TauID SF) and TES/TauID overlays across pT.
-  * corr  : per-DM joint fits with TES correlated across pT. Inputs are 3 2D
-            scans per DM (one per pT bin) on the same combined workspace; each
-            scans (tes_DM, tid_SF_DM_pt<N>) with the other 2 TauID POIs profiled.
-            Per-fit gives a 4-panel plot per DM with 3 overlaid TES projections
-            (sanity check — should agree) and 3 TauID panels.
+Three fit variants are supported via --variant:
+  * uncorr   (default): one 2D scan per (DM, pT) region — 2-panel per-fit
+                        plots (TES, TauID SF) and TES/TauID overlays across pT.
+  * corr   : per-DM joint fits with TES correlated across pT. Inputs are 3 2D
+             scans per DM (one per pT bin); each scans (tes_DM, tid_SF_DM_pt<N>)
+             with the other 2 TauID POIs profiled. Per-fit gives a 4-panel plot
+             per DM (3 TES projections overlaid, 3 TauID panels).
+  * fullcorr: per-DM joint fits with BOTH TES and TauID correlated across pT
+              (one POI each per DM) + 3 lnN nuisances tid_syst_DM_pt{1,2,3} (10%).
+              1 2D scan per DM → 2-panel per-DM plot (TES profile, common TauID
+              profile) annotated with per-pT effective TauID values
+              SF_eff = tid_SF_DM · (1 + 0.10·θ̂_DM_pt<N>) read from the param file.
 
 The overlay mode writes a CSV summary with best-fit ± 1σ per pT bin and
 pairwise σ-discrepancies (mainly useful for the uncorr variant to decide
@@ -374,16 +378,101 @@ def plot_overlay_corr(prof_dict, outdir, jet_wp, ele_wp, dm):
   return out
 
 
+# ---------- fullcorr: 1 2D scan per DM + per-pT effective TauID from param file ----------
+
+def _read_param_file(filepath):
+  """Parse a FitparameterValues_*.txt as written by the fullcorr fit step.
+     Returns {param_name: value} dict (skips empty lines / malformed)."""
+  out = {}
+  if not os.path.exists(filepath):
+    return out
+  with open(filepath) as f:
+    for line in f:
+      line = line.strip()
+      if not line or ':' not in line:
+        continue
+      k, v = line.split(':', 1)
+      try:
+        out[k.strip()] = float(v.strip())
+      except ValueError:
+        continue
+  return out
+
+
+def collect_profiles_fullcorr(indir, year, jet_wp, ele_wp, dm):
+  """For fullcorr: 1 2D scan per DM, branches (tes_<dm>, tid_SF_<dm>).
+     Returns {'tes': profile, 'tid': profile, 'pulls': {ptN: θ̂}, 'eff': {ptN: SF_eff}}."""
+  combo_dir = os.path.join(indir, f'againstjet_{jet_wp}',
+                           f'againstelectron_{ele_wp}', year)
+  fname = f"higgsCombine.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.MultiDimFit.mH90.root"
+  fpath = os.path.join(combo_dir, fname)
+  tes_poi = f'tes_{dm}'
+  tid_poi = f'tid_SF_{dm}'
+  out = {'tes': None, 'tid': None, 'pulls': {}, 'eff': {}}
+  out['tes'] = _profile_from_2d(fpath, tes_poi, tid_poi)
+  out['tid'] = _profile_from_2d(fpath, tid_poi, tes_poi)
+  # Per-pT pulls + effective SFs from the param file
+  pf = os.path.join(combo_dir, f"FitparameterValues_mutau_DeepTau_{year}-13TeV_{dm}.txt")
+  params = _read_param_file(pf)
+  tid_bf = params.get(tid_poi, out['tid']['bf'] if out['tid'] else 1.0)
+  for pt_idx in (1, 2, 3):
+    syst_name = f"tid_syst_{dm}_pt{pt_idx}"
+    if syst_name in params:
+      theta = params[syst_name]
+      out['pulls'][pt_idx] = theta
+      out['eff'][pt_idx] = tid_bf * (1.0 + 0.10 * theta)
+  return out
+
+
+def plot_per_dm_fullcorr(prof_dict, outdir, jet_wp, ele_wp, dm):
+  """2-panel per-DM plot for fullcorr: TES profile (left), TauID common profile + per-pT effective values (right)."""
+  if not (prof_dict['tes'] or prof_dict['tid']):
+    return None
+  c = ROOT.TCanvas('c', '', 1400, 600)
+  c.Divide(2, 1)
+  title = f"{dm}  (VSjet={jet_wp}, VSe={ele_wp})"
+  keep = []
+  if prof_dict['tes']:
+    p = prof_dict['tes']
+    keep.append(draw_profile(c.cd(1), p['xs'], p['ys'], p['poi'],
+                             title + "  TES (correlated)"))
+  if prof_dict['tid']:
+    p = prof_dict['tid']
+    g = draw_profile(c.cd(2), p['xs'], p['ys'], p['poi'],
+                     title + "  TauID common SF")
+    keep.append(g)
+    # Annotate per-pT effective values & pulls in the right panel
+    pad = c.cd(2)
+    pad.cd()
+    pull_lines = []
+    base_y = 0.92
+    txt = ROOT.TLatex()
+    txt.SetNDC(True)
+    txt.SetTextSize(0.030)
+    txt.SetTextAlign(33)
+    if prof_dict['eff']:
+      txt.DrawLatex(0.88, base_y, "Per-pT effective TauID SF:")
+      for i, pt_idx in enumerate(sorted(prof_dict['eff'].keys()), start=1):
+        sf = prof_dict['eff'][pt_idx]
+        pull = prof_dict['pulls'].get(pt_idx, 0.0)
+        line = f"pt{pt_idx}: {sf:.4f}  (pull {pull:+.2f}#sigma)"
+        txt.DrawLatex(0.88, base_y - 0.05*i, line)
+  os.makedirs(outdir, exist_ok=True)
+  out = os.path.join(outdir, f"nll1d_fullcorr_{dm}.png")
+  c.SaveAs(out)
+  return out
+
+
 # ---------- Main ----------
 
 def main():
   ap = argparse.ArgumentParser(description=__doc__)
-  ap.add_argument('--variant', default='uncorr', choices=['uncorr','corr'],
-                  help="uncorr = 2D fit per (DM,pT); corr = per-DM joint fit with correlated TES")
+  ap.add_argument('--variant', default='uncorr', choices=['uncorr','corr','fullcorr'],
+                  help="uncorr = 2D fit per (DM,pT); corr = correlated TES; fullcorr = both TES & TauID correlated")
   ap.add_argument('--indir',  default=None,
-                  help="defaults: output_pt_less_region (uncorr) / output_pt_less_region_corrTES (corr)")
+                  help="defaults vary by variant (e.g. output_pt_less_region_fullcorr)")
   ap.add_argument('--outdir', default=None,
-                  help="defaults: plots_pt_less_region (uncorr) / plots_pt_less_region_corrTES (corr)")
+                  help="defaults vary by variant (e.g. plots_pt_less_region_fullcorr)")
   ap.add_argument('--year',   default='2025')
   ap.add_argument('--jet_wp', default=None)
   ap.add_argument('--ele_wp', default=None)
@@ -391,10 +480,11 @@ def main():
   args = ap.parse_args()
 
   # Variant-aware defaults
+  _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
   if args.indir is None:
-    args.indir = 'output_pt_less_region_corrTES' if args.variant == 'corr' else 'output_pt_less_region'
+    args.indir = f'output_pt_less_region{_suffix}'
   if args.outdir is None:
-    args.outdir = 'plots_pt_less_region_corrTES' if args.variant == 'corr' else 'plots_pt_less_region'
+    args.outdir = f'plots_pt_less_region{_suffix}'
 
   jet_glob = args.jet_wp if args.jet_wp else '*'
   ele_glob = args.ele_wp if args.ele_wp else '*'
@@ -424,6 +514,32 @@ def main():
                                  jet_wp, ele_wp, dm):
               n_overlay += 1
     print(f">>> [corr] Wrote {n_per_fit} per-DM plots, {n_overlay} overlays")
+    return
+
+  # ----- fullcorr variant: 1 2D scan per DM, per-pT effective TauID from param file -----
+  if args.variant == 'fullcorr':
+    jet_dirs = sorted(glob.glob(os.path.join(args.indir, f'againstjet_{jet_glob}')))
+    n_per_fit = 0
+    for jd in jet_dirs:
+      jet_wp = os.path.basename(jd).replace('againstjet_', '')
+      ele_dirs = sorted(glob.glob(os.path.join(jd, f'againstelectron_{ele_glob}')))
+      for ed in ele_dirs:
+        ele_wp = os.path.basename(ed).replace('againstelectron_', '')
+        print(f">>> [fullcorr] {jet_wp} x {ele_wp}")
+        for dm in ('DM0','DM1','DM10','DM11'):
+          prof_dict = collect_profiles_fullcorr(args.indir, args.year, jet_wp, ele_wp, dm)
+          if not (prof_dict['tes'] or prof_dict['tid']):
+            continue
+          out_sub = os.path.join(args.outdir, f'againstjet_{jet_wp}',
+                                 f'againstelectron_{ele_wp}', args.year, 'nll_1d')
+          if plot_per_dm_fullcorr(prof_dict, out_sub, jet_wp, ele_wp, dm):
+            n_per_fit += 1
+          # Print summary
+          if prof_dict['eff']:
+            print(f"    {dm}: tid_common={prof_dict['tid']['bf']:.4f} | "
+                  + " ".join(f"pt{k}={v:.4f}(θ̂={prof_dict['pulls'][k]:+.2f}σ)"
+                             for k, v in sorted(prof_dict['eff'].items())))
+    print(f">>> [fullcorr] Wrote {n_per_fit} per-DM plots")
     return
 
   # ----- uncorr variant (original 2D scans) -----

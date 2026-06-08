@@ -59,6 +59,107 @@ def load_edges(setup,**kwargs):
     return edg
 
 
+def _load_fullcorr_tid(input_root, year, jet_wp, ele_wp):
+    """For fullcorr TauID: per-DM SF_eff(DM, pt) = common · (1 + 0.10·θ̂_pt).
+       Uncertainty uses the full POI-nuisance covariance from FitDiagnostics
+       (the two are strongly anti-correlated; the data measures the *product*).
+       Returns (regions, values, errhi, errlo) with regions = '<DM>_pt<N>'."""
+    import re as _re
+    from math import sqrt
+    try:
+        import ROOT as _ROOT
+    except ImportError:
+        _ROOT = None
+
+    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_DM*.txt"
+    files = glob.glob(pattern)
+    print(f"[fullcorr-tid] Found {len(files)} param files")
+    # Postfit FitDiag tree (covariance source)
+    fitdiag_dir = input_root.replace('output_pt_less_region', 'postfit_pt_less_region')
+    fitdiag_dir = os.path.join(fitdiag_dir, f"againstjet_{jet_wp}",
+                               f"againstelectron_{ele_wp}", year)
+
+    regions, vals, errhi, errlo = [], [], [], []
+    for fn in files:
+        if os.path.getsize(fn) == 0:
+            continue
+        m = _re.search(r'_(DM\d+)\.txt$', fn)
+        if not m:
+            continue
+        dm = m.group(1)
+        common = {'val': None, 'low': None, 'high': None}
+        pulls = {}
+        with open(fn) as f:
+            for line in f:
+                line = line.strip()
+                if not line or ':' not in line:
+                    continue
+                k, v = line.split(':', 1)
+                k = k.strip()
+                try:
+                    v = float(v.strip())
+                except ValueError:
+                    continue
+                if k == f'tid_SF_{dm}':                common['val']  = v
+                elif k == f'tid_SF_{dm}_1sigma_low':   common['low']  = v
+                elif k == f'tid_SF_{dm}_1sigma_high':  common['high'] = v
+                else:
+                    pm = _re.match(rf'tid_syst_{dm}_(pt\d+)$', k)
+                    if pm:
+                        pulls[pm.group(1)] = v
+        if common['val'] is None:
+            continue
+
+        # Try FitDiagnostics for full covariance error propagation
+        sf_eff_map, sig_eff_map = {}, {}
+        fitdiag_path = os.path.join(fitdiag_dir,
+            f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+        if _ROOT is not None and os.path.exists(fitdiag_path):
+            f_fd = _ROOT.TFile.Open(fitdiag_path)
+            fr = f_fd.Get('fit_s') if f_fd else None
+            if fr:
+                pars = fr.floatParsFinal()
+                tid_v = pars.find(f'tid_SF_{dm}')
+                if tid_v:
+                    tid_val = tid_v.getVal()
+                    tid_err = tid_v.getError()
+                    for pt in (1,2,3):
+                        th = pars.find(f'tid_syst_{dm}_pt{pt}')
+                        if not th: continue
+                        th_val = th.getVal(); th_err = th.getError()
+                        rho = fr.correlation(f'tid_SF_{dm}', f'tid_syst_{dm}_pt{pt}')
+                        a = 1.0 + 0.10*th_val
+                        b = 0.10*tid_val
+                        var = a*a*tid_err*tid_err + b*b*th_err*th_err + 2.0*a*b*rho*tid_err*th_err
+                        sf_eff_map[f'pt{pt}']  = tid_val * a
+                        sig_eff_map[f'pt{pt}'] = sqrt(max(0.0, var))
+            if f_fd: f_fd.Close()
+
+        # Fallback uncertainty (ignores correlation — used only if FitDiag missing)
+        tid_err_d_fb = abs(common['val'] - common['low'])  if common['low']  is not None else 0.0
+        tid_err_u_fb = abs(common['high'] - common['val']) if common['high'] is not None else 0.0
+        sys_term_fb = 0.10 * common['val']
+
+        for pt in ('pt1','pt2','pt3'):
+            theta = pulls.get(pt, 0.0)
+            if pt in sf_eff_map:
+                sf = sf_eff_map[pt]
+                err = sig_eff_map[pt]
+                eff_err_d = eff_err_u = err
+                source = "FitDiag-cov"
+            else:
+                sf = common['val'] * (1.0 + 0.10 * theta)
+                eff_err_d = (tid_err_d_fb**2 + sys_term_fb**2)**0.5
+                eff_err_u = (tid_err_u_fb**2 + sys_term_fb**2)**0.5
+                source = "fallback"
+            regions.append(f"{dm}_{pt}")
+            vals.append(sf)
+            errhi.append(eff_err_u)
+            errlo.append(eff_err_d)
+            print(f"[fullcorr-tid] {dm}_{pt}: SF_eff={sf:.4f} +/-{eff_err_u:.4f} ({source}, θ̂={theta:+.2f}σ)")
+    return regions, vals, errhi, errlo
+
+
 # Load the SF measurements from the new 2D measurement files
 def load_sf_measurements(setup, year, **kwargs):
     tag     = kwargs.get('tag',         ""              )
@@ -78,7 +179,17 @@ def load_sf_measurements(setup, year, **kwargs):
     print(f"[DEBUG] Looking for {sf} measurements in year {year} (variant={variant})")
 
     # Variant-aware input root
-    input_root = "output_pt_less_region_corrTES" if variant == "corr" else "output_pt_less_region"
+    if variant == "corr":
+        input_root = "output_pt_less_region_corrTES"
+    elif variant == "fullcorr":
+        input_root = "output_pt_less_region_fullcorr"
+    else:
+        input_root = "output_pt_less_region"
+
+    # fullcorr + TauID: synthesize per-pT effective SFs from common POI + per-pT pulls
+    if variant == "fullcorr" and sf == "tid_SF":
+        return _load_fullcorr_tid(input_root, year, jet_wp, ele_wp)
+
     # Use glob to find all measurement files
     pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_*.txt"
     #f"plots_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/measurement_2D_tes_*_tid_SF_*_mt_*_mutau.txt"
@@ -313,7 +424,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                 else:
                     name = 'TauID'
                     
-                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{('_corrTES' if variant == 'corr' else '')}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
+                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
 
                 for year in [args.year]:
                     for dm in dm_order:
@@ -509,7 +620,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                         corrections=[corr]
                     )
                     
-                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{('_corrTES' if variant == 'corr' else '')}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
+                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
                     with open(json_filename, "w") as fout:
                         print(f">>> Writing JSON: {json_filename}")
                         fout.write(cset.json())
@@ -633,8 +744,8 @@ if __name__ == '__main__':
   parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
   parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
   parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
-  parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
-                      help="uncorr: per-region param files, TES per (DM,pT); corr: per-DM param files, TES per DM only")
+  parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                      help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES & common TauID with per-pT effective SFs")
   args = parser.parse_args()
   main(args)
   print(">>>\n>>> done\n")

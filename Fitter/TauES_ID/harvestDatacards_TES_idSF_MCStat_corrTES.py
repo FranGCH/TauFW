@@ -1,8 +1,5 @@
 #! /usr/bin/env python
 """
-Date : May 2022 
-Author : @oponcet and Saskia Falke 
-Based ond code of Izaak Neutelings (January 2018)
 Description : 
 Script to generate datacards for the mutau channel and for each regions defined in the config file. 
 The tes is defined as a POI for each "tesRegions" defined in the config file. Horizontal morphing is used

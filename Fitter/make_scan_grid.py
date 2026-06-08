@@ -27,6 +27,14 @@ def find_corr_scan(folder, dm, pt):
     return path if os.path.isfile(path) else None
 
 
+def find_fullcorr_scan(folder, dm, pt):
+    """fullcorr: 1 scan per DM (no pT in name); tes_<dm> + tid_SF_<dm>.
+       The `pt` arg is ignored — returns the per-DM scan."""
+    name = f"scan_2D_tes_{dm}_tid_SF_{dm}_mt_{dm}_mutaumultidimfit.png"
+    path = os.path.join(folder, name)
+    return path if os.path.isfile(path) else None
+
+
 def build_grid(folder, out_path, title=None, finder=find_scan):
     cells = [[finder(folder, dm, pt) for pt in PTS] for dm in DMS]
     found = [p for row in cells for p in row if p]
@@ -107,19 +115,29 @@ def walk_wps(root):
 
 
 def main():
+    global PTS  # fullcorr collapses to a single per-DM column
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=None,
                     help="root dir (defaults depend on --variant)")
-    ap.add_argument("--variant", choices=["uncorr", "corr"], default="uncorr")
+    ap.add_argument("--variant", choices=["uncorr", "corr", "fullcorr"], default="uncorr")
     args = ap.parse_args()
 
+    _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
     if args.root is None:
-        args.root = "plots_pt_less_region_corrTES" if args.variant == "corr" else "plots_pt_less_region"
+        args.root = f"plots_pt_less_region{_suffix}"
 
     if not os.path.isdir(args.root):
         sys.exit(f"root not found: {args.root}")
 
-    finder = find_corr_scan if args.variant == "corr" else find_scan
+    if args.variant == "corr":
+        finder = find_corr_scan
+    elif args.variant == "fullcorr":
+        finder = find_fullcorr_scan
+        # fullcorr: 1 scan per DM, no pT split — collapse to single column
+        PTS = ["combined"]
+    else:
+        finder = find_scan
+
     n = 0
     for jet_wp, ele_wp, year, folder in walk_wps(args.root):
         title = f"{jet_wp} | {ele_wp} | {year} ({args.variant})"

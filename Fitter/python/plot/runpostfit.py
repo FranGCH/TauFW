@@ -9,9 +9,13 @@ def main(args):
     # Variant-aware paths:
     #   uncorr (default): PostFitShape file per region (e.g. ..._DM0_pt1.root)
     #   corr            : PostFitShape file per DM    (e.g. ..._DM0.root, holds 3 pT channels)
+    #   fullcorr        : same per-DM layout as corr, but its own output tree
     if args.variant == 'corr':
         postfit_root = './postfit_pt_less_region_corrTES'
         outroot      = 'output_plots_corrTES'
+    elif args.variant == 'fullcorr':
+        postfit_root = './postfit_pt_less_region_fullcorr'
+        outroot      = 'output_plots_fullcorr'
     else:
         postfit_root = './postfit_pt_less_region'
         outroot      = 'output_plots'
@@ -30,8 +34,8 @@ def main(args):
         print(">>>   Region: %s"%(region))
         era = "%s" % args.year
 
-        # Map region -> PostFitShape file: corr variant uses per-DM file.
-        if args.variant == 'corr':
+        # Map region -> PostFitShape file: corr/fullcorr variants use per-DM file.
+        if args.variant in ('corr', 'fullcorr'):
             dm_part = region.split('_')[0]  # e.g. DM0_pt1 -> DM0
             shape_label = dm_part
         else:
@@ -83,8 +87,8 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--jet', dest='againstjet', default='Tight', help="against jet WP")
     parser.add_argument('-e', '--electron', dest='againstelectron', default='Tight', help="against electron WP")
     parser.add_argument('-y', '--year', dest='year', default='2024', help="year for plotting")
-    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
-                                         help="fit variant: uncorr (per-region postfit files) or corr (per-DM)")
+    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                                         help="fit variant: uncorr (per-region), corr (per-DM TES), fullcorr (per-DM TES+TauID)")
 
     args = parser.parse_args()
   

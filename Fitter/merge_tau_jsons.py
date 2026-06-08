@@ -173,26 +173,31 @@ def create_single_correction(input_dir, correction_type, variant="uncorr"):
     """Helper function to create a single correction with all WP combinations merged."""
 
     # Settings based on type
+    variant_suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, '')
     if correction_type == "tes":
         pattern_base = "TauES"
-        final_name = "TauES_2024" + ("_corrTES" if variant == "corr" else "")
+        final_name = "TauES_2024" + variant_suffix
         description = f"Tau Energy Scale corrections with all WP combinations ({variant} variant)"
     else:
         pattern_base = "TauID"
-        final_name = "TauIdSF_2024" + ("_corrTES" if variant == "corr" else "")
+        final_name = "TauIdSF_2024" + variant_suffix
         description = f"Tau ID Scale Factor corrections with all WP combinations ({variant} variant)"
 
     # Regex to find files and extract WPs from filename
-    # Matches: TauES_SF_dm_DeepTau2018v2p5_2024[_corrTES]_VSjetMedium_VSeleVVLoose.json
     wp_regex = re.compile(r".*VSjet(?P<jet>[a-zA-Z]+)_VSele(?P<ele>[a-zA-Z]+)\.json$")
 
-    # Find all potential files; filter by variant on the filename
+    # Find all potential files; filter by variant on the filename.
+    # Each variant's per-WP JSONs carry a unique tag; uncorr files have neither.
     search_pattern = os.path.join(input_dir, f"*{pattern_base}*.json")
     all_files = glob.glob(search_pattern)
     if variant == "corr":
         all_files = [f for f in all_files if "_corrTES_" in os.path.basename(f)]
+    elif variant == "fullcorr":
+        all_files = [f for f in all_files if "_fullcorr_" in os.path.basename(f)]
     else:
-        all_files = [f for f in all_files if "_corrTES_" not in os.path.basename(f)]
+        all_files = [f for f in all_files
+                     if "_corrTES_" not in os.path.basename(f)
+                     and "_fullcorr_" not in os.path.basename(f)]
     all_files.sort()
     
     if not all_files:
@@ -341,8 +346,8 @@ Examples:
                         help="List corrections in a specific JSON file")
     parser.add_argument('--list-all', dest='list_all', action='store_true',
                         help="List corrections in all found JSON files")
-    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr'], default='uncorr',
-                        help="uncorr (default) or corr: filter per-WP input files by '_corrTES_' tag")
+    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                        help="uncorr / corr / fullcorr: filter per-WP input files by variant tag in filename")
 
     args = parser.parse_args()
     

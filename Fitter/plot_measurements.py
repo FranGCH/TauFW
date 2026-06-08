@@ -106,10 +106,179 @@ def load_measurements_corr(ele_wp, jet_wp, year):
     return measurements
 
 
+def _fullcorr_sf_eff_and_err(fitdiag_path, dm):
+    """Read tid_SF_<dm>, tid_syst_<dm>_pt{1,2,3} (val + err + correlation) from a
+       FitDiagnostics file's fit_s RooFitResult and return:
+           sf_eff[pt] = tid_SF · (1 + 0.10·θ̂)
+           sig_eff[pt]² = (1+0.10·θ̂)²·σ_tid² + (0.10·tid)²·σ_θ² + 2·(...)·ρ·σ_tid·σ_θ
+       Returns ({pt: sf_eff}, {pt: sig_eff}, tid_val, tid_err) or (None,None,None,None) if unreadable.
+       The covariance term is essential — POI and per-pT nuisances are highly anti-correlated
+       (the data measures the *product*, not the individual factors)."""
+    import ROOT
+    from math import sqrt
+    if not os.path.exists(fitdiag_path):
+        return None, None, None, None
+    f = ROOT.TFile.Open(fitdiag_path)
+    fr = f.Get('fit_s') if f else None
+    if not fr:
+        if f: f.Close()
+        return None, None, None, None
+    pars = fr.floatParsFinal()
+    tid_v = pars.find(f'tid_SF_{dm}')
+    if not tid_v:
+        f.Close()
+        return None, None, None, None
+    tid_val = tid_v.getVal()
+    tid_err = tid_v.getError()
+    sf_eff, sig_eff = {}, {}
+    for pt in (1, 2, 3):
+        syst_name = f'tid_syst_{dm}_pt{pt}'
+        th = pars.find(syst_name)
+        if not th:
+            continue
+        th_val = th.getVal()
+        th_err = th.getError()
+        rho = fr.correlation(f'tid_SF_{dm}', syst_name)
+        a = 1.0 + 0.10 * th_val
+        b = 0.10 * tid_val
+        var = a*a*tid_err*tid_err + b*b*th_err*th_err + 2.0*a*b*rho*tid_err*th_err
+        sf_eff[f'pt{pt}']  = tid_val * a
+        sig_eff[f'pt{pt}'] = sqrt(max(0.0, var))
+    f.Close()
+    return sf_eff, sig_eff, tid_val, tid_err
+
+
+def load_measurements_fullcorr(ele_wp, jet_wp, year):
+    """fullcorr loader: per-DM param file gives tes_<DM>, tid_SF_<DM> (POIs) +
+       3 nuisance pulls tid_syst_<DM>_pt{1,2,3}. Each DM expands into 3 measurement
+       records (one per pT) with effective TauID = common · (1 + 0.10 · θ̂).
+       Uncertainty uses the full POI-nuisance covariance from FitDiagnostics
+       (the POI and per-pT nuisances are strongly anti-correlated)."""
+    PT_RANGES = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
+    measurements = []
+
+    pattern = f"output_pt_less_region_fullcorr/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_DM*.txt"
+    files = glob.glob(pattern)
+    print(f"[fullcorr] Found {len(files)} per-DM MultiDimFit param files")
+    for filename in files:
+        if os.path.getsize(filename) == 0:
+            continue
+        dm_match = re.search(r'_(DM\d+)\.txt$', filename)
+        if not dm_match:
+            continue
+        dm = dm_match.group(1)
+        tes = {'val': None, 'low': None, 'high': None}
+        tid = {'val': None, 'low': None, 'high': None}
+        pulls = {}  # ptN -> θ̂
+        with open(filename) as f:
+            for line in f:
+                line = line.strip()
+                if not line or ':' not in line:
+                    continue
+                key, sval = line.split(':', 1)
+                key = key.strip()
+                try:
+                    val = float(sval.strip())
+                except ValueError:
+                    continue
+                if key == f'tes_{dm}': tes['val'] = val
+                elif key == f'tes_{dm}_1sigma_low': tes['low'] = val
+                elif key == f'tes_{dm}_1sigma_high': tes['high'] = val
+                elif key == f'tid_SF_{dm}': tid['val'] = val
+                elif key == f'tid_SF_{dm}_1sigma_low': tid['low'] = val
+                elif key == f'tid_SF_{dm}_1sigma_high': tid['high'] = val
+                else:
+                    pm = re.match(rf'tid_syst_{dm}_(pt\d+)$', key)
+                    if pm:
+                        pulls[pm.group(1)] = val
+
+        if tes['val'] is None or tid['val'] is None:
+            continue
+        tes_err_d = abs(tes['val'] - tes['low'])  if tes['low']  is not None else None
+        tes_err_u = abs(tes['high'] - tes['val']) if tes['high'] is not None else None
+        # SF_eff errors with full covariance from FitDiagnostics if available
+        fitdiag_path = (f"postfit_pt_less_region_fullcorr/againstjet_{jet_wp}/"
+                        f"againstelectron_{ele_wp}/{year}/"
+                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+        sf_eff_map, sig_eff_map, _, _ = _fullcorr_sf_eff_and_err(fitdiag_path, dm)
+        for pt in ('pt1','pt2','pt3'):
+            theta = pulls.get(pt, 0.0)
+            sf_eff = tid['val'] * (1.0 + 0.10 * theta)
+            if sf_eff_map and pt in sf_eff_map:
+                sf_eff   = sf_eff_map[pt]
+                eff_err  = sig_eff_map[pt]
+                eff_err_d = eff_err_u = eff_err
+            else:
+                # Fallback: ignore correlation (overestimates the error)
+                tid_err_d = abs(tid['val'] - tid['low'])  if tid['low']  is not None else 0.0
+                tid_err_u = abs(tid['high'] - tid['val']) if tid['high'] is not None else 0.0
+                sys_term = 0.10 * tid['val']
+                eff_err_d = (tid_err_d**2 + sys_term**2)**0.5
+                eff_err_u = (tid_err_u**2 + sys_term**2)**0.5
+            measurements.append({
+                'type': 'MultiDimFit', 'region': f"{dm} {PT_RANGES[pt]}",
+                'dm': dm, 'pt_bin': pt, 'jet_wp': jet_wp, 'ele_wp': ele_wp,
+                'tes_val': tes['val'], 'tes_err_down': tes_err_d, 'tes_err_up': tes_err_u,
+                'tid_val': sf_eff,     'tid_err_down': eff_err_d, 'tid_err_up': eff_err_u,
+                'tid_common': tid['val'], 'tid_pull': theta,
+                'correlation': 0.0,
+            })
+
+    # FitDiagnostics: read pulls from fit_s and compute effective TauID
+    fd_pattern = f"./FitDiagnosticsValues/VSjet{jet_wp}_VSele{ele_wp}/DM*_fitdiagnostics_TES_TauID_values.txt"
+    fd_files = glob.glob(fd_pattern)
+    print(f"[fullcorr] Found {len(fd_files)} per-DM FitDiagnostics files")
+    for filename in fd_files:
+        if os.path.getsize(filename) == 0:
+            continue
+        m = re.match(r'(DM\d+)_fitdiagnostics', os.path.basename(filename))
+        if not m: continue
+        dm = m.group(1)
+        tes_val = tes_err = None
+        tid_val = tid_err = None
+        with open(filename) as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 3: continue
+                k = parts[0]
+                try:
+                    v = float(parts[1]); e = float(parts[2])
+                except ValueError:
+                    continue
+                if k == f'tes_{dm}':       tes_val, tes_err = v, e
+                elif k == f'tid_SF_{dm}':  tid_val, tid_err = v, e
+        if tes_val is None or tid_val is None:
+            continue
+        # Per-pT effective SFs from the FitDiagnostics covariance
+        fitdiag_path = (f"postfit_pt_less_region_fullcorr/againstjet_{jet_wp}/"
+                        f"againstelectron_{ele_wp}/{year}/"
+                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+        sf_eff_map, sig_eff_map, _, _ = _fullcorr_sf_eff_and_err(fitdiag_path, dm)
+        for pt in ('pt1','pt2','pt3'):
+            if sf_eff_map and pt in sf_eff_map:
+                sf, err = sf_eff_map[pt], sig_eff_map[pt]
+            else:
+                sys_term = 0.10 * tid_val
+                sf  = tid_val
+                err = (tid_err**2 + sys_term**2)**0.5
+            measurements.append({
+                'type': 'FitDiagnostics', 'region': f"{dm} {PT_RANGES[pt]}",
+                'dm': dm, 'pt_bin': pt, 'jet_wp': jet_wp, 'ele_wp': ele_wp,
+                'tes_val': tes_val, 'tes_err_down': tes_err, 'tes_err_up': tes_err,
+                'tid_val': sf,      'tid_err_down': err,    'tid_err_up': err,
+                'tid_common': tid_val, 'tid_pull': 0.0,
+                'correlation': 0.0,
+            })
+    print(f"[fullcorr] Loaded {len(measurements)} measurements total")
+    return measurements
+
+
 def load_measurements(ele_wp="tight", jet_wp="medium", year="2024", variant="uncorr"):
     """Load measurements from 2D measurement files and FitDiagnostics"""
     if variant == "corr":
         return load_measurements_corr(ele_wp, jet_wp, year)
+    if variant == "fullcorr":
+        return load_measurements_fullcorr(ele_wp, jet_wp, year)
 
     measurements = []
 
@@ -508,8 +677,8 @@ def main():
     parser.add_argument('--jet_wp', type=str, default="Medium", help="Jet working point (not used in this script)")
     parser.add_argument('--ele_wp', type=str, default="Tight", help="Electron working point (not used in this script)")
     parser.add_argument('--year', type=str, default="2024", help="Year for plotting (not used in this script)")
-    parser.add_argument('--variant', choices=['uncorr','corr'], default='uncorr',
-                        help="uncorr: per-region inputs; corr: per-DM inputs (TES shared across pT)")
+    parser.add_argument('--variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                        help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES+TauID with per-pT pulls")
 
     args = parser.parse_args()
     # Load measurements
