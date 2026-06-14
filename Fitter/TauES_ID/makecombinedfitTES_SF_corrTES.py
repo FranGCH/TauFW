@@ -60,26 +60,13 @@ def find_boost_params(fit_result_file, poi1_name, poi2_name, threshold=0):
             parts.append("%s=%.6g" % (b, float(getattr(tree, b))))
         except Exception:
             pass
-    # Also seed nuisances from the deepest grid entry — pass-1 saved them via
-    # --saveSpecifiedNuis all. Without this, pass-2 starts at the right POI
-    # corner but with all nuisances at datacard defaults, and in low-stats
-    # bins it drifts straight back into the local basin pass-1 was stuck in.
-    skip = {"deltaNLL", "quantileExpected", "iToy", "limit", "limitErr",
-            "mh", "syst", "iSeed", "t_cpu", "t_real", "r",
-            poi1_name, poi2_name}
-    n_nuis = 0
-    for b in tree.GetListOfBranches():
-        bname = b.GetName()
-        if bname in skip: continue
-        try:
-            v = float(getattr(tree, bname))
-        except Exception:
-            continue
-        if abs(v) > 1e3: continue
-        parts.append("%s=%.6g" % (bname, v))
-        n_nuis += 1
+    # POI-only seeding: do NOT also seed nuisances. With 76+ nuisances all
+    # carrying Gaussian priors, seeding their values from the deepest grid
+    # entry yanks Migrad straight back to the local minimum (each θ_i pays a
+    # θ²/2 prior cost, so the prior pulls all of them toward 0, dragging the
+    # POIs along). The original uncorr boost (commit a07ac27) only seeded POIs.
     f.Close()
-    print(f"[BOOST] Pass-1 deepest point: deltaNLL={best_nll:.6f} at entry {best_idx} (POIs + {n_nuis} nuisances seeded)")
+    print(f"[BOOST] Pass-1 deepest point: deltaNLL={best_nll:.6f} at entry {best_idx} (POIs only)")
     return ",".join(parts) if parts else None
 
 # Generating the datacards for mutau channel
@@ -172,9 +159,13 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     extratag     = kwargs.get('extratag',     "_DeepTau")
     algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
     npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
-    fit_opts     = kwargs.get('fit_opts',      "--setRobustFitTolerance=0.001 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=0 --setRobustFitStrategy=1  --X-rtd MINIMIZER_analytic %s"%(npts_fit) ) #--setRobustFitTolerance=0.001--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1  --X-rtd FITTER_NEW_CROSSING_ALGO
-    xrtd_opts    = kwargs.get('xrtd_opts',    "") 
-    cmin_opts    = kwargs.get('cmin_opts',     "--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan") # --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan
+    # Tightened Migrad: Strategy 2 (most accurate, slowest) + tolerance 1e-5 + PreScan.
+    # Strategy 0 with tolerance 1e-3 left the free-POI fit converging early at a
+    # shallow attractor while the grid found deeper minima (deltaNLL<0 in tree),
+    # which no amount of boost re-seeding could fix.
+    fit_opts     = kwargs.get('fit_opts',      "--setRobustFitTolerance=1e-5 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=2 --setRobustFitStrategy=2  --X-rtd MINIMIZER_analytic %s"%(npts_fit) )
+    xrtd_opts    = kwargs.get('xrtd_opts',    "")
+    cmin_opts    = kwargs.get('cmin_opts',     "--cminFallbackAlgo Minuit2,Migrad,2:1e-5 --cminPreScan")
     save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult --saveWorkspace") #--saveSpecifiedNuis all --saveFitResult")   
     era          = kwargs.get('era',          "")
     config_mumu  = kwargs.get('config_mumu',  "")
@@ -281,6 +272,27 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[corrTES] 2D scan ({POI2}, {POI1}) BIN={BINLABELoutput}")
                     print(f"  {MultiDimFit_opts}")
                     os.system(f"combine -M MultiDimFit {MultiDimFit_opts}")
+
+                    # ---- Iterative boost: up to 5 retries (max 6 passes total).
+                    # After each pass, if the grid found a deeper basin than the
+                    # current free-POI fit, re-seed from that grid point and
+                    # re-scan. Each pass reuses -n .{BINLABELoutput} and so
+                    # overwrites the previous pass's ROOT file in place. ----
+                    fres = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
+                    MAX_PASSES = 6
+                    for pass_n in range(2, MAX_PASSES + 1):
+                        boost = find_boost_params(fres, POI2, POI1)
+                        if not boost:
+                            print(f"[BOOST] {dm}/{r} converged before pass-{pass_n} (no deeper basin)")
+                            break
+                        boosted_opts = MultiDimFit_opts.replace(
+                            "--setParameters r=1 ",
+                            f"--setParameters r=1,{boost} ",
+                            1,
+                        )
+                        print(f"[BOOST] {dm}/{r} pass-{pass_n} (seeded from pass-{pass_n-1} deepest grid point)")
+                        os.system(f"combine -M MultiDimFit {boosted_opts}")
+                        print(f"[BOOST] {dm}/{r} pass-{pass_n} complete — overwrote {fres}")
 
                 # ---- Extract best-fits + 1σ; write per-DM param file ----
                 # Each 2D scan tree has branches: tes_DM<X>, tid_SF_DM<X>_pt<N>, deltaNLL, ...

@@ -28,7 +28,7 @@ paramdict = { }
 
 def pullsDistribution(filename,outname,text="",rhomin=None,verb=0):
     if verb>=1:
-      print ">>>> pullsDistribution(%r)"%(filename)
+      print(">>>> pullsDistribution(%r)"%(filename))
     nbins, xmin, xmax = 35, -3., 4.
     pulllist = filterPullFile(filename,rhomin=rhomin,verb=verb)
     b_pulls = TH1F("b_pulls","",nbins,xmin,xmax)
@@ -37,7 +37,7 @@ def pullsDistribution(filename,outname,text="",rhomin=None,verb=0):
     
     for i, pull in enumerate(pulllist):
       if verb>=2:
-        print pull
+        print(pull)
       _, pb, _, ps, _, _ = pull
       b_pulls.Fill(pb)
       s_pulls.Fill(ps)
@@ -47,8 +47,8 @@ def pullsDistribution(filename,outname,text="",rhomin=None,verb=0):
     bwidth = (xmax-xmin)/nbins
     norm = b_pulls.GetEntries()*bwidth/math.sqrt(2*math.pi) # 1/sqrt(2*pi) = 0.3989422804
     if verb>=1:
-      print ">>>> pullsDistribution: norm=%.4g, b_pulls.GetEntries()=%d, math.sqrt(2*math.pi)=%.5g, bwidth=%.5g"%(
-        norm,b_pulls.GetEntries(),math.sqrt(2*math.pi),bwidth)
+      print(">>>> pullsDistribution: norm=%.4g, b_pulls.GetEntries()=%d, math.sqrt(2*math.pi)=%.5g, bwidth=%.5g"%(
+        norm,b_pulls.GetEntries(),math.sqrt(2*math.pi),bwidth))
     gaus = TF1('g',"gaus",xmin,xmax)
     gaus.SetParameters(norm,0,1)
     
@@ -111,13 +111,13 @@ def pullsDistribution(filename,outname,text="",rhomin=None,verb=0):
     canvas.Print(outname+".png")
     canvas.Print(outname+".pdf")
     canvas.Close()
-    if not gROOT.IsBatch(): raw_input("Press Enter to continue...")
+    if not gROOT.IsBatch(): input("Press Enter to continue...")
 
 
 
 def pullErrorsDistribution(filename,outname,text="",xmax=1.5,rhomin=None,verb=0):
     if verb>=1:
-      print ">>>> pullErrorsDistribution(%r)"%(filename)
+      print(">>>> pullErrorsDistribution(%r)"%(filename))
     nbins, xmin = 30, 0.
     pulllist = filterPullFile(filename,rhomin=rhomin)
     b_pulls = TH1F("b_pulls","",nbins,xmin,xmax)
@@ -129,11 +129,11 @@ def pullErrorsDistribution(filename,outname,text="",xmax=1.5,rhomin=None,verb=0)
       b_pulls.Fill(eb)
       s_pulls.Fill(es)
       if eb>xmax or es>xmax:
-        print "pullErrorsDistribution: WARNING! Overflow (>%s) pull uncertainty for %r with %.3f+-%.3f (B-only), %.3f+-%.3f (S+B), rho=%.3f"%(
-          xmax,name,pb,eb,ps,es,rho)
+        print("pullErrorsDistribution: WARNING! Overflow (>%s) pull uncertainty for %r with %.3f+-%.3f (B-only), %.3f+-%.3f (S+B), rho=%.3f"%(
+          xmax,name,pb,eb,ps,es,rho))
       if eb<0 or es<0:
-        print "pullErrorsDistribution: WARNING! Negative pull uncertainty for %r with %.3f+-%.3f (B-only), %.3f+-%.3f (S+B), rho=%.3f"%(
-          name,pb,eb,ps,es,rho)
+        print("pullErrorsDistribution: WARNING! Negative pull uncertainty for %r with %.3f+-%.3f (B-only), %.3f+-%.3f (S+B), rho=%.3f"%(
+          name,pb,eb,ps,es,rho))
     
     canvas = TCanvas("canvas", "Pulls", 800, 600)
     canvas.SetMargin(0.09,0.02,0.11,0.02) # LRBT
@@ -186,7 +186,7 @@ def pullErrorsDistribution(filename,outname,text="",xmax=1.5,rhomin=None,verb=0)
     canvas.Print(outname+".png")
     canvas.Print(outname+".pdf")
     canvas.Close()
-    if not gROOT.IsBatch(): raw_input("Press Enter to continue...")
+    if not gROOT.IsBatch(): input("Press Enter to continue...")
 
 
 ###def pulls(filename,outname,text=""):
@@ -273,7 +273,7 @@ def pullsVertical(filename,outname,titles=None,text="",**kwargs):
     verb     = kwargs.get('verb',      0      )
     rhomin0  = rhomin # original value
     if verb>=1:
-      print ">>> pullsVertical(%r,nmax=%d)"%(filename,nmax)
+      print(">>> pullsVertical(%r,nmax=%d)"%(filename,nmax))
     pulllist = None
     while not pulllist:
       if isinstance(filename,str):
@@ -282,12 +282,12 @@ def pullsVertical(filename,outname,titles=None,text="",**kwargs):
         pulllist = filename
       npulls, off = len(pulllist), 0.10
       if not pulllist:
-        print ">>> pullsVertical: WARNING! Could not find any pulls for %r with nmax=%s, rhomin=%s"%(filename,nmax,rhomin)
+        print(">>> pullsVertical: WARNING! Could not find any pulls for %r with nmax=%s, rhomin=%s"%(filename,nmax,rhomin))
       if rhomin!=None:
         if rhomin/rhomin0<0.10:
           return
         rhomin *= 0.5 # try again with smaller rho
-        print ">>> pullsVertical: Trying again with rhomin=%s..."%(rhomin)
+        print(">>> pullsVertical: Trying again with rhomin=%s..."%(rhomin))
     if not titles:
       sigstr = "S+B fit"
       if showr:
@@ -318,11 +318,11 @@ def pullsVertical(filename,outname,titles=None,text="",**kwargs):
     xlaboff = min(0.0,2.362e-3-5.051e-6*height+3.071e-10*height**2)
     xtitoff = 800./max(1000.,height)
     if verb>=2:
-      print ">>> npulls=%s, height=%s, scale=%.4f, yscale=%.3f tmarg=%.5f, bmarg=%.5f, tsize=%.5f"%(npulls,height,scale,yscale,tmarg,bmarg,tsize)
-      print ">>> tmarg+bmarg=%.3f, 1-tmarg-bmarg=%.4f"%(tmarg+bmarg,1-tmarg-bmarg)
-      print ">>> pad.GetWh()*pad.GetHNDC()=%.3f*%.3f=%.3f"%(canvas.GetWh(),canvas.GetHNDC(),canvas.GetWh()*canvas.GetHNDC())
-      print ">>> pad.GetWw()*pad.GetWNDC()=%.3f*%.3f=%.3f"%(canvas.GetWw(),canvas.GetWNDC(),canvas.GetWw()*canvas.GetWNDC())
-      print ">>> xlaboff=%.3f, xtitoff=%.3f"%(xlaboff,xtitoff)
+      print(">>> npulls=%s, height=%s, scale=%.4f, yscale=%.3f tmarg=%.5f, bmarg=%.5f, tsize=%.5f"%(npulls,height,scale,yscale,tmarg,bmarg,tsize))
+      print(">>> tmarg+bmarg=%.3f, 1-tmarg-bmarg=%.4f"%(tmarg+bmarg,1-tmarg-bmarg))
+      print(">>> pad.GetWh()*pad.GetHNDC()=%.3f*%.3f=%.3f"%(canvas.GetWh(),canvas.GetHNDC(),canvas.GetWh()*canvas.GetHNDC()))
+      print(">>> pad.GetWw()*pad.GetWNDC()=%.3f*%.3f=%.3f"%(canvas.GetWw(),canvas.GetWNDC(),canvas.GetWw()*canvas.GetWNDC()))
+      print(">>> xlaboff=%.3f, xtitoff=%.3f"%(xlaboff,xtitoff))
     canvas.SetGrid(0,1)
     canvas.SetMargin(lmarg,rmarg,bmarg,tmarg) # LRBT
     canvas.SetTicks(1, 1)
@@ -389,7 +389,7 @@ def pullsVertical(filename,outname,titles=None,text="",**kwargs):
     y1 = 0.000003/yscale #(1-tmarg-bmarg)*height
     y2 = y1+0.8*bmarg
     if verb>=1:
-      print ">>> y1=%.5f, y2=%.5f"%(y1,y2)
+      print(">>> y1=%.5f, y2=%.5f"%(y1,y2))
     leg = TLegend(x1,y1,x2,y2)
     leg.SetBorderSize(0)
     leg.SetFillStyle(0)
@@ -440,12 +440,12 @@ def pullsVertical(filename,outname,titles=None,text="",**kwargs):
     #canvas.Print(outname+".root")
     canvas.Close()
 
-    if not gROOT.IsBatch(): raw_input("Press Enter to continue...")
+    if not gROOT.IsBatch(): input("Press Enter to continue...")
   
 
 def comparePulls(filenames,outname,titles=None,text="",nmax=-1,rhomin=None,deltamin=None,showdelta=False,sort=None,verb=0):
     if verb>=1:
-      print ">>> comparePulls(%r,nmax=%d)"%(filenames,nmax)
+      print(">>> comparePulls(%r,nmax=%d)"%(filenames,nmax))
     #assert len(filenames)>=2, "Can compare only two files!"
     pulldict  = { }
     pullnames = [ ] # common pull names
@@ -479,14 +479,14 @@ def comparePulls(filenames,outname,titles=None,text="",nmax=-1,rhomin=None,delta
          #denom = abs(max([1e-6,pull1[ipull],pull2[ipull]]))
          diff = (pull2[ipull]-pull1[ipull]) #/denom # relative difference
        if verb>=2:
-         print ">>>   common pull name: %r (Delta=%.2f%%)"%(pullname,100.0*diff)
+         print(">>>   common pull name: %r (Delta=%.2f%%)"%(pullname,100.0*diff))
        if rhomin and abs(pull1[-1])<rhomin and abs(pull2[-1])<rhomin: continue
        if deltamin and abs(diff)<deltamin: continue
        pulllist.append((pullname,pull1[ipull],pull1[ipull+1],pull2[ipull],pull2[ipull+1],diff))
     if verb>=1:
-      print ">>>   compare %s: %s/%s vs. %s/%s"%(filenames,len(pulllist),npulls[0],len(pulllist),npulls[1])
+      print(">>>   compare %s: %s/%s vs. %s/%s"%(filenames,len(pulllist),npulls[0],len(pulllist),npulls[1]))
     if verb>=3:
-      print ">>>   %s"%(pulllist)
+      print(">>>   %s"%(pulllist))
     if sort and sort.lower()=='rho': # sort by correlation factor rho
       pulllist.sort(key=lambda x: x[-1])
     pullsVertical(pulllist,outname,titles=titles,text=text,showrho=showdelta,rhotitle="#Delta",verb=verb)
@@ -504,7 +504,7 @@ def parsePull(line):
     p_s, e_s = (float(parts[3]), float(parts[4])) if len(parts)>=4 else (0.0,0.0)
     rho = float(parts[5]) if len(parts)>=6 else 0
   except Exception as err:
-    print "ERROR! parsePull: Could not convert pull %r -> %r -> name, S+B, B-only, rho"%(pull,parts)
+    print("ERROR! parsePull: Could not convert pull %r -> %r -> name, S+B, B-only, rho"%(pull,parts))
     raise err
   return pull, p_b, e_b, p_s, e_s, rho
   
@@ -539,7 +539,7 @@ def getSignalStrength(fname,**kwargs):
   tname = kwargs.get('tree', "fit_s" ) #"tree_fit_sb"
   file  = TFile.Open(fname,'READ')
   if not file or file.IsZombie():
-    print '>>> getSignalStrength: did not find file "%s"'%(fname)
+    print('>>> getSignalStrength: did not find file "%s"'%(fname))
   #tree     = file.Get(treename)
   #if not tree:
   #  print warning('getSignalStrength: did not find tree "%s" in file "%s"'%(tname,fname),pre="   ")

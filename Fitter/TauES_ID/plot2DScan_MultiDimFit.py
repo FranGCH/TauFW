@@ -719,10 +719,22 @@ def plot_2d_scan(setup, region, year, scan_data, **kwargs):
     hist_2d.GetZaxis().SetLabelSize(0.050)
     
     # Set up color palette for better visualization
-    hist_2d.SetMinimum(0)
-    max_val = hist_2d.GetMaximum()
-    if max_val > 5:
-        hist_2d.SetMaximum(5)  # Cap the maximum for better color scale
+    # Z-axis range: -1 to 5 in -2ΔlnL. Standard kBird palette, but the lowest
+    # ~1/6 of the range (i.e. the negative-deltaNLL band) is overwritten to
+    # bright green so grid cells where Migrad disagrees with the grid stand out.
+    hist_2d.SetMinimum(-1)
+    hist_2d.SetMaximum(5)
+    import ROOT as _ROOT
+    _ROOT.gStyle.SetPalette(_ROOT.kBird)
+    _ROOT.gStyle.SetNumberContours(255)
+    _palette = _ROOT.TColor.GetPalette()
+    _n_pal = _palette.GetSize()
+    _frac_neg = 1.0 / 6.0  # 0 sits at fraction 1/6 of the [-1, 5] range
+    _n_neg = int(_n_pal * _frac_neg)
+    _green_idx = _ROOT.TColor.GetColor(0, 255, 0)  # pure bright green
+    for _i in range(_n_neg):
+        _palette[_i] = _green_idx
+    _ROOT.gStyle.SetPalette(_n_pal, _palette.GetArray())
 
     # Draw the 2D histogram with smoother color transitions
     hist_2d.Draw("COLZ")

@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
-"""Load 2025 DM-binned tau SFs from tau_sf/ and produce a combined correctionlib JSON
-with TES + TauID, both carrying the per-(DM, pT-bin) uncorrelated systematics.
+"""Load DM-binned tau SFs from tau_sf/ for a given year (-y, default 2025) and produce
+a combined correctionlib JSON with TES + TauID, both carrying the per-(DM, pT-bin)
+uncorrelated systematics.
 
 Variants:
   --variant uncorr (default): per-WP JSONs ..._<year>_VSjet*_VSele*.json
@@ -58,9 +59,9 @@ def extract_sfs(filepath):
   return out
 
 
-def load_per_wp(prefix, variant='uncorr'):
+def load_per_wp(prefix, year='2025', variant='uncorr'):
   """Build dmsfs[wp_VSjet][wp_VSe][dm] = [(nom, errup, errdown) per pT bin] from
-     files like {prefix}_DeepTau2018v2p5_2025[_<variant>]_VSjet{X}_VSele{Y}.json.
+     files like {prefix}_DeepTau2018v2p5_{year}[_<variant>]_VSjet{X}_VSele{Y}.json.
 
      Only WPs with files on disk are included — partial WP coverage works."""
   suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, '')
@@ -68,7 +69,7 @@ def load_per_wp(prefix, variant='uncorr'):
   for wjet in VSJET_WPS:
     for wse in VSE_WPS:
       fname = os.path.join(SF_DIR,
-        f"{prefix}_DeepTau2018v2p5_2025{suffix}_VSjet{wjet}_VSele{wse}.json")
+        f"{prefix}_DeepTau2018v2p5_{year}{suffix}_VSjet{wjet}_VSele{wse}.json")
       if not os.path.exists(fname):
         print(f">>> WARNING: missing {fname}")
         continue
@@ -94,10 +95,10 @@ def dm_average(dmsfs):
   return ptsfs
 
 
-def build_correction(prefix, name, tid_label, info, output_desc, variant='uncorr',
-                     pt_bins=None):
+def build_correction(prefix, name, tid_label, info, output_desc, year='2025',
+                     variant='uncorr', pt_bins=None):
   """Read per-WP files matching `prefix`, return a single schema.Correction."""
-  dmsfs = load_per_wp(prefix, variant=variant)
+  dmsfs = load_per_wp(prefix, year=year, variant=variant)
   ptsfs = dm_average(dmsfs)
   bins  = pt_bins if pt_bins is not None else PT_BINS
   return makecorr_tid(
@@ -105,7 +106,7 @@ def build_correction(prefix, name, tid_label, info, output_desc, variant='uncorr
     dmsfs       = dmsfs,
     Format      = 'Run3_May24',
     id          = tid_label,
-    era         = '2025',
+    era         = year,
     wps_VSe     = VSE_WPS,
     dms         = DMS,
     bins        = bins,
@@ -120,33 +121,38 @@ def build_correction(prefix, name, tid_label, info, output_desc, variant='uncorr
 
 def main():
   ap = argparse.ArgumentParser(description=__doc__)
+  ap.add_argument('-y', '--year', default='2025',
+                  help="era of the tau_sf/ input JSONs and output labels (default: %(default)s)")
   ap.add_argument('--variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                   help="uncorr: TES per (DM,pT); corr: TES per-DM; fullcorr: TES per-DM, TauID per (DM,pT) is effective SF")
   ap.add_argument('--out', default=None,
-                  help="output JSON (default: data/tau/TauCorrections_2025[_<variant>]_with_uncorrelated_systs.json)")
+                  help="output JSON (default: data/tau/TauCorrections_<year>[_<variant>]_with_uncorrelated_systs.json)")
   args = ap.parse_args()
 
+  year    = args.year
   variant = args.variant
   # TES axis: 3 pT bins for uncorr, 1 inclusive bin for corr & fullcorr
   tes_pt_bins = TES_CORR_BINS if variant in ('corr', 'fullcorr') else PT_BINS
 
-  print(f">>> Building TauID correction (variant={variant})...")
+  print(f">>> Building TauID correction (year={year}, variant={variant})...")
   tid_corr = build_correction(
     prefix      = 'TauID_SF_dm',
     name        = 'TauID_SF',
     tid_label   = 'DeepTau2018v2p5VSjet',
-    info        = 'Tau ID SFs for DeepTau2018v2p5 in 2025',
+    info        = f'Tau ID SFs for DeepTau2018v2p5 in {year}',
     output_desc = 'Tau ID scale factor',
+    year        = year,
     variant     = variant,
     pt_bins     = PT_BINS,
   )
-  print(f">>> Building TES correction (variant={variant})...")
+  print(f">>> Building TES correction (year={year}, variant={variant})...")
   tes_corr = build_correction(
     prefix      = 'TauES_SF_dm',
     name        = 'TauEnergy_SF',
     tid_label   = 'DeepTau2018v2p5VSjet',
-    info        = f"Tau Energy Scale corrections for DeepTau2018v2p5 in 2025 ({'correlated across pT per DM' if variant in ('corr', 'fullcorr') else 'per (DM, pT)'})",
+    info        = f"Tau Energy Scale corrections for DeepTau2018v2p5 in {year} ({'correlated across pT per DM' if variant in ('corr', 'fullcorr') else 'per (DM, pT)'})",
     output_desc = 'Tau energy scale correction',
+    year        = year,
     variant     = variant,
     pt_bins     = tes_pt_bins,
   )
@@ -155,10 +161,10 @@ def main():
   os.makedirs(outdir, exist_ok=True)
   if args.out is None:
     suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, '')
-    args.out = os.path.join(outdir, f'TauCorrections_2025{suffix}_with_uncorrelated_systs.json')
+    args.out = os.path.join(outdir, f'TauCorrections_{year}{suffix}_with_uncorrelated_systs.json')
   cset = schema.CorrectionSet(
     schema_version = schema.VERSION,
-    description    = f"Tau ES + ID SFs for 2025 with per-(DM, pT-bin) uncorrelated systematic variations ({variant} variant)",
+    description    = f"Tau ES + ID SFs for {year} with per-(DM, pT-bin) uncorrelated systematic variations ({variant} variant)",
     corrections    = [tes_corr, tid_corr],
   )
   print(f">>> Writing {args.out}...")
