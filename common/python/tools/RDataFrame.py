@@ -109,7 +109,7 @@ def printRDFReport(report,reorder=False):
         evt_dict[cut.GetAll()].append(cut) # add "child" cut
   def printcut(cut,indent=""): # help-function to print recursively
     if reorder and cut in skipcuts: return # cut already printed
-    cumeff = 100.*cut.GetPass()/ntot # cumulative efficiency
+    cumeff = 100.*cut.GetPass()/ntot if ntot != 0 else -1 # cumulative efficiency
     print(">>> %10d %10d %10.2f %10.2f    %s"%(cut.GetPass(),cut.GetAll(),cut.GetEff(),cumeff,indent+cut.GetName()))
     if reorder: # recursively print "child" cuts
       skipcuts.append(cut)
