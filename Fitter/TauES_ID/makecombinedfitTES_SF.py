@@ -17,6 +17,19 @@ import sys
 import os
 import yaml
 from argparse import ArgumentParser
+import logging
+logger = logging.getLogger(__name__)
+
+def get_WP_from_filepath(filepath):
+    filepath_parts = filepath.split('/')
+    for part in filepath_parts:
+        if 'againstjet' in part:
+            jet_wp = part.replace('againstjet_','')
+        if 'againstelectron' in part:
+            ele_wp = part.replace('againstelectron_','')
+    return jet_wp, ele_wp
+
+
 
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag,input_dir):
@@ -26,8 +39,12 @@ def generate_datacards_mutau(era, config, extratag,input_dir):
     if 'input_file' in locals() or 'input_file' in globals():
         input_file = locals().get('input_file', None) or globals().get('input_file', None)
     if input_file:
+        print("generate datacards mutau with input file")
+        logger.info("Calling: python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s --input_file %s" % (era, config, extratag, input_dir, input_file))
         os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s --input_file %s" % (era, config, extratag, input_dir, input_file))
     else:
+        print("generate datacard for mutau without input file")
+        logger.info("Calling python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s" % (era, config, extratag, input_dir))
         os.system("python3 TauES_ID/harvestDatacards_TES_idSF_MCStat.py -y %s -c %s -e %s -i %s" % (era, config, extratag, input_dir))
 
 # Generating the datacards for mumu channel
@@ -103,7 +120,7 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, output_dir, mu
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.4")
     extratag     = kwargs.get('extratag',     "_PNet")
     algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
     npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
@@ -117,6 +134,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     input_dir   = kwargs.get('input_dir')
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
     base_out = input_dir.replace('input', 'output')
+    print("====== base_out : %s ; input_dir: %s" %(base_out,input_dir))
     if os.path.basename(os.path.normpath(input_dir)) == era:
         output_dir = os.path.normpath(base_out)
     else:
@@ -127,6 +145,8 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     print(f"input_dir: {input_dir}")
     print(f"computed output_dir: {output_dir}")
     workspace = ""
+    jet_wp, ele_wp = get_WP_from_filepath(input_dir)
+    print(f"Extracted jet_wp: {jet_wp}, ele_wp: {ele_wp}")
 
     # Create the workspace for combined fit
     if int(option) > 3:
@@ -150,6 +170,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         if int(option) <= 3 :
             # For CR Zmumu 
             print("config_mumu = %s"  %(config_mumu))
+            print("mumu_input_file = %s"  %(mumu_input_file))
             
             # FIX: Check if config_mumu exists OR if a direct file was provided
             if str(config_mumu) != 'None' or mumu_input_file:
@@ -164,7 +185,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             # Create workspace 
             os.system(f"text2workspace.py {output_dir}/{datacardfile}.txt")
             workspace = f"{output_dir}/{datacardfile}.root"
-            print("Datacard workspace has been created")
+            print(f"Datacard workspace has been created {workspace}")
 
         ## FIT ##
 
@@ -217,7 +238,121 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
-            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # :r=0.96,1.04 %s=1,%s=1, ,POI2, POI1  --freezeParameters r
+            POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # :r=0.96,1.04 %s=1,%s=1, ,POI2, POI1  --freezeParameters r #OG
+            if jet_wp == "Loose" and ele_wp == "Tight":
+                if r == "DM0_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.06,{POI2}=0.97 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.065,{POI2}=0.963 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045,{POI2}=0.97 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.025,{POI2}=0.996 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+            elif jet_wp == "Loose" and ele_wp == "VVLoose":
+                if r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.935,{POI2}=0.97 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+            
+            elif jet_wp == "Medium" and ele_wp == "Tight":
+                if r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.087,{POI2}=0.954 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045,{POI2}=1 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.918,{POI2}=0.991 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045,{POI2}=1.022 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "Medium" and ele_wp == "VVLoose":
+                if r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.005,{POI2}=0.9610 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.92,{POI2}=0.991 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045,{POI2}=1.02 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+            
+            elif jet_wp == "Tight" and ele_wp == "Tight":
+                if r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.105,{POI2}=0.954 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045,{POI2}=1 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.94,{POI2}=0.99 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.918,{POI2}=0.973 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+            elif jet_wp == "Tight" and ele_wp == "VVLoose":
+                if r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.918,{POI2}=0.973 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "VLoose" and ele_wp == "Tight":
+                if r == "DM1_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM10_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.94 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM10_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.813 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.875 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "VLoose" and ele_wp == "VVLoose":
+                if r == "DM0_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.19 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM0_pt2":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.90 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.98 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1,{POI2}=1 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM10_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.96 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM10_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.045 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.81 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.855 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+            elif jet_wp == "VTight" and ele_wp == "Tight":
+                if r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.087 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.910 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM10_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.94 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "VTight" and ele_wp == "VVLoose":
+                if r == "DM10_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.939 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "VVLoose" and ele_wp == "Tight":
+                if r == "DM0_pt2":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.875 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.961,{POI2}=1.001 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.065 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.023 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.77 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.918 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+            elif jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                if r == "DM0_pt1":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.171 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM0_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.855 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt2":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.96,{POI2}=1.013 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM1_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=1.08,{POI2}=1.013 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM2_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.705 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+                elif r == "DM11_pt3":
+                    POI_OPTS = f"-P {POI2} -P {POI1} --setParameterRanges {POI2}={tes_range}:{POI1}={tid_SF_range} --setParameters r=1,{POI1}=0.918 --redefineSignalPOIs {POI2},{POI1} --freezeParameters r"
+
+
             # POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=0.8,%s=1.025 --redefineSignalPOIs %s,%s  --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1, POI2,POI1) # %s=1,%s=1, ,POI2, POI1  --freezeParameters r  --freezeParameters r
             MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --cminFallbackAlgo Minuit2,Migrad,0:0.001
             
@@ -407,7 +542,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.8,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.4")
     extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -483,6 +618,7 @@ def main(args):
 
     # Generating the datacards for mutau channel
     generate_datacards_mutau(era=era, config=config, extratag=extratag, input_dir=input_dir)
+    print("===== end of generate datacards mutau =====")
 
     # Generating the datacards for mumu channel (commented out, use provided file instead)
     # if str(config_mumu) != 'None':

@@ -24,7 +24,8 @@ from CombineHarvester.CombinePdfs.morphing import BuildCMSHistFuncFactory
 
 import ROOT
 from ROOT import RooWorkspace, TFile, RooRealVar
-
+import logging
+logger = logging.getLogger(__name__)
 def check_integral(filename, procs, name, region):
     from ROOT import TFile, TH1
     file = TFile(filename)
@@ -64,7 +65,8 @@ def harvest(setup, year, obs, **kwargs):
     outtag      = tag+extratag
    
     filename = "%s/%s_%s_tes_%s.inputs-%s%s.root"%(indir,analysis,channel,obs,era,tag)
- 
+    print(f'harvest: filename {filename}')
+    print(f'harvest: output dir {outdir}')
     # For each region = DM 
     # each variable can have a subset of regions in which it is fitted defined in config file under this variable entry
     if "fitRegions" in setup["observables"][obs]:
@@ -339,7 +341,7 @@ def ensureDirectory(dirname):
 def main(args):
 
     ## Open and import information from config file here to be publicly accessible in all functions
-    print("Using configuration file: %s" % args.config)
+    logger.info("Using configuration file: %s" % args.config)
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
 

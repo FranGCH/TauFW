@@ -12,7 +12,8 @@ import sys
 import os
 import yaml
 from argparse import ArgumentParser
-
+import logging
+logger = logging.getLogger(__name__)
 # Generating the datacards for mutau channel
 def generate_datacards_mutau(era, config, extratag):
     print(' >>>>>> Generating datacards for mutau channel')
@@ -73,7 +74,7 @@ def merge_datacards_ZmmCR(setup, setup_mumu, era,extratag,region, mumu_input_fil
 def run_combined_fit(setup, setup_mumu, option, **kwargs):
     mumu_input_file = kwargs.get('mumu_input_file', None)
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"])))
-    tid_SF_range = kwargs.get('tid_SF_range', "0.70,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.4")
     extratag     = kwargs.get('extratag',     "_PNet")
     algo         = kwargs.get('algo',         "--algo=singles   ") #--alignEdges=1") #--alignEdges=1 grid
     npts_fit     = kwargs.get('npts_fit',     "")
@@ -82,8 +83,8 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     cmin_opts    = kwargs.get('cmin_opts',    "") #--cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --cminDefaultMinimizerStrategy 0
     save_opts    = kwargs.get('save_opts',    " --saveShapes")
     era          = kwargs.get('era',          "")
-    jet_wp       = kwargs.get('jet_wp',       "Medium")
-    ele_wp       = kwargs.get('ele_wp',       "VVLoose")
+    jet_wp       = kwargs.get('jet_wp', args.jet_wp)
+    ele_wp       = kwargs.get('ele_wp', args.ele_wp)
     config_mumu  = kwargs.get('config_mumu',  "")
     workspace = ""
 
@@ -187,7 +188,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
                 param_opts = ",".join([f"{key}={value}" for key, value in params.items()])
                 print("param_opts : %s" %(param_opts))
-                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:sf_W_{r}=0.0,10.0 --freezeParameters r"
+                POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}:sf_W_{r}=0.0,10.0 --freezeParameters r,tes_{r},tid_SF_{r}"
                 MutliFitout = f"{fit_outdir}/higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
                 FitDiagnostics_opts = f" -m 90  {MutliFitout} {POI_OPTS_F} -n .{BINLABELoutput} {xrtd_opts} {cmin_opts} "
                 print(f">>>>>>>>>>>>>>>>>>>>>>[DEBUG] FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r}  --plots")
@@ -212,10 +213,10 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
         elif option == '3':
             # Option 3: 2D scan - need to run FitDiagnostics first
             POI = f"tes_{r},tid_SF_{r}"
-            tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+            tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.4")
             # Set TES range based on region (same logic as option 1)
-            if r == "DM022":
-                tes_range = "0.970,1.028"
+            if r == "DM0":
+                tes_range = "0.950,1.050"
             # elif r == "DM1":
             #     tes_range = "0.970,1.028"
             # elif r == "DM10":
@@ -302,12 +303,36 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 print(f"Option 3 - param_opts: {param_opts}")
                 
                 # Set up FitDiagnostics options for 2D scan ,{param_opts}
-                POI_OPTS_F = f"--saveNLL --setParameters r=1  --freezeParameters r "  # {fit_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}                                           tes_{r},tid_SF_{r},--setParameterRanges r=0.96,1.04 --freezeParameters tes_{r},tid_SF_{r}  tid_SF_{r}, --setParameterRanges r=0.9,1.1  --setParameterRanges r=0.96,1.04 ,r --freezeParameters tes_{r},tid_SF_{r} --freezeParameters r" # :sf_W_{r}=0.0,10.0
+                POI_OPTS_F = f"--saveNLL --setParameters r=1  --freezeParameters r "
+                # POI_OPTS_F = f" --saveNLL --setParameters r=1,{param_opts} --freezeParameters r "
+                if r == "DM2" and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tid_SF_{r}=0.94  --freezeParameters r "
+                elif r == "DM1_pt2" and jet_wp == "VVLoose" and ele_wp == "Tight":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tid_SF_{r}=0.98  --freezeParameters r "
+                elif r == "DM2" and jet_wp == "VTight" and ele_wp == "VVLoose":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tes_{r}=0.837,tid_SF_{r}=1.01  --freezeParameters r "
+                elif r == "DM2_pt1" and jet_wp == "VLoose" and ele_wp == "Tight":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tes_{r}=1.0100,tid_SF_{r}=0.9343  --freezeParameters r "
+                elif r == "DM2_pt3" and jet_wp == "Tight" and ele_wp == "Tight":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tid_SF_{r}=0.94  --freezeParameters r "
+                elif r == "DM2_pt2" and jet_wp == "Medium" and ele_wp == "VVLoose":
+                    POI_OPTS_F = f"--saveNLL --setParameters r=1,tid_SF_{r}=0.83,tes_{r}=1.022 --freezeParameters r "
                 
+                elif jet_wp == "VLoose" and ele_wp == "VVLoose": 
+                    if r == "DM2_pt3":
+                        POI_OPTS_F = f"--saveNLL --setParameters r=1,tid_SF_{r}=0.833,tes_{r}=0.956  --freezeParameters r "
+                
+
+
+                # {fit_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range}                                        
+                #tes_{r},tid_SF_{r},--setParameterRanges r=0.96,1.04 --freezeParameters tes_{r},tid_SF_{r}  tid_SF_{r}, --setParameterRanges r=0.9,1.1  --setParameterRanges r=0.96,1.04 ,r --freezeParameters tes_{r},tid_SF_{r} --freezeParameters r" # :sf_W_{r}=0.0,10.0
+                #POI_OPTS_F = f"--saveNLL --setParameters r=1,{param_opts} --setParameterRanges tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --freezeParameters r,tes_{r},tid_SF_{r}"
                 # Use workspace file
                 workspace_file = f"{postfit_outdir}/{datacardfile}.root"
+                logger.debug(f"[DEBUG] Workspace file: {workspace_file}")
+                print(f"[DEBUG] Workspace file: {workspace_file}")
                 # FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --redefineSignalPOIs tes_{r},tid_SF_{r} {save_opts}" #{xrtd_opts} {cmin_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}
-                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 --redefineSignalPOIs tes_{r},tid_SF_{r} --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO {save_opts}"
+                FitDiagnostics_opts = f" -m 90 -d {workspace_file} {POI_OPTS_F} -n .{BINLABELoutput} --robustHesse=1 --redefineSignalPOIs tes_{r},tid_SF_{r} --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO {save_opts} --trackParameters tid_SF_{r}" #OG 
                 # print(f"[DEBUG] Option 3 - FitDiagnostics command: combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r} --plots")
                 # os.system(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}") # --plots")
                 
@@ -326,12 +351,12 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"combine -M FitDiagnostics {FitDiagnostics_opts} --redefineSignalPOIs tes_{r},tid_SF_{r}")
                     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
                 print(f"FitDiagnostics for 2D scan {r} completed")
-                os.system(f"mkdir -p impacts/VSjet{jet_wp}_VSele{ele_wp}/")
-                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r ")  
-                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0")
-                os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 -o impacts_{r}.json --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0") 
-                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tid_SF_{r} --POI tid_SF_{r}")
-                os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tes_{r} --POI tes_{r}")
+                # os.system(f"mkdir -p impacts/VSjet{jet_wp}_VSele{ele_wp}/")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doInitialFit --robustFit 1 --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r ")  
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0")
+                # os.system(f"combineTool.py -M Impacts -d {workspace_file} -m 90 -o impacts_{r}.json --redefineSignalPOIs tes_{r},tid_SF_{r} --setParameterRange tes_{r}={tes_range}:tid_SF_{r}={tid_SF_range} --setParameters r=1 --freezeParameters r -v 0") 
+                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tid_SF_{r} --POI tid_SF_{r}")
+                # os.system(f"plotImpacts.py -i impacts_{r}.json -o impacts/VSjet{jet_wp}_VSele{ele_wp}/impacts_{r}_tes_{r} --POI tes_{r}")
                 ##################################################
                 try:
                     import ROOT
@@ -366,6 +391,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 
                 # Move files to postfit directory
                 os.system(f"mv {outf_fit} {postfit_outdir}/")
+                os.system(f"mv higgsCombine*root {postfit_outdir}/")
                 print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
             else:
                 print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -374,7 +400,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 print(f">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.7,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.4")
     extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -422,8 +448,8 @@ def main(args):
     config_mumu = args.config_mumu 
     option = args.option
     extratag     = "_PNet"
-
-
+    logger.info("Starting main makecombinedfitTES_SF_postfit")
+    print("--------- main makecombinedfitTES_SF_postfit ---------")
     print("Using configuration file: %s"%(args.config))
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
@@ -463,8 +489,8 @@ if __name__ == '__main__':
     parser.add_argument('-cmm', '--config_mumu', dest='config_mumu', type=str, default='None', action='store', help="set config file containing sample & fit setup")
     parser.add_argument('--indir', dest='indir', type=str, required=False, help="Path to the input root file for mutau")
     parser.add_argument('--mumu_input_file', dest='mumu_input_file', type=str, required=False, help="Path to the input root file for mumu")
-    parser.add_argument('--jet_wp', dest='jet_wp', type=str, required=False, help="jet working point")
-    parser.add_argument('--ele_wp', dest='ele_wp', type=str, required=False, help="electron working point")
+    parser.add_argument('--jet_wp', dest='jet_wp', type=str, required=True, help="jet working point")
+    parser.add_argument('--ele_wp', dest='ele_wp', type=str, required=True, help="electron working point")
     args = parser.parse_args()
 
     main(args)

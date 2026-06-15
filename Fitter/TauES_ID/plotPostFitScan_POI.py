@@ -45,8 +45,8 @@ def plotCorrelation(channel,var,region,year,*parameters,**kwargs):
     
     title       = kwargs.get('title',     ""                )
     name        = kwargs.get('name',      ""                )
-    indir       = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir',      "output_%s"%year )
-    outdir      = indir.replace('output_pt_less_region', 'postfit_%s'%year) #kwargs.get('outdir',    "postfit_%s"%year )
+    indir       = kwargs.get('indir',      "output_%s"%year )
+    outdir      = indir.replace('output', 'postfit') #kwargs.get('outdir',    "postfit_%s"%year )
     tag         = kwargs.get('tag',       ""                )
     plotlabel   = kwargs.get('plotlabel', ""                )
     order       = kwargs.get('order',     False             )
@@ -176,7 +176,7 @@ def writeParametersFitVal(channel,var,region,year,*parameters,**kwargs):
 
 
     # get variables
-    indir       = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir',     "output_%s"%year  )
+    indir       = kwargs.get('indir',     "output_%s"%year  )
     tag         = kwargs.get('tag',       ""                )
     poi         = kwargs.get('poi',       ""                )
     era         = "%s-13TeV"%year
@@ -276,8 +276,8 @@ def plotPostFitValues(channel,var,region,year,paramfull_list,*parameters,**kwarg
     
     title       = kwargs.get('title',     ""    )
     name        = kwargs.get('name',      ""    )
-    indir       = kwargs.get('indir',     "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year  )
-    outdir      = indir.replace('output_pt_less_region', 'postfit_%s'%year) #kwargs.get('outdir',    "postfit_%s"%year )
+    indir       = kwargs.get('indir',     "output_%s"%year  )
+    outdir      = indir.replace('output', 'postfit') #kwargs.get('outdir',    "postfit_%s"%year )
     tag         = kwargs.get('tag',       ""    )
     plotlabel   = kwargs.get('plotlabel', ""    )
     poi         = kwargs.get('poi',       ""    )
@@ -600,7 +600,7 @@ def chunkify(list,nmax,overlap=0,complete=False):
   
 def getBBBList(channel,var,region,year,process,**kwargs):
     """Get list of all BBB nuisance parameter for a proces."""
-    indir    = kwargs.get('indir',      "/eos/user/f/fcasalin/TauFW_230425/Fitter_out/output_pt_less_region/againstjet_Medium/againstelectron_VVLoose/%s"%year ) #kwargs.get('indir', "output_%s"%year)
+    indir    = kwargs.get('indir', "output_%s"%year)
     era      = "%s-13TeV"%year
     tag      = kwargs.get('tag', "" )
     filename = '%s/higgsCombine.%s_%s-%s%s-%s.MultiDimFit.mH90.root'%(indir,channel,var,region,tag,era)
