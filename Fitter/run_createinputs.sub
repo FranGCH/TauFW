@@ -6,25 +6,38 @@ universe              = vanilla
 executable            = run_createinputs_v2.sh
 
 # Arguments will be provided directly by the submission script
-# Format: <DM> <CMSSW_PATH> <EOS_OUTPUT_DIR>
-arguments             = /afs/cern.ch/user/f/fcasalin/TauFW_230425/CMSSW_14_1_0_pre4/src 
-#/afs/cern.ch/user/z/zhdong/CMSSW_14_1_0_pre4/src/TauFW/Fitter/condor_outputs_inclu_3pt/tau_fitter
+base_path = /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src
+
+arguments             = $(base_path) -j $(JWP) -e $(EWP)
 
 # --- Resource Requests ---
-# Request 4 CPU cores
 request_cpus = 4
-# Request 3000 MB of memory
+
 request_memory = 3000 MB
 
 # --- Log Files ---
 # Use separate log files for each DM to avoid conflicts
-output                = condor_logs/job_DM0_$(ClusterId).out
-error                 = condor_logs/job_DM0_$(ClusterId).err
-log                   = condor_logs/job_DM0_$(ClusterId).log
+
+output = condor_logs/stdout.job_$(JWP)_$(EWP)_$(ClusterId).$(ProcId)
+error  = condor_logs/stderr.job_$(JWP)_$(EWP)_$(ClusterId).$(ProcId)
+log    = condor_logs/log.job_$(JWP)_$(EWP)_$(ClusterId)
 
 # --- Job Duration ---
-+JobFlavour           = "testmatch"
++JobFlavour           = "tomorrow"
 
 # --- Submission Queue ---
 # This file describes a single job, so we only need queue 1
-queue 1
+queue JWP, EWP from (
+    VVLoose VVLoose
+    VVLoose Tight
+    VLoose VVLoose
+    VLoose Tight
+    Loose VVLoose
+    Loose Tight
+    Medium VVLoose
+    Medium Tight
+    Tight VVLoose
+    Tight Tight
+    VTight VVLoose
+    VTight Tight
+)
