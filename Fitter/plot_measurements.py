@@ -9,14 +9,15 @@ import glob
 import argparse
 import re
 from ROOT import TCanvas, TGraph, TGraphAsymmErrors, TLatex, TLegend, TLine, kBlue, kRed, kGreen, kMagenta, kBlack, kOrange, kGray
-
+import logging
+logger = logging.getLogger(__name__)
 def load_measurements(ele_wp="tight", jet_wp="medium"):
     """Load measurements from 2D measurement files and FitDiagnostics"""
     
     measurements = []
     
     # --- 1. Load MultiDimFit (2D Scan) files ---
-    pattern_multidim = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/2024/FitparameterValues__mutau_DeepTau_2024-13TeV_*.txt"
+    pattern_multidim = f"output_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/2024/FitparameterValues__mutau_PNet_2024-13TeV_*.txt"
     files_multidim = glob.glob(pattern_multidim)
     print(f"Found {len(files_multidim)} MultiDimFit files")
     
@@ -301,11 +302,11 @@ def create_tes_plot(measurements, jet_wp, ele_wp):
         text.DrawLatex(gr_multi.GetXaxis().GetXmin() + 0.05*(gr_multi.GetXaxis().GetXmax()-gr_multi.GetXaxis().GetXmin()), i, label)
 
     # Legend
-    leg = TLegend(0.65, 0.75, 0.9, 0.88)
-    leg.SetBorderSize(0)
-    leg.AddEntry(gr_multi, "2D Scan", "lp")
-    leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
-    leg.Draw()
+    # leg = TLegend(0.65, 0.75, 0.9, 0.88)
+    # leg.SetBorderSize(0)
+    # leg.AddEntry(gr_multi, "2D Scan", "lp")
+    # leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
+    # leg.Draw()
     
     line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5)
     line_unity.SetLineStyle(2); line_unity.SetLineColor(ROOT.kGray+1); line_unity.Draw()
@@ -384,11 +385,11 @@ def create_tauID_plot(measurements, jet_wp, ele_wp):
         text.SetTextSize(0.035); text.SetTextAlign(32)
         text.DrawLatex(gr_multi.GetXaxis().GetXmin() + 0.08*(gr_multi.GetXaxis().GetXmax()-gr_multi.GetXaxis().GetXmin()), i, label)
     
-    leg = TLegend(0.65, 0.75, 0.9, 0.88)
-    leg.SetBorderSize(0)
-    leg.AddEntry(gr_multi, "2D Scan", "lp")
-    leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
-    leg.Draw()
+    # leg = TLegend(0.65, 0.75, 0.9, 0.88)
+    # leg.SetBorderSize(0)
+    # leg.AddEntry(gr_multi, "2D Scan", "lp")
+    # leg.AddEntry(gr_fitdiag, "FitDiagnostics", "lp")
+    # leg.Draw()
     
     line_unity = ROOT.TLine(1.0, -0.5, 1.0, n_points - 0.5)
     line_unity.SetLineStyle(2); line_unity.SetLineColor(ROOT.kGray+1); line_unity.Draw()
