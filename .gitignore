@@ -30,4 +30,6 @@ Plotter/OG_tables
 Plotter/NewTables
 Fitter/fcasalin.cc
 Fitter/condor_logs
-Fitter/condor_*.log
+Fitter/*.log
+Fitter/output_pt*
+Fitter/WorkFlow_LOGs*
