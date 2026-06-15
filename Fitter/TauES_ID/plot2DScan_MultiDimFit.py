@@ -62,12 +62,15 @@ def format_region_label(region, setup=None):
 
 def format_region_for_sorting(region):
     """Create sorting key for regions to match your plot order"""
-    # Define the desired order (reverse: DM11, DM10, DM1, DM0)
+    # Desired order (reverse decay-mode order). Includes the PNet/UParT-only
+    # DM2 (h^{+-}2pi0) and the DMrest catch-all bin; harmless for DeepTau (4 bins).
     order_map = {
         'DM11': 0,
-        'DM10': 1, 
-        'DM1': 2,
-        'DM0': 3
+        'DM10': 1,
+        'DM2': 2,
+        'DM1': 3,
+        'DM0': 4,
+        'DMrest': 5,
     }
     
     if '_pt' in region:

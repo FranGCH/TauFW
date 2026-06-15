@@ -477,7 +477,10 @@ def main():
   ap.add_argument('--jet_wp', default=None)
   ap.add_argument('--ele_wp', default=None)
   ap.add_argument('--mode',   default='both', choices=['per-fit','overlay','both'])
+  ap.add_argument('--dms',    default='DM0,DM1,DM10,DM11',
+                  help="comma-separated DMs (PNet/UParT: DM0,DM1,DM2,DM10,DM11,DMrest)")
   args = ap.parse_args()
+  dms = tuple(d for d in args.dms.split(',') if d)
 
   # Variant-aware defaults
   _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
@@ -499,7 +502,7 @@ def main():
       for ed in ele_dirs:
         ele_wp = os.path.basename(ed).replace('againstelectron_', '')
         print(f">>> [corr] {jet_wp} x {ele_wp}")
-        for dm in ('DM0','DM1','DM10','DM11'):
+        for dm in dms:
           prof_dict = collect_profiles_corr(args.indir, args.year, jet_wp, ele_wp, dm)
           if not (prof_dict['tes'] or prof_dict['tid']):
             continue
@@ -526,7 +529,7 @@ def main():
       for ed in ele_dirs:
         ele_wp = os.path.basename(ed).replace('againstelectron_', '')
         print(f">>> [fullcorr] {jet_wp} x {ele_wp}")
-        for dm in ('DM0','DM1','DM10','DM11'):
+        for dm in dms:
           prof_dict = collect_profiles_fullcorr(args.indir, args.year, jet_wp, ele_wp, dm)
           if not (prof_dict['tes'] or prof_dict['tid']):
             continue
@@ -579,7 +582,7 @@ def main():
         for ed in ele_dirs:
           ele_wp = os.path.basename(ed).replace('againstelectron_', '')
           print(f">>> {jet_wp} x {ele_wp}")
-          for dm in ('DM0','DM1','DM10','DM11'):
+          for dm in dms:
             prof_dict = collect_profiles(args.indir, args.year, jet_wp, ele_wp, dm)
             if not (prof_dict['tes'] or prof_dict['tid']):
               continue

@@ -16,6 +16,9 @@ except ImportError:
     cs = None
 # import rich
 
+TREE_TAG = ""  # tagger suffix for the output tree (e.g. "_pnet"); set from --tagger, "" = DeepTau
+
+
 def load_pt_values(setup,**kwargs):
     pt_avg_list = []
     pt_error_list = []
@@ -178,13 +181,13 @@ def load_sf_measurements(setup, year, **kwargs):
 
     print(f"[DEBUG] Looking for {sf} measurements in year {year} (variant={variant})")
 
-    # Variant-aware input root
+    # Variant-aware input root (+ tagger suffix for PNet/UParT trees)
     if variant == "corr":
-        input_root = "output_pt_less_region_corrTES"
+        input_root = "output_pt_less_region_corrTES" + TREE_TAG
     elif variant == "fullcorr":
-        input_root = "output_pt_less_region_fullcorr"
+        input_root = "output_pt_less_region_fullcorr" + TREE_TAG
     else:
-        input_root = "output_pt_less_region"
+        input_root = "output_pt_less_region" + TREE_TAG
 
     # fullcorr + TauID: synthesize per-pT effective SFs from common POI + per-pT pulls
     if variant == "fullcorr" and sf == "tid_SF":
@@ -293,10 +296,24 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     # Ensure output directory exists
     ensureDirectory("tau_sf")
     
+    # Tagger-aware labels (DeepTau by default; PNet/UParT via config 'tagger' block)
+    _tagger    = setup.get('tagger') or {}
+    id_label   = _tagger.get('id_label', 'DeepTau2018v2p5VSjet')          # e.g. ParticleNetVSjet
+    tagger_tag = id_label.replace('VSjet', '').rstrip('_') or 'DeepTau2018v2p5'  # filename component
+
     # Loop over DMs
     print(">>> DM exclusive ")
-    # Define the DM order
-    dm_order = ["DM0", "DM1", "DM10", "DM11"]
+    # DM order from config (unique DMs in scanRegions order); fallback to legacy 4-bin DeepTau
+    try:
+        dm_order = []
+        for _r in setup["observables"]["m_vis"]["scanRegions"]:
+            _d = _r.split('_')[0]
+            if _d not in dm_order:
+                dm_order.append(_d)
+    except Exception:
+        dm_order = []
+    if not dm_order:
+        dm_order = ["DM0", "DM1", "DM10", "DM11"]
 
     # Define pt edges for each pt bin (adjust these based on your actual pt ranges)
     pt_bin_edges = { # should be configurable in the yml file, but for now hardcoded based on typical pt binning
@@ -424,7 +441,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                 else:
                     name = 'TauID'
                     
-                sfile = TFile(f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
+                sfile = TFile(f"tau_sf/{name}_SF_dm_{tagger_tag}_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.root", 'recreate')
 
                 for year in [args.year]:
                     for dm in dm_order:
@@ -507,7 +524,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                     dm_systematic_categories = []
                     
                     for dm in dm_order:
-                        dm_num = int(dm.replace('DM', ''))  # Convert DM0 -> 0, DM11 -> 11
+                        dm_num = -1 if dm == 'DMrest' else int(dm.replace('DM', ''))  # DM0->0, DM11->11, DMrest->-1
                         key = f'{dm}_{current_jet_wp}'
                         
                         if key in sf_dict[sf][args.year] and len(sf_dict[sf][args.year][key]["content"]) > 0:
@@ -566,15 +583,15 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                     corr = cs.Correction(
                         name=f"{name}SF",
                         version=1,
-                        description=f"{name} SF, pT binned divided by DM with systematic variations and working point inputs (DeepTau2018v2p5)",
+                        description=f"{name} SF, pT binned divided by DM with systematic variations and working point inputs ({id_label})",
                         inputs=[
                             cs.Variable(name="genmatch", type="int", description="Tau genmatch, sf only on real taus (genmatch 5)"),
-                            cs.Variable(name="DM", type="int", description="Tau decay mode (0,1,10,11)"),
+                            cs.Variable(name="DM", type="int", description="Tau decay mode (e.g. 0,1,2,10,11; -1 = rest for PNet/UParT)"),
                             cs.Variable(name="pT", type="real", description="Tau transverse momentum"),
                             cs.Variable(name="syst", type="string", description="Systematic variation ('nom', 'up', 'down')"),
                             cs.Variable(name="wp_VSmu", type="string", description="DeepTau2018v2p5 working point vs muon ('VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
                             cs.Variable(name="wp_VSe", type="string", description="DeepTau2018v2p5 working point vs electron ('VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
-                            cs.Variable(name="wp_VSjet", type="string", description="DeepTau2018v2p5 working point vs jet ('VVVLoose', 'VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
+                            cs.Variable(name="wp_VSjet", type="string", description=f"{id_label} working point vs jet"),
                         ],
                         output={'name': "sf", 'type': "real", 'description': f"{name} scale factor"},
                         data=cs.Category(
@@ -620,7 +637,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                         corrections=[corr]
                     )
                     
-                    json_filename = f"tau_sf/{name}_SF_dm_DeepTau2018v2p5_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
+                    json_filename = f"tau_sf/{name}_SF_dm_{tagger_tag}_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
                     with open(json_filename, "w") as fout:
                         print(f">>> Writing JSON: {json_filename}")
                         fout.write(cset.json())
@@ -746,6 +763,10 @@ if __name__ == '__main__':
   parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
   parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                       help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES & common TauID with per-pT effective SFs")
+  parser.add_argument('--tagger', dest='tagger', type=str, default='',
+                      help="output-tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
   args = parser.parse_args()
+  if args.tagger:
+    TREE_TAG = "_" + args.tagger
   main(args)
   print(">>>\n>>> done\n")

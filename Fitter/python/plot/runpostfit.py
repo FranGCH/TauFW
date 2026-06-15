@@ -10,15 +10,16 @@ def main(args):
     #   uncorr (default): PostFitShape file per region (e.g. ..._DM0_pt1.root)
     #   corr            : PostFitShape file per DM    (e.g. ..._DM0.root, holds 3 pT channels)
     #   fullcorr        : same per-DM layout as corr, but its own output tree
+    _tt = ("_" + args.tagger) if getattr(args, 'tagger', '') else ""  # tagger suffix (pnet/upart)
     if args.variant == 'corr':
-        postfit_root = './postfit_pt_less_region_corrTES'
-        outroot      = 'output_plots_corrTES'
+        postfit_root = './postfit_pt_less_region_corrTES' + _tt
+        outroot      = 'output_plots_corrTES' + _tt
     elif args.variant == 'fullcorr':
-        postfit_root = './postfit_pt_less_region_fullcorr'
-        outroot      = 'output_plots_fullcorr'
+        postfit_root = './postfit_pt_less_region_fullcorr' + _tt
+        outroot      = 'output_plots_fullcorr' + _tt
     else:
-        postfit_root = './postfit_pt_less_region'
-        outroot      = 'output_plots'
+        postfit_root = './postfit_pt_less_region' + _tt
+        outroot      = 'output_plots' + _tt
 
     for config in configs:
         if not config.endswith(".yml"): # config = channel name
@@ -89,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument('-y', '--year', dest='year', default='2024', help="year for plotting")
     parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                                          help="fit variant: uncorr (per-region), corr (per-DM TES), fullcorr (per-DM TES+TauID)")
+    parser.add_argument('--tagger', dest='tagger', type=str, default='',
+                                         help="tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
 
     args = parser.parse_args()
   

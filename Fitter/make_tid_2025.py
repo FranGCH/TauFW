@@ -20,6 +20,8 @@ SF_DIR     = os.path.join(HERE, 'tau_sf')
 VSJET_WPS  = ['VVLoose','VLoose','Loose','Medium','Tight','VTight']
 VSE_WPS    = ['VVLoose','Tight']
 DMS        = [0,1,10,11]
+LABEL      = 'DeepTau2018v2p5'        # filename tagger component (set from --config tagger)
+TID_LABEL  = 'DeepTau2018v2p5VSjet'   # correctionlib id label (set from --config tagger)
 PT_BINS    = [20.0,40.0,60.0,200.0]  # 3 pT bins for TauID (and TES uncorr)
 TES_CORR_BINS = [20.0, 200.0]        # 1 inclusive bin for corrTES TES
 
@@ -69,7 +71,7 @@ def load_per_wp(prefix, year='2025', variant='uncorr'):
   for wjet in VSJET_WPS:
     for wse in VSE_WPS:
       fname = os.path.join(SF_DIR,
-        f"{prefix}_DeepTau2018v2p5_{year}{suffix}_VSjet{wjet}_VSele{wse}.json")
+        f"{prefix}_{LABEL}_{year}{suffix}_VSjet{wjet}_VSele{wse}.json")
       if not os.path.exists(fname):
         print(f">>> WARNING: missing {fname}")
         continue
@@ -127,10 +129,34 @@ def main():
                   help="uncorr: TES per (DM,pT); corr: TES per-DM; fullcorr: TES per-DM, TauID per (DM,pT) is effective SF")
   ap.add_argument('--out', default=None,
                   help="output JSON (default: data/tau/TauCorrections_<year>[_<variant>]_with_uncorrelated_systs.json)")
+  ap.add_argument('-c', '--config', default=None,
+                  help="fit config with a 'tagger' block (PNet/UParT). If omitted, DeepTau defaults are used.")
   args = ap.parse_args()
 
   year    = args.year
   variant = args.variant
+
+  # Tagger-aware: derive label / id / VSjet WPs / DM list from the config (DeepTau default)
+  global VSJET_WPS, DMS, LABEL, TID_LABEL
+  if args.config:
+    import yaml
+    with open(args.config) as _f:
+      _setup = yaml.safe_load(_f)
+    _tagger = _setup.get('tagger') or {}
+    TID_LABEL = _tagger.get('id_label', TID_LABEL)
+    LABEL     = TID_LABEL.replace('VSjet', '').rstrip('_') or 'DeepTau2018v2p5'
+    if _tagger.get('vsjet', {}).get('wps'):
+      VSJET_WPS = list(_tagger['vsjet']['wps'].keys())
+    try:  # DM list from scanRegions: DM0->0, DM11->11, DMrest->-1
+      _dms = []
+      for _r in _setup["observables"]["m_vis"]["scanRegions"]:
+        _d = _r.split('_')[0]
+        if _d not in _dms:
+          _dms.append(_d)
+      DMS = [(-1 if _d == 'DMrest' else int(_d.replace('DM', ''))) for _d in _dms]
+    except Exception:
+      pass
+    print(f">>> Tagger from config: id={TID_LABEL}, label={LABEL}, VSjet WPs={VSJET_WPS}, DMs={DMS}")
   # TES axis: 3 pT bins for uncorr, 1 inclusive bin for corr & fullcorr
   tes_pt_bins = TES_CORR_BINS if variant in ('corr', 'fullcorr') else PT_BINS
 
@@ -138,8 +164,8 @@ def main():
   tid_corr = build_correction(
     prefix      = 'TauID_SF_dm',
     name        = 'TauID_SF',
-    tid_label   = 'DeepTau2018v2p5VSjet',
-    info        = f'Tau ID SFs for DeepTau2018v2p5 in {year}',
+    tid_label   = TID_LABEL,
+    info        = f'Tau ID SFs for {TID_LABEL} in {year}',
     output_desc = 'Tau ID scale factor',
     year        = year,
     variant     = variant,
@@ -149,8 +175,8 @@ def main():
   tes_corr = build_correction(
     prefix      = 'TauES_SF_dm',
     name        = 'TauEnergy_SF',
-    tid_label   = 'DeepTau2018v2p5VSjet',
-    info        = f"Tau Energy Scale corrections for DeepTau2018v2p5 in {year} ({'correlated across pT per DM' if variant in ('corr', 'fullcorr') else 'per (DM, pT)'})",
+    tid_label   = TID_LABEL,
+    info        = f"Tau Energy Scale corrections for {TID_LABEL} in {year} ({'correlated across pT per DM' if variant in ('corr', 'fullcorr') else 'per (DM, pT)'})",
     output_desc = 'Tau energy scale correction',
     year        = year,
     variant     = variant,
@@ -161,7 +187,8 @@ def main():
   os.makedirs(outdir, exist_ok=True)
   if args.out is None:
     suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, '')
-    args.out = os.path.join(outdir, f'TauCorrections_{year}{suffix}_with_uncorrelated_systs.json')
+    label_tag = '' if LABEL == 'DeepTau2018v2p5' else f'_{LABEL}'  # keep DeepTau name unchanged
+    args.out = os.path.join(outdir, f'TauCorrections{label_tag}_{year}{suffix}_with_uncorrelated_systs.json')
   cset = schema.CorrectionSet(
     schema_version = schema.VERSION,
     description    = f"Tau ES + ID SFs for {year} with per-(DM, pT-bin) uncorrelated systematic variations ({variant} variant)",

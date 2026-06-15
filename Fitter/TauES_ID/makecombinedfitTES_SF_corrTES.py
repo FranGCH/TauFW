@@ -19,6 +19,28 @@ import yaml
 from argparse import ArgumentParser
 
 
+def nonempty_regions(input_file, regions, proc="data_obs", min_yield=0.0):
+    """Drop regions whose `proc` histogram integral is <= min_yield (e.g. empty DMrest
+    at tight WPs). Fail-safe: keep regions if the file/dir/hist can't be read, never drop all."""
+    import ROOT
+    if not input_file or not os.path.exists(input_file):
+        return list(regions)
+    f = ROOT.TFile.Open(input_file)
+    if not f or f.IsZombie():
+        return list(regions)
+    keep = []
+    for r in regions:
+        d = f.Get(r)
+        h = d.Get(proc) if d else None
+        integ = h.Integral() if (h and h.InheritsFrom("TH1")) else 0.0
+        if integ > min_yield:
+            keep.append(r)
+        else:
+            print(">>> [skip-empty] region %r: %s integral=%.4g <= %g -- skipping" % (r, proc, integ, min_yield))
+    f.Close()
+    return keep if keep else list(regions)
+
+
 def find_boost_params(fit_result_file, poi1_name, poi2_name, threshold=0):
     """If pass-1's MultiDimFit tree has min(deltaNLL) below `threshold`
     (i.e. a grid scan point sits in a deeper basin than combine's initial
@@ -794,6 +816,19 @@ def main(args):
     print("Using configuration file: %s"%(args.config))
     with open(args.config, 'r') as file:
         setup = yaml.safe_load(file)
+
+    # Auto-skip zero-yield regions (e.g. empty DMrest at tight WPs) so the fit doesn't
+    # try to scan/measure empty bins. Mirrors the same filter in the harvest step.
+    _infile = getattr(args, 'input_file', None)
+    for _obs in setup.get("observables", {}):
+        for _key in ("fitRegions", "scanRegions"):
+            if _key in setup["observables"][_obs]:
+                _orig = list(setup["observables"][_obs][_key])
+                _kept = nonempty_regions(_infile, _orig)
+                if len(_kept) != len(_orig):
+                    print(">>> [skip-empty] %s/%s: %d -> %d regions (dropped %s)"
+                          % (_obs, _key, len(_orig), len(_kept), [r for r in _orig if r not in _kept]))
+                setup["observables"][_obs][_key] = _kept
 
 
     if config_mumu != 'None':

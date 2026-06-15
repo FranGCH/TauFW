@@ -1,0 +1,239 @@
+## Config for TES + TauID SF fit, UParT VSjet HYBRID, mutau channel, by UParT-DM and pT.
+## Hybrid: VSjet = UParT (raw-score WP), VSe/VSmu = DeepTau2018v2p5 (kept).
+## Decay-mode binning uses UParT decay modes (decayModeUParT_2): 6 bins {0,1,2,10,11,rest}.
+## Sibling of config_coarse_PNet.yml / config_coarse_TT.yml. Drive with run_inputs_pnet.sh
+## (point CONFIG at this file) / a UParT workflow.
+
+channel: mutau
+
+tag: "_mutau"
+
+# Tagger-generic block consumed by createinputsTES.py: the VSjet cut is built as
+# "<discriminant> >= wps[<-j WP>]" and injected at the $VSJET placeholder below.
+# VSe/VSmu are intentionally absent -> they stay DeepTau (hybrid).
+tagger:
+    id_label: "UParTVSjet"
+    vsjet:
+        discriminant: "rawUParTVSjet_2"
+        wps:
+            Loose:   0.1316
+            Medium:  0.2541
+            Tight:   0.3956
+            VTight:  0.5354
+            VVTight: 0.6649
+
+# $VSJET is replaced per-WP at input creation; VSe/VSmu remain DeepTau (the -e WP still
+# swaps idDeepTau2018v2p5VSe). NOTE: idDecayModeNewDMs_2 (HPS DM validity) kept for now.
+baselineCuts: "q_1*q_2<0 && iso_1<0.15 && idDecayModeNewDMs_2 && $VSJET && idDeepTau2018v2p5VSe_2>=2 && idDeepTau2018v2p5VSmu_2>=4 && !lepton_vetoes_notau && metfilter && mt_1<65 "
+
+# 6 UParT decay-mode bins x 3 pT bins. "rest" = decayModeUParT_2 not in {0,1,2,10,11}.
+regions:
+    DM0_pt1:
+        definition: "decayModeUParT_2==0 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}, pt: 20-40"
+    DM0_pt2:
+        definition: "decayModeUParT_2==0 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}, pt: 40-60"
+    DM0_pt3:
+        definition: "decayModeUParT_2==0 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}, pt: 60-200"
+        binning: [11, 40, 150]
+    DM1_pt1:
+        definition: "decayModeUParT_2==1 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}#pi^{0}, pt: 20-40"
+    DM1_pt2:
+        definition: "decayModeUParT_2==1 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}#pi^{0}, pt: 40-60"
+    DM1_pt3:
+        definition: "decayModeUParT_2==1 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}#pi^{0}, pt: 60-200"
+        binning: [11, 40, 150]
+    DM2_pt1:
+        definition: "decayModeUParT_2==2 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}2#pi^{0}, pt: 20-40"
+    DM2_pt2:
+        definition: "decayModeUParT_2==2 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}2#pi^{0}, pt: 40-60"
+    DM2_pt3:
+        definition: "decayModeUParT_2==2 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}2#pi^{0}, pt: 60-200"
+        binning: [11, 40, 150]
+    DM10_pt1:
+        definition: "decayModeUParT_2==10 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 20-40"
+    DM10_pt2:
+        definition: "decayModeUParT_2==10 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 40-60"
+    DM10_pt3:
+        definition: "decayModeUParT_2==10 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}h^{#mp}h^{#pm}, pt: 60-200"
+        binning: [11, 40, 150]
+    DM11_pt1:
+        definition: "decayModeUParT_2==11 && pt_2>20 && pt_2<40"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 20-40"
+    DM11_pt2:
+        definition: "decayModeUParT_2==11 && pt_2>=40 && pt_2<60"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 40-60"
+    DM11_pt3:
+        definition: "decayModeUParT_2==11 && pt_2>=60 && pt_2<200"
+        title: "h^{#pm}h^{#mp}h^{#pm}#pi^{0}, pt: 60-200"
+        binning: [11, 40, 150]
+    DMrest_pt1:
+        definition: "(decayModeUParT_2!=0 && decayModeUParT_2!=1 && decayModeUParT_2!=2 && decayModeUParT_2!=10 && decayModeUParT_2!=11) && pt_2>20 && pt_2<40"
+        title: "rest, pt: 20-40"
+    DMrest_pt2:
+        definition: "(decayModeUParT_2!=0 && decayModeUParT_2!=1 && decayModeUParT_2!=2 && decayModeUParT_2!=10 && decayModeUParT_2!=11) && pt_2>=40 && pt_2<60"
+        title: "rest, pt: 40-60"
+    DMrest_pt3:
+        definition: "(decayModeUParT_2!=0 && decayModeUParT_2!=1 && decayModeUParT_2!=2 && decayModeUParT_2!=10 && decayModeUParT_2!=11) && pt_2>=60 && pt_2<200"
+        title: "rest, pt: 60-200"
+        binning: [11, 40, 150]
+
+plottingOrder: &region_list
+          [
+            "DM0_pt1", "DM0_pt2", "DM0_pt3",
+            "DM1_pt1", "DM1_pt2", "DM1_pt3",
+            "DM2_pt1", "DM2_pt2", "DM2_pt3",
+            "DM10_pt1", "DM10_pt2", "DM10_pt3",
+            "DM11_pt1", "DM11_pt2", "DM11_pt3",
+            "DMrest_pt1", "DMrest_pt2", "DMrest_pt3",
+          ]
+
+observables:
+    m_vis:
+        binning: [22, 40, 150]
+        title: "m_{vis}"
+        extra:
+            cut: "40<m_vis && m_vis<150"
+        fitRegions:  *region_list
+        scanRegions: *region_list
+
+TESvariations:
+    values : [0.950, 0.960 ,0.970, 0.980, 0.990, 1.010, 1.020, 1.030, 1.040, 1.050]
+    processes: ["ZTT"]
+
+fitSpecs:
+    doBBB: doShapes
+    signalBBB: True
+    backgroundBBB: True
+
+samples:
+    filename: "$PICODIR/$SAMPLE_$CHANNEL$TAG.root"
+    join: ["VV","TT","ST"]
+    split:
+        DY: [ ["ZTT","genmatch_2==5"], ["ZL","genmatch_2>0 && genmatch_2<5"], ["ZJ","genmatch_2==0"] ]
+        TT: [["TTT","genmatch_2==5"], ["TTL","genmatch_2>0 && genmatch_2<5"], ["TTJ","genmatch_2==0"] ]
+    rename:
+        WJ: "W"
+    data: "data_obs"
+    removeSFs: ["idweight_2"]   # remove DeepTau VSjet SF (we measure UParT VSjet)
+
+tesRegions:
+    DM0:     {title: "DM0"}
+    DM1:     {title: "DM1"}
+    DM2:     {title: "DM2"}
+    DM10:    {title: "DM10"}
+    DM11:    {title: "DM11"}
+    DMrest:  {title: "DMrest"}
+    DM0_pt1:    {title: "DM0 20<p_{t_{#tau}}<40"}
+    DM0_pt2:    {title: "DM0 40<=p_{t_{#tau}}<60"}
+    DM0_pt3:    {title: "DM0 60<=p_{t_{#tau}}<200"}
+    DM1_pt1:    {title: "DM1 20<p_{t_{#tau}}<40"}
+    DM1_pt2:    {title: "DM1 40<=p_{t_{#tau}}<60"}
+    DM1_pt3:    {title: "DM1 60<=p_{t_{#tau}}<200"}
+    DM2_pt1:    {title: "DM2 20<p_{t_{#tau}}<40"}
+    DM2_pt2:    {title: "DM2 40<=p_{t_{#tau}}<60"}
+    DM2_pt3:    {title: "DM2 60<=p_{t_{#tau}}<200"}
+    DM10_pt1:   {title: "DM10 20<p_{t_{#tau}}<40"}
+    DM10_pt2:   {title: "DM10 40<=p_{t_{#tau}}<60"}
+    DM10_pt3:   {title: "DM10 60<=p_{t_{#tau}}<200"}
+    DM11_pt1:   {title: "DM11 20<p_{t_{#tau}}<40"}
+    DM11_pt2:   {title: "DM11 40<=p_{t_{#tau}}<60"}
+    DM11_pt3:   {title: "DM11 60<=p_{t_{#tau}}<200"}
+    DMrest_pt1: {title: "DMrest 20<p_{t_{#tau}}<40"}
+    DMrest_pt2: {title: "DMrest 40<=p_{t_{#tau}}<60"}
+    DMrest_pt3: {title: "DMrest 60<=p_{t_{#tau}}<200"}
+
+tid_SFRegions:
+    DM0:     {title: "DM0"}
+    DM1:     {title: "DM1"}
+    DM2:     {title: "DM2"}
+    DM10:    {title: "DM10"}
+    DM11:    {title: "DM11"}
+    DMrest:  {title: "DMrest"}
+    DM0_pt1:    {title: "DM0 20<p_{t_{#tau}}<40"}
+    DM0_pt2:    {title: "DM0 40<=p_{t_{#tau}}<60"}
+    DM0_pt3:    {title: "DM0 60<=p_{t_{#tau}}<200"}
+    DM1_pt1:    {title: "DM1 20<p_{t_{#tau}}<40"}
+    DM1_pt2:    {title: "DM1 40<=p_{t_{#tau}}<60"}
+    DM1_pt3:    {title: "DM1 60<=p_{t_{#tau}}<200"}
+    DM2_pt1:    {title: "DM2 20<p_{t_{#tau}}<40"}
+    DM2_pt2:    {title: "DM2 40<=p_{t_{#tau}}<60"}
+    DM2_pt3:    {title: "DM2 60<=p_{t_{#tau}}<200"}
+    DM10_pt1:   {title: "DM10 20<p_{t_{#tau}}<40"}
+    DM10_pt2:   {title: "DM10 40<=p_{t_{#tau}}<60"}
+    DM10_pt3:   {title: "DM10 60<=p_{t_{#tau}}<200"}
+    DM11_pt1:   {title: "DM11 20<p_{t_{#tau}}<40"}
+    DM11_pt2:   {title: "DM11 40<=p_{t_{#tau}}<60"}
+    DM11_pt3:   {title: "DM11 60<=p_{t_{#tau}}<200"}
+    DMrest_pt1: {title: "DMrest 20<p_{t_{#tau}}<40"}
+    DMrest_pt2: {title: "DMrest 40<=p_{t_{#tau}}<60"}
+    DMrest_pt3: {title: "DMrest 60<=p_{t_{#tau}}<200"}
+
+processes: ["ZTT","ZL","ZJ","W","VV","ST","TTT","TTL","TTJ","QCD","data_obs"]
+
+systematics:
+    LTF:
+        effect: "shape"
+        processes: ["ZL", "TTL"]
+        name: "shape_mTauFake_$BIN"
+        title: "+/- 3% LTF shape"
+        variations: ["Up", "Down"]
+        sampleAppend: ["_LTF1p030","_LTF0p970"]
+    JTF:
+        effect: "shape"
+        processes: ["ZJ", "TTJ", "W"]
+        name: "shape_jTauFake_$BIN"
+        title: "+/- 10% JTF"
+        variations: ["Up", "Down"]
+        sampleAppend: ["_JTF1p100","_JTF0p900"]
+    lumi:
+        effect: "lnN"
+        processes: ["ZTT", "ZL", "ZJ", "TTT", "TTL", "TTJ", "W", "ST", "VV"]
+        scaleFactor: 1.025
+    eff_m:
+        effect: "lnN"
+        processes: ["ZTT", "ZL", "ZJ", "TTT", "TTL", "TTJ", "W", "ST", "VV"]
+        scaleFactor: 1.02
+    muonFakerate:
+        effect: "lnN"
+        processes: ["ZL", "TTL"]
+        scaleFactor: 1.50
+    xsec_dy:
+       effect: "lnN"
+       processes: ["ZTT", "ZL", "ZJ"]
+       scaleFactor: 1.02
+    xsec_tt:
+        effect: "lnN"
+        processes: ["TTT", "TTL", "TTJ"]
+        scaleFactor: 1.06
+    xsec_st:
+        effect: "lnN"
+        processes: ["ST"]
+        scaleFactor: 1.05
+    xsec_vv:
+        effect: "lnN"
+        processes: ["VV"]
+        scaleFactor: 1.05
+    norm_wj:
+        effect: "lnN"
+        processes: ["W"]
+        scaleFactor: 1.08
+    norm_qcd:
+        effect: "lnN"
+        processes: ["QCD"]
+        scaleFactor: 1.20
+    rate_jTauFake_$BIN:
+        effect: "lnN"
+        processes: ["W","QCD","ZJ","TTJ"]
+        scaleFactor: 1.15

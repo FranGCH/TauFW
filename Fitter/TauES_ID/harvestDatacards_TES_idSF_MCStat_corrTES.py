@@ -44,6 +44,27 @@ def check_integral(filename, procs, name, region):
     print('returning: ', name, '\t', ret)
     return ret
 
+def nonempty_regions(input_file, regions, proc="data_obs", min_yield=0.0):
+    """Drop regions whose `proc` histogram integral is <= min_yield (e.g. empty DMrest
+    at tight WPs, which crashes CombineHarvester on all-zero shape templates).
+    Fail-safe: keep regions if the file/dir/hist can't be read, and never drop all."""
+    if not input_file or not os.path.exists(input_file):
+        return list(regions)
+    f = TFile(input_file)
+    if not f or f.IsZombie():
+        return list(regions)
+    keep = []
+    for r in regions:
+        d = f.Get(r)
+        h = d.Get(proc) if d else None
+        integ = h.Integral() if (h and h.InheritsFrom("TH1")) else 0.0
+        if integ > min_yield:
+            keep.append(r)
+        else:
+            print(">>> [skip-empty] region %r: %s integral=%.4g <= %g -- skipping" % (r, proc, integ, min_yield))
+    f.Close()
+    return keep if keep else list(regions)
+
 def harvest(setup, year, obs, **kwargs):
     """Harvest cards."""
 
@@ -66,8 +87,19 @@ def harvest(setup, year, obs, **kwargs):
     outtag      = tag+extratag
    
     filename = "%s/%s_%s_tes_%s.inputs-%s%s.root"%(indir,analysis,channel,obs,era,tag)
- 
-    # For each region = DM 
+
+    # Auto-skip zero-yield regions (e.g. empty DMrest at tight WPs). Empty all-zero shape
+    # templates crash CombineHarvester; dropping them keeps the chain robust per-WP.
+    for _key in ("fitRegions", "scanRegions"):
+        if _key in setup["observables"][obs]:
+            _orig = list(setup["observables"][obs][_key])
+            _kept = nonempty_regions(filename, _orig)
+            if len(_kept) != len(_orig):
+                print(">>> [skip-empty] %s: %d -> %d regions (dropped %s)"
+                      % (_key, len(_orig), len(_kept), [r for r in _orig if r not in _kept]))
+            setup["observables"][obs][_key] = _kept
+
+    # For each region = DM
     # each variable can have a subset of regions in which it is fitted defined in config file under this variable entry
     if "fitRegions" in setup["observables"][obs]:
       for region in setup["observables"][obs]["fitRegions"]:

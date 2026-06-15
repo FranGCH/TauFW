@@ -11,13 +11,16 @@ def main():
     parser.add_argument('--ele_wp', type=str, default="tight", help="Electron working point (not used in this script)")
     parser.add_argument('--variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                         help="uncorr: per-region 2D scan; corr: per-DM TES scan; fullcorr: per-DM TES+TauID scan")
+    parser.add_argument('--tagger', type=str, default='',
+                        help="tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
     args = parser.parse_args()
-    # Variant defaults
+    # Variant defaults (+ tagger suffix so it matches runpostfit's output_plots tree)
     _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
+    _tt = ("_" + args.tagger) if args.tagger else ""
     if args.img_dir is None:
-        args.img_dir = f"./output_plots{_suffix}/"
+        args.img_dir = f"./output_plots{_suffix}{_tt}/"
     if args.out_dir is None:
-        args.out_dir = f"./combined_pre_post{_suffix}/"
+        args.out_dir = f"./combined_pre_post{_suffix}{_tt}/"
     
     IMG_DIR = args.img_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"
     OUT_DIR = args.out_dir + f"jet_{args.jet_wp}_ele_{args.ele_wp}/"

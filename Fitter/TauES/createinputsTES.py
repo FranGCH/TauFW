@@ -39,7 +39,8 @@ def main(args):
   DM = args.DM
   inclusive = args.inclusive
   plot      = True
-  outdir    = ensuredir(f"input_pt_less_region/againstjet_{againstjet}/againstelectron_{againstelectron}")
+  outbase   = getattr(args, 'outbase', None) or 'input_pt_less_region'  # separate tree per tagger (e.g. input_pt_less_region_pnet)
+  outdir    = ensuredir(f"{outbase}/againstjet_{againstjet}/againstelectron_{againstelectron}")
   plotdir   = ensuredir(outdir,"plots")
   analysis  = 'ztt'
 
@@ -120,14 +121,38 @@ def main(args):
     # Assumes config has 'idDeepTau2018v2p5VSjet_2>=5' (Medium) and 'idDeepTau2018v2p5VSe_2>=2' (VVLoose)
     
     if "baselineCuts" in setup:
+        tagger = setup.get("tagger")
+        if tagger and "vsjet" in tagger:
+            # --- Config-driven, tagger-generic VSjet selection (PNet / UParT / DeepTau) ---
+            # The VSjet cut is built from tagger.vsjet.wps[<-j WP>] and injected at the
+            # `$VSJET` placeholder in baselineCuts (falls back to the default DeepTau term).
+            # VSe/VSmu stay DeepTau (hybrid) and keep the integer-WP replacement below.
+            vj   = tagger["vsjet"]
+            disc = vj["discriminant"]
+            wps  = vj["wps"]
+            if againstjet not in wps:
+                raise KeyError("VSjet WP %r not in tagger.vsjet.wps %s" % (againstjet, list(wps)))
+            vsjet_cut = "%s>=%s" % (disc, wps[againstjet])
+            if "$VSJET" in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace("$VSJET", vsjet_cut)
+            elif 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', vsjet_cut)
+            else:
+                print("WARNING: no $VSJET placeholder or default VSjet term in baselineCuts to replace!")
+            # VSe stays DeepTau (hybrid): replace integer WP as in the legacy path
+            electroncut = map_wp_to_int["againstelectron"][againstelectron]
+            if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
+            print(f"[tagger {tagger.get('id_label','?')}] VSjet cut: {vsjet_cut}, VSe(DeepTau) idx {electroncut}")
+            print(f"New baselineCuts: {setup['baselineCuts']}")
         # Only apply WP replacement if we are in a channel that likely uses Taus (mutau, etau, etc)
         # or if the cuts are actually present.
-        if "tau" in channel or "idDeepTau" in setup["baselineCuts"]:
+        elif "tau" in channel or "idDeepTau" in setup["baselineCuts"]:
             jetcut = map_wp_to_int["againstjet"][againstjet]
             electroncut = map_wp_to_int["againstelectron"][againstelectron]
-            
+
             print(f"Updating baseline cuts for WP: VSjet {againstjet} (idx {jetcut}), VSele {againstelectron} (idx {electroncut})")
-            
+
             # Replace VSjet cut (Default Medium=5)
             if 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
                 setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
@@ -139,7 +164,7 @@ def main(args):
                 setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
             else:
                 print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")
-                
+
             print(f"New baselineCuts: {setup['baselineCuts']}")
         else:
             print(f"Channel '{channel}' does not seem to use Tau ID working points. Skipping WP replacement in baseline cuts.")
@@ -311,6 +336,7 @@ if __name__ == "__main__":
   parser.add_argument('-i', '--inclusive', dest='inclusive', action='store_true', default=False, help="which pt region" )
   parser.add_argument('-j', '--jet', dest='againstjet', default='Medium', help="against jet cut")
   parser.add_argument('-e', '--electron', dest='againstelectron', default='VVLoose', help="against electron cut")
+  parser.add_argument('-O', '--outbase', dest='outbase', default='input_pt_less_region', help="base dir for input histograms (use a separate tree per tagger, e.g. input_pt_less_region_pnet)")
   args = parser.parse_args()
   # LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity

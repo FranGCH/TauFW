@@ -115,12 +115,15 @@ def walk_wps(root):
 
 
 def main():
-    global PTS  # fullcorr collapses to a single per-DM column
+    global PTS, DMS  # fullcorr collapses to a single per-DM column; DMS may grow for PNet/UParT
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=None,
                     help="root dir (defaults depend on --variant)")
     ap.add_argument("--variant", choices=["uncorr", "corr", "fullcorr"], default="uncorr")
+    ap.add_argument("--dms", default=",".join(DMS),
+                    help="comma-separated DM rows (e.g. DM0,DM1,DM2,DM10,DM11,DMrest for PNet/UParT)")
     args = ap.parse_args()
+    DMS = [d for d in args.dms.split(",") if d]
 
     _suffix = {'corr': '_corrTES', 'fullcorr': '_fullcorr', 'uncorr': ''}[args.variant]
     if args.root is None:

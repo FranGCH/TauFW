@@ -37,13 +37,13 @@ def extract_genmatch_data(data_node):
         return None
 
 
-def create_combined_correction(input_dir, output_filename, correction_type="tes", variant="uncorr"):
+def create_combined_correction(input_dir, output_filename, correction_type="tes", variant="uncorr", label=""):
     """Create a single correction with variation parameter from individual JSON files."""
 
     print(f"Creating {correction_type.upper()} correction file (variant={variant})...")
 
     # Create the correction
-    combined_corr = create_single_correction(input_dir, correction_type, variant=variant)
+    combined_corr = create_single_correction(input_dir, correction_type, variant=variant, label=label)
     
     if not combined_corr:
         print(f"ERROR: Could not create {correction_type.upper()} correction!")
@@ -126,18 +126,18 @@ def test_correction(filename, combined_corr):
         traceback.print_exc()
 
 
-def create_combined_both_corrections(input_dir, output_filename, variant="uncorr"):
+def create_combined_both_corrections(input_dir, output_filename, variant="uncorr", label=""):
     """Create a single file with both TES and TauIdSF corrections."""
 
     print(f"Creating combined file with both TES and TauIdSF corrections (variant={variant})...")
 
     # Create TES correction
     print("\n=== Creating TES correction ===")
-    tes_corr = create_single_correction(input_dir, "tes", variant=variant)
+    tes_corr = create_single_correction(input_dir, "tes", variant=variant, label=label)
 
     # Create TauIdSF correction
     print("\n=== Creating TauIdSF correction ===")
-    id_corr = create_single_correction(input_dir, "id", variant=variant)
+    id_corr = create_single_correction(input_dir, "id", variant=variant, label=label)
     
     corrections_list = []
     if tes_corr:
@@ -169,7 +169,7 @@ def create_combined_both_corrections(input_dir, output_filename, variant="uncorr
         test_correction(output_filename, corr)
 
 
-def create_single_correction(input_dir, correction_type, variant="uncorr"):
+def create_single_correction(input_dir, correction_type, variant="uncorr", label=""):
     """Helper function to create a single correction with all WP combinations merged."""
 
     # Settings based on type
@@ -198,6 +198,10 @@ def create_single_correction(input_dir, correction_type, variant="uncorr"):
         all_files = [f for f in all_files
                      if "_corrTES_" not in os.path.basename(f)
                      and "_fullcorr_" not in os.path.basename(f)]
+    # Tagger filter: tau_sf/ is shared, so keep only files for this tagger label
+    # (e.g. label="ParticleNet" -> "..._ParticleNet_..."; "" keeps all = DeepTau default).
+    if label:
+        all_files = [f for f in all_files if f"_{label}_" in os.path.basename(f)]
     all_files.sort()
     
     if not all_files:
@@ -348,8 +352,24 @@ Examples:
                         help="List corrections in all found JSON files")
     parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                         help="uncorr / corr / fullcorr: filter per-WP input files by variant tag in filename")
+    parser.add_argument('-c', '--config', dest='config', type=str, default=None,
+                        help="fit config with a 'tagger' block; filters shared tau_sf/ inputs to that tagger (PNet/UParT). DeepTau if omitted.")
+    parser.add_argument('--label', dest='label', type=str, default=None,
+                        help="explicit tagger label filter (e.g. ParticleNet); overrides --config")
 
     args = parser.parse_args()
+
+    # Resolve tagger label filter for the shared tau_sf/ dir
+    label = args.label or ""
+    if not label and args.config:
+        import yaml
+        with open(args.config) as _f:
+            _tagger = (yaml.safe_load(_f).get('tagger') or {})
+        _id = _tagger.get('id_label', 'DeepTau2018v2p5VSjet')
+        _lab = _id.replace('VSjet', '').rstrip('_')
+        label = '' if _lab == 'DeepTau2018v2p5' else _lab  # '' keeps DeepTau default behavior
+    if label:
+        print(f">>> merge: filtering tau_sf/ inputs to tagger label '{label}'")
     
     if args.list_file:
         list_corrections_in_file(args.list_file)
@@ -363,11 +383,11 @@ Examples:
     
     # Create corrections based on type
     if args.correction_type == "tes":
-        create_combined_correction(args.input_dir, args.output_file, "tes", variant=args.variant)
+        create_combined_correction(args.input_dir, args.output_file, "tes", variant=args.variant, label=label)
     elif args.correction_type == "id":
-        create_combined_correction(args.input_dir, args.output_file, "id", variant=args.variant)
+        create_combined_correction(args.input_dir, args.output_file, "id", variant=args.variant, label=label)
     else:  # both - create single file with both corrections
-        create_combined_both_corrections(args.input_dir, args.output_file, variant=args.variant)
+        create_combined_both_corrections(args.input_dir, args.output_file, variant=args.variant, label=label)
 
 
 if __name__ == '__main__':
