@@ -21,8 +21,11 @@ PicoProducer/output
 PicoProducer/data/jsonpog
 Plotter/plots
 Plotter/tutorial/plots
+Plotter/*.tex
 Fitter/*/*plots*
 Fitter/*.log
 Fitter/output*
 Fitter/*.out
 Fitter/Zpt/weights
+Fitter/condor_logs/*
+Fitter/run_remove_preandpostfit.sh
