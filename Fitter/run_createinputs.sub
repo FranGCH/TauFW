@@ -1,0 +1,33 @@
+# ===================================================================
+# template.jdl: Used to generate the configuration for a single job
+# ===================================================================
+
+universe              = vanilla
+executable            = run_createinputs_v2.sh
+
+# Arguments will be provided directly by the submission script
+base_path = /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src
+
+arguments             = $(base_path) -j $(JWP) -e $(EWP)
+
+# --- Resource Requests ---
+# request_cpus = 4
+
+# request_memory = 3000 MB
+
+# --- Log Files ---
+# Use separate log files for each DM to avoid conflicts
+
+output = condor_logs/stdout.job_$(JWP)_$(EWP)_$(ClusterId).$(ProcId)
+error  = condor_logs/stderr.job_$(JWP)_$(EWP)_$(ClusterId).$(ProcId)
+log    = condor_logs/log.job_$(JWP)_$(EWP)_$(ClusterId)
+
+# --- Job Duration ---
++JobFlavour           = "tomorrow"
+
+# --- Submission Queue ---
+# This file describes a single job, so we only need queue 1
+queue JWP, EWP from (
+    VVLoose Tight
+    Medium Tight
+)
