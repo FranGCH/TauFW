@@ -48,6 +48,7 @@ def main():
             # Check for scan plot if directory is provided
             if SCAN_DIR:
                 tag = key.replace(".png", "") # e.g. DM0_pt1
+                print(f" >>>>>>>>>>>>>>>>>> Looking for scan plot for {tag} (variant={args.variant})")
                 if args.variant == 'corr':
                     # corrTES: tes_<DM> (no pT suffix) + tid_SF_<region>
                     dm_part = tag.split('_')[0]  # DM0_pt1 -> DM0
@@ -69,6 +70,7 @@ def main():
                         os.path.join(SCAN_DIR,
                             f"scan_2D_tes_{tag}_tid_SF_{tag}_mt_{tag}_mutaumultidimfit.png"),
                     ]
+                print(f" >>>>>>>>>>>>>>>>>> Scan candidates: {candidates}")
                 scan_path = next((p for p in candidates if os.path.exists(p)), None)
                 if scan_path:
                     scan_img = Image.open(scan_path)

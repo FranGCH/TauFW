@@ -168,7 +168,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
     tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
-    extratag     = kwargs.get('extratag',     "_DeepTau")
+    extratag     = kwargs.get('extratag',     "_PNet")
     algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
     npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
     fit_opts     = kwargs.get('fit_opts',      "--setRobustFitTolerance=0.001 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=0 --setRobustFitStrategy=1  --X-rtd MINIMIZER_analytic %s"%(npts_fit) ) #--setRobustFitTolerance=0.001--robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=1  --X-rtd FITTER_NEW_CROSSING_ALGO
@@ -326,7 +326,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[BOOST] Reached MAX_BOOST_ITER={MAX_BOOST_ITER} without entry 0 becoming global min — accepting current result")
 
                 # Extract actual parameter values from the fit result
-                param_file = f"FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt"
+                param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
                 print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
                 print(f"[DEBUG] Creating parameter file: {param_file}")
                 # if os.path.exists(fit_result_file):
@@ -521,7 +521,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
     tid_SF_range = kwargs.get('tid_SF_range', "0.8,1.2")
-    extratag     = kwargs.get('extratag',     "_DeepTau")
+    extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
     indir        = kwargs.get('indir', "")
@@ -570,7 +570,7 @@ def main(args):
     config_mumu = args.config_mumu 
     option = args.option
     # Always set extratag to a non-empty default value
-    extratag = "_DeepTau"
+    extratag = "_PNet"
     input_dir = args.input_dir
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
     base_out = input_dir.replace('input', 'output')

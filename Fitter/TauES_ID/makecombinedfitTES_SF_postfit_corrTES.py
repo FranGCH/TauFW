@@ -54,7 +54,7 @@ def load_param_file(path):
 def run_combined_fit(setup, setup_mumu, option, args, **kwargs):
     tes_range    = kwargs.get('tes_range', f"{min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])}")
     tid_SF_range = kwargs.get('tid_SF_range', "0.50,1.2")
-    extratag     = kwargs.get('extratag', "_DeepTau")
+    extratag     = kwargs.get('extratag', "_PNet")
     save_opts    = kwargs.get('save_opts', " --saveShapes")
     era          = kwargs.get('era', "")
     jet_wp       = kwargs.get('jet_wp', args.jet_wp)
@@ -102,7 +102,7 @@ def run_combined_fit(setup, setup_mumu, option, args, **kwargs):
 
         # Load param file written by the fit step
         param_file = os.path.join(fit_outdir,
-                                  f"FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{dm}.txt")
+                                  f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{dm}.txt")
         if not os.path.isfile(param_file):
             print(f"[corrTES-postfit] ERROR: param file {param_file} missing; skipping {dm}")
             continue

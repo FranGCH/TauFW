@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-J_VALUES=("VTight") #"VVLoose" "VLoose" "Loose" "Medium" "Tight")
-E_VALUES=("Tight") #"VVLoose")
+J_VALUES=("Tight")
+E_VALUES=("VVLoose")
 
-YEAR=2025
-CONFIG="TauES_ID/config/config_coarse_TT.yml"
+YEAR=2024
+CONFIG="TauES_ID/config/config_coarse_PNet_TT.yml"
 CONFIG_MM="TauES/config/FitSetup_mumu.yml" #CR config
 
 # Create timestamped log file
@@ -16,6 +16,10 @@ echo "Run started at $(date)" | tee -a "$LOGFILE"
 
 for j in "${J_VALUES[@]}"; do
     for e in "${E_VALUES[@]}"; do
+        if [[ "$j" == "Medium" && "$e" == "Tight" ]]; then
+            echo "Skipping combination j=${j}, e=${e} (already done)" | tee -a "$LOGFILE"
+            continue
+        fi
         
         {
             echo "------------------------------------------------------------"
@@ -26,11 +30,13 @@ for j in "${J_VALUES[@]}"; do
         python3 TauES/createinputsTES.py \
             -y ${YEAR} \
             -c ${CONFIG} \
+            --outbase input_pt_less_region_pnet \
             -j ${j} \
             -e ${e} 2>&1 | tee -a "$LOGFILE"
         python3 TauES/createinputsTES.py \
             -y ${YEAR} \
             -c ${CONFIG_MM} \
+            --outbase input_pt_less_region_pnet \
             -j ${j} \
             -e ${e} 
 

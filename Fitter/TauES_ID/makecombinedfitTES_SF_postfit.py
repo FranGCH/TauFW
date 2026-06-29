@@ -74,7 +74,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     mumu_input_file = kwargs.get('mumu_input_file', None)
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"])))
     tid_SF_range = kwargs.get('tid_SF_range', "0.50,1.2")
-    extratag     = kwargs.get('extratag',     "_DeepTau")
+    extratag     = kwargs.get('extratag',     "_PNet")
     algo         = kwargs.get('algo',         "--algo=singles   ") #--alignEdges=1") #--alignEdges=1 grid
     npts_fit     = kwargs.get('npts_fit',     "")
     fit_opts     = kwargs.get('fit_opts',     "--setRobustFitTolerance=0.001 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=0 --setRobustFitStrategy=1  --X-rtd MINIMIZER_analytic --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan") # --robustFit=1 --setRobustFitAlgo=Minuit2   --setRobustFitStrategy=1 --cminFallbackAlgo Minuit2,Migrad,0:0.0001 --cminPreScan --X-rtd FITTER_NEW_CROSSING_ALGO 
@@ -170,7 +170,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     tes_range = "0.900,1.300"
 
                 # Load the parameters from the text file (always from postfit_outdir)
-                param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt")
+                param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt")
                 params = {}
                 with open(param_file, 'r') as f:
                     for line in f:
@@ -205,7 +205,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
                 # Postfit shape:
                 outf_postfit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/PostFitShape_{era}_{setup['tag']}_{r}.root" # {postfit_outdir}
-                outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_DeepTau-{era}-13TeV.root" # {postfit_outdir}
+                outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_PNet-{era}-13TeV.root" # {postfit_outdir}
                 print(f"[DEBUG] PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
                 os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
                 print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
@@ -262,7 +262,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 tes_range = "0.950,1.050"
 
             # Load parameters from file
-            param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_DeepTau_{era}-13TeV_{r}.txt")
+            param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt")
             param_file = param_file.replace("postfit", "output")
             if os.path.exists(param_file):
                 params = {}
@@ -390,7 +390,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
     tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
-    extratag     = kwargs.get('extratag',     "_DeepTau")
+    extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
     indir        = kwargs.get('indir',        None      )
@@ -436,7 +436,7 @@ def main(args):
     config = args.config
     config_mumu = args.config_mumu 
     option = args.option
-    extratag     = "_DeepTau"
+    extratag     = "_PNet"
 
 
     print("Using configuration file: %s"%(args.config))

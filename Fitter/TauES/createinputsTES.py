@@ -12,7 +12,7 @@ from TauFW.Fitter.plot.datacard import createinputs, plotinputs
 from TauFW.Fitter.plot.rebinning import rebinning
 import yaml
 import time
-
+import os 
 #nano doc: https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html
 
 map_wp_to_int = OrderedDict([('againstjet', 
@@ -27,6 +27,23 @@ map_wp_to_int = OrderedDict([('againstjet',
                                              ('Tight', 6),
                                              ('Loose', 4 )]))
                            ])
+
+map_PNetscores_to_wp = OrderedDict([('againstjet',
+          OrderedDict([
+                       ('VVLoose',0.1774),
+                       ('VLoose', 0.3810),
+                       ('Loose',0.6857),
+                       ('Medium', 0.8347),
+                       ('Tight', 0.9059),
+                       ('VTight', 0.9494)])),
+                       ('againstelectron',
+          OrderedDict([('VVLoose',0.1266),
+                      #  ('VLoose',0.6997),
+                    #    ('Loose',0.9354),
+                      #  ('Medium',0.9791),
+                       ('Tight',0.9897)]))
+                       ])
+
 
 def main(args):
   start_time = time.time()  # Start timing
@@ -118,15 +135,15 @@ def main(args):
     #   APPLY WORKING POINTS TO BASELINE CUTS      #
     ################################################
     # Map string WP to integer and replace in baseline cuts
-    # Assumes config has 'idDeepTau2018v2p5VSjet_2>=5' (Medium) and 'idDeepTau2018v2p5VSe_2>=2' (VVLoose)
+    # Assumes config has 'rawPNetVSjet_2>=0.8347' (Medium) and 'rawPNetVSe_2>=0.1266' (VVLoose)
     
     if "baselineCuts" in setup:
         tagger = setup.get("tagger")
         if tagger and "vsjet" in tagger:
-            # --- Config-driven, tagger-generic VSjet selection (PNet / UParT / DeepTau) ---
+            # --- Config-driven, tagger-generic VSjet selection (PNet / UParT / PNet) ---
             # The VSjet cut is built from tagger.vsjet.wps[<-j WP>] and injected at the
-            # `$VSJET` placeholder in baselineCuts (falls back to the default DeepTau term).
-            # VSe/VSmu stay DeepTau (hybrid) and keep the integer-WP replacement below.
+            # `$VSJET` placeholder in baselineCuts (falls back to the default PNet term).
+            # VSe/VSmu stay PNet (hybrid) and keep the integer-WP replacement below.
             vj   = tagger["vsjet"]
             disc = vj["discriminant"]
             wps  = vj["wps"]
@@ -135,35 +152,35 @@ def main(args):
             vsjet_cut = "%s>=%s" % (disc, wps[againstjet])
             if "$VSJET" in setup["baselineCuts"]:
                 setup["baselineCuts"] = setup["baselineCuts"].replace("$VSJET", vsjet_cut)
-            elif 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
-                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', vsjet_cut)
+            elif 'rawPNetVSjet_2>=0.8347' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSjet_2>=0.8347', vsjet_cut)
             else:
                 print("WARNING: no $VSJET placeholder or default VSjet term in baselineCuts to replace!")
-            # VSe stays DeepTau (hybrid): replace integer WP as in the legacy path
-            electroncut = map_wp_to_int["againstelectron"][againstelectron]
-            if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
-                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
-            print(f"[tagger {tagger.get('id_label','?')}] VSjet cut: {vsjet_cut}, VSe(DeepTau) idx {electroncut}")
+            # VSe stays PNet (hybrid): replace integer WP as in the legacy path
+            electroncut = map_PNetscores_to_wp["againstelectron"][againstelectron]
+            if 'rawPNetVSe_2>=0.1266' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSe_2>=0.1266', f'rawPNetVSe_2>={electroncut}')
+            print(f"[tagger {tagger.get('id_label','?')}] VSjet cut: {vsjet_cut}, VSe(PNet) idx {electroncut}")
             print(f"New baselineCuts: {setup['baselineCuts']}")
         # Only apply WP replacement if we are in a channel that likely uses Taus (mutau, etau, etc)
         # or if the cuts are actually present.
-        elif "tau" in channel or "idDeepTau" in setup["baselineCuts"]:
-            jetcut = map_wp_to_int["againstjet"][againstjet]
-            electroncut = map_wp_to_int["againstelectron"][againstelectron]
+        elif "tau" in channel or "rawPNet" in setup["baselineCuts"]:
+            jetcut = map_PNetscores_to_wp["againstjet"][againstjet]
+            electroncut = map_PNetscores_to_wp["againstelectron"][againstelectron]
 
             print(f"Updating baseline cuts for WP: VSjet {againstjet} (idx {jetcut}), VSele {againstelectron} (idx {electroncut})")
 
             # Replace VSjet cut (Default Medium=5)
-            if 'idDeepTau2018v2p5VSjet_2>=5' in setup["baselineCuts"]:
-                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSjet_2>=5', f'idDeepTau2018v2p5VSjet_2>={jetcut}')
+            if 'rawPNetVSjet_2>=0.8347' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSjet_2>=0.8347', f'rawPNetVSjet_2>={jetcut}')
             else:
-                print("WARNING: Could not find standard VSjet cut 'idDeepTau2018v2p5VSjet_2>=5' in baselineCuts to replace!")
+                print("WARNING: Could not find standard VSjet cut 'rawPNetVSjet_2>=0.8347' in baselineCuts to replace!")
 
             # Replace VSele cut (Default VVLoose=2)
-            if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
-                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut}')
+            if 'rawPNetVSe_2>=0.1266' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSe_2>=0.1266', f'rawPNetVSe_2>={electroncut}')
             else:
-                print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")
+                print("WARNING: Could not find standard VSele cut 'rawPNetVSe_2>=0.1266' in baselineCuts to replace!")
 
             print(f"New baselineCuts: {setup['baselineCuts']}")
         else:
@@ -305,7 +322,10 @@ def main(args):
             run_plotinputs_all(fname,varprocs,obs_region_groups,text=text,
                        pname=pname,tag=tag,group=groups, parallel=parallel)
             rebinning(fname, obs=obs_region_groups[0][0].filename, tag=tag) 
-            fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
+            original_dir = os.path.dirname(fname)
+            original_basename = os.path.basename(fname)
+            fname = os.path.join(original_dir, "rebinning", original_basename)
+            # fname = fname.split('/')[0] + '/rebinning/' + fname.split('/')[-1]
         else:
             print("WARNING: No observable/region groups found. Skipping plotting.")
         plotdir   = ensuredir(plotdir,"rebinning")
@@ -337,6 +357,7 @@ if __name__ == "__main__":
   parser.add_argument('-j', '--jet', dest='againstjet', default='Medium', help="against jet cut")
   parser.add_argument('-e', '--electron', dest='againstelectron', default='VVLoose', help="against electron cut")
   parser.add_argument('-O', '--outbase', dest='outbase', default='input_pt_less_region', help="base dir for input histograms (use a separate tree per tagger, e.g. input_pt_less_region_pnet)")
+  #maybe the problem when submitting the jobs is the outbase argument. I should try to put the full path.
   args = parser.parse_args()
   # LOG.verbosity = args.verbosity
   PLOG.verbosity = args.verbosity

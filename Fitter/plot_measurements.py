@@ -10,7 +10,7 @@ import argparse
 import re
 from ROOT import TCanvas, TGraph, TGraphAsymmErrors, TLatex, TLegend, TLine, kBlue, kRed, kGreen, kMagenta, kBlack, kOrange, kGray
 
-TREE_TAG = ""  # tagger suffix for the output/postfit trees (e.g. "_pnet"); set from --tagger, "" = DeepTau
+TREE_TAG = "_pnet"  # tagger suffix for the output/postfit trees (e.g. "_pnet"); set from --tagger, "" = PNet
 
 def load_measurements_corr(ele_wp, jet_wp, year):
     """corrTES loader: one param/fitdiag file per DM contains 4 POIs (1 TES + 3 TauID);
@@ -19,7 +19,7 @@ def load_measurements_corr(ele_wp, jet_wp, year):
     measurements = []
 
     # ---- MultiDimFit: per-DM param files ----
-    pattern = f"output_pt_less_region_corrTES{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_DM*.txt"
+    pattern = f"output_pt_less_region_corrTES{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_PNet_{year}-13TeV_DM*.txt"
     files = glob.glob(pattern)
     print(f"[corr] Found {len(files)} per-DM MultiDimFit param files")
     for filename in files:
@@ -159,7 +159,7 @@ def load_measurements_fullcorr(ele_wp, jet_wp, year):
     PT_RANGES = {'pt1': '20-40 GeV', 'pt2': '40-60 GeV', 'pt3': '60-200 GeV'}
     measurements = []
 
-    pattern = f"output_pt_less_region_fullcorr{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_DM*.txt"
+    pattern = f"output_pt_less_region_fullcorr{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_PNet_{year}-13TeV_DM*.txt"
     files = glob.glob(pattern)
     print(f"[fullcorr] Found {len(files)} per-DM MultiDimFit param files")
     for filename in files:
@@ -201,7 +201,7 @@ def load_measurements_fullcorr(ele_wp, jet_wp, year):
         # SF_eff errors with full covariance from FitDiagnostics if available
         fitdiag_path = (f"postfit_pt_less_region_fullcorr{TREE_TAG}/againstjet_{jet_wp}/"
                         f"againstelectron_{ele_wp}/{year}/"
-                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_PNet-{year}-13TeV.root")
         sf_eff_map, sig_eff_map, _, _ = _fullcorr_sf_eff_and_err(fitdiag_path, dm)
         for pt in ('pt1','pt2','pt3'):
             theta = pulls.get(pt, 0.0)
@@ -254,7 +254,7 @@ def load_measurements_fullcorr(ele_wp, jet_wp, year):
         # Per-pT effective SFs from the FitDiagnostics covariance
         fitdiag_path = (f"postfit_pt_less_region_fullcorr{TREE_TAG}/againstjet_{jet_wp}/"
                         f"againstelectron_{ele_wp}/{year}/"
-                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+                        f"fitDiagnostics.mt_m_vis-{dm}_mutau_PNet-{year}-13TeV.root")
         sf_eff_map, sig_eff_map, _, _ = _fullcorr_sf_eff_and_err(fitdiag_path, dm)
         for pt in ('pt1','pt2','pt3'):
             if sf_eff_map and pt in sf_eff_map:
@@ -285,7 +285,7 @@ def load_measurements(ele_wp="tight", jet_wp="medium", year="2024", variant="unc
     measurements = []
 
     # --- 1. Load MultiDimFit (2D Scan) files ---
-    pattern_multidim = f"output_pt_less_region{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_DeepTau_{year}-13TeV_*.txt"
+    pattern_multidim = f"output_pt_less_region{TREE_TAG}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues__mutau_PNet_{year}-13TeV_*.txt"
     files_multidim = glob.glob(pattern_multidim)
     print(f"Found {len(files_multidim)} MultiDimFit files")
     
@@ -686,7 +686,7 @@ def main():
     parser.add_argument('--variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
                         help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES+TauID with per-pT pulls")
     parser.add_argument('--tagger', type=str, default='',
-                        help="tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
+                        help="tree tagger suffix (e.g. pnet, upart); '' = PNet default")
 
     args = parser.parse_args()
     global TREE_TAG
