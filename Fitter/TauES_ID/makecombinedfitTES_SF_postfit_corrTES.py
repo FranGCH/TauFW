@@ -102,7 +102,7 @@ def run_combined_fit(setup, setup_mumu, option, args, **kwargs):
 
         # Load param file written by the fit step
         param_file = os.path.join(fit_outdir,
-                                  f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{dm}.txt")
+                                  f"FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{dm}.txt")
         if not os.path.isfile(param_file):
             print(f"[corrTES-postfit] ERROR: param file {param_file} missing; skipping {dm}")
             continue
@@ -189,6 +189,8 @@ def run_combined_fit(setup, setup_mumu, option, args, **kwargs):
 
 def main(args):
     era = args.era
+    extratag = args.extratag or "_PNet"
+    extratag = extratag if extratag.startswith('_') else '_' + extratag
     print(f"Using config: {args.config}")
     with open(args.config, 'r') as f:
         setup = yaml.safe_load(f)
@@ -199,7 +201,7 @@ def main(args):
 
     run_combined_fit(setup, setup_mumu, args.option, args,
                      era=era, config=args.config, config_mumu=args.config_mumu,
-                     jet_wp=args.jet_wp, ele_wp=args.ele_wp)
+                     jet_wp=args.jet_wp, ele_wp=args.ele_wp,extratag=extratag)
 
 
 if __name__ == '__main__':
@@ -223,6 +225,7 @@ if __name__ == '__main__':
     parser.add_argument('--impacts', dest='impacts', action='store_true', default=False,
                         help="also run combineTool Impacts per DM (slow)")
     parser.add_argument('--impacts-parallel', dest='impacts_parallel', type=int, default=8)
+    parser.add_argument('--extratag', dest='extratag', type=str, default='', help="Extra tag for the output files (e.g., '_PNet', 'PNet', '_PNet_HPS', etc.)")
     args = parser.parse_args()
     main(args)
     print(">>>\n>>> corrTES postfit done\n")

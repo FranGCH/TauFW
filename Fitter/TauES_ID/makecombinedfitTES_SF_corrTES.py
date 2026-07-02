@@ -178,7 +178,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # tes_range    = kwargs.get('tes_range',    "0.950,1.050")
     tes_range    = kwargs.get('tes_range',    "%s,%s" %(min(setup["TESvariations"]["values"]), max(setup["TESvariations"]["values"]))                         )
     tid_SF_range = kwargs.get('tid_SF_range', "0.5,1.2")
-    extratag     = kwargs.get('extratag',     "_PNet")
+    extratag     = kwargs.get('extratag',     "_PNet") #-> to modify
     algo         = kwargs.get('algo',         "--algo=grid") #--alignEdges=1 grid --fastScan
     npts_fit     = kwargs.get('npts_fit',     "--points=1600 ") ## 66  --points=10000 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001 --robustHesse=1 --robustFit=1 --setRobustFitAlgo=Minuit2 --setRobustFitStrategy=2 --setRobustFitTolerance=0.001
     # Tightened Migrad: Strategy 2 (most accurate, slowest) + tolerance 1e-5 + PreScan.
@@ -195,6 +195,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     input_dir   = kwargs.get('input_dir')
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it.
     # corrTES variant routes outputs to *_corrTES/ so it doesn't clobber the uncorrelated fit's outputs.
+
     if 'input_pt_less_region' in input_dir:
         base_out = input_dir.replace('input_pt_less_region', 'output_pt_less_region_corrTES')
     else:
@@ -394,7 +395,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[corrTES] {dm}: {len(tes_projections)} TES projections, "
                           f"using tightest: tes={best:.4f} [{lo:.4f}, {hi:.4f}]")
 
-                param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{dm}.txt"
+                param_file = f"FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{dm}.txt"
                 with open(param_file, "w") as pf:
                     for poi in all_pois:
                         if poi in bestfits:
@@ -414,7 +415,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     cmd = (f"python3 {os.path.join(cwd_main, 'TauES_ID/plot2DScan_MultiDimFit.py')} "
                            f"--poi1 {tes_poi} --poi2 tid_SF_{r} "
                            f"-r {r} -y {era} -c {os.path.join(cwd_main, kwargs.get('config', ''))} "
-                           f"-i {output_dir} -t multidimfit")
+                           f"-i {output_dir} -t multidimfit --extratag {extratag}")
                     print(f"[corrTES] 2D plot: {cmd}")
                     os.system(cmd)
             finally:
@@ -556,7 +557,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[BOOST] Reached MAX_BOOST_ITER={MAX_BOOST_ITER} without entry 0 becoming global min — accepting current result")
 
                 # Extract actual parameter values from the fit result
-                param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
+                param_file = f"FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{r}.txt"
                 print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
                 print(f"[DEBUG] Creating parameter file: {param_file}")
                 # if os.path.exists(fit_result_file):
@@ -772,8 +773,9 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
         # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
-            print(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
-            os.system(f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit")
+            command_2D = f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit --extratag {extratag}"
+            print(command_2D)
+            os.system(command_2D)
         # for r in setup["observables"]["m_vis"]["scanRegions"]:
         #     # Plot TES
         #     os.system(f"python3 TauES_ID/plotParabola_POI_region.py -p tes -y {era} -e {extratag} -r {min(setup['TESvariations']['values'])},{max(setup['TESvariations']['values'])} -s -a -c {config} -i {indir}")
@@ -795,7 +797,9 @@ def main(args):
     config_mumu = args.config_mumu 
     option = args.option
     # Always set extratag to a non-empty default value
-    extratag = "_PNet"
+    extratag = args.extratag or "_PNet"
+    extratag = extratag if extratag.startswith('_') else '_' + extratag
+
     input_dir = args.input_dir
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
     base_out = input_dir.replace('input', 'output')
@@ -869,6 +873,7 @@ if __name__ == '__main__':
     parser.add_argument('--mumu_datacard_file', dest='mumu_datacard_file', type=str, default=None, help="Path to the mumu datacard file to use (if not generating)")
     parser.add_argument('-i', '--input_dir', dest='input_dir', type=str, help="inputdir containing root files for datacard")
     parser.add_argument('--input_file', dest='input_file', type=str, required=True, help="Path to the input root file")
+    parser.add_argument('--extratag', dest='extratag', type=str, default='', help="Extra tag for the output files (e.g., '_PNet', 'PNet', '_PNet_HPS', etc.)")
     args = parser.parse_args()
 
     main(args)

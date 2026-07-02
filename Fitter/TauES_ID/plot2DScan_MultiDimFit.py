@@ -63,7 +63,7 @@ def format_region_label(region, setup=None):
 def format_region_for_sorting(region):
     """Create sorting key for regions to match your plot order"""
     # Desired order (reverse decay-mode order). Includes the PNet/UParT-only
-    # DM2 (h^{+-}2pi0) and the DMrest catch-all bin; harmless for DeepTau (4 bins).
+    # DM2 (h^{+-}2pi0) and the DMrest catch-all bin; harmless for  (4 bins).
     order_map = {
         'DM11': 0,
         'DM10': 1,
@@ -1196,7 +1196,8 @@ def main(args):
     channel = setup["channel"].replace("mu", "m").replace("tau", "t")
     tag = setup.get("tag", "")
     era = args.year
-    extratag = "_DeepTau"
+    extratag = args.extratag or "_PNet"
+    extratag = extratag if extratag.startswith('_') else '_' + extratag
     
     # Input directory
     if args.indir:
@@ -1324,6 +1325,9 @@ if __name__ == '__main__':
     
     parser.add_argument('-i', '--indir', dest='indir', type=str, 
                        help='input directory')
+    
+    parser.add_argument('--extratag', dest='extratag', type=str, default='', 
+                        help="Extra tag for the output files (e.g., '_PNet', 'PNet', '_PNet_HPS', etc.)")
     
     parser.add_argument('-t', '--plottag', dest='plottag', type=str, 
                        default="", help='extra tag for plot filename')
