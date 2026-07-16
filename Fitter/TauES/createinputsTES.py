@@ -17,15 +17,15 @@ import os
 
 map_wp_to_int = OrderedDict([('againstjet', 
 				OrderedDict([('VVLoose', 2),
-               ('VLoose', 3),
-               ('Loose',  4),
-					     ('Medium', 5),
-					     ('Tight',  6),
-					     ('VTight', 7)])),
+                        ('VLoose', 3),
+                        ('Loose',  4),
+					    ('Medium', 5),
+					    ('Tight',  6),
+					    ('VTight', 7)])),
 	                    ('againstelectron',
 				OrderedDict([('VVLoose', 2),
-                                             ('Tight', 6),
-                                             ('Loose', 4 )]))
+                             ('Tight', 6),
+                             ('Loose', 4 )]))
                            ])
 
 map_PNetscores_to_wp = OrderedDict([('againstjet',
@@ -164,6 +164,33 @@ def main(args):
             print(f"New baselineCuts: {setup['baselineCuts']}")
         # Only apply WP replacement if we are in a channel that likely uses Taus (mutau, etau, etc)
         # or if the cuts are actually present.
+
+        elif "tau" in channel and "rawPNet" in setup["baselineCuts"] and "idDeepTau2018v2p5" in setup["baselineCuts"]:
+            # PNet with HPS conditions
+            jetcut_pnet = map_PNetscores_to_wp["againstjet"][againstjet]
+            electroncut_pnet = map_PNetscores_to_wp["againstelectron"][againstelectron]
+            electroncut_deeptau = map_wp_to_int["againstelectron"][againstelectron]
+
+            if 'rawPNetVSjet_2>=0.8347' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSjet_2>=0.8347', f'rawPNetVSjet_2>={jetcut_pnet}')
+                print(f"Updated baselineCuts: replaced rawPNetVSjet_2>=0.8347 with {jetcut_pnet}")
+            else:
+                print("WARNING: Could not find standard VSjet cut 'rawPNetVSjet_2>=0.8347' in baselineCuts to replace!")
+
+            if 'rawPNetVSe_2>=0.1266' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('rawPNetVSe_2>=0.1266', f'rawPNetVSe_2>={electroncut_pnet}')
+                print(f"Updated baselineCuts: replaced rawPNetVSe_2>=0.1266 with {electroncut_pnet}")
+            else:
+                print("WARNING: Could not find standard VSele cut 'rawPNetVSe_2>=0.1266' in baselineCuts to replace!")
+            
+            if 'idDeepTau2018v2p5VSe_2>=2' in setup["baselineCuts"]:
+                setup["baselineCuts"] = setup["baselineCuts"].replace('idDeepTau2018v2p5VSe_2>=2', f'idDeepTau2018v2p5VSe_2>={electroncut_deeptau}')
+                print(f"Updated baselineCuts: replaced idDeepTau2018v2p5VSe_2>=2 with {electroncut_deeptau}")
+            else:
+                print("WARNING: Could not find standard VSele cut 'idDeepTau2018v2p5VSe_2>=2' in baselineCuts to replace!")  
+
+            print(f"New baselineCuts: {setup['baselineCuts']}")                      
+
         elif "tau" in channel or "rawPNet" in setup["baselineCuts"]:
             jetcut = map_PNetscores_to_wp["againstjet"][againstjet]
             electroncut = map_PNetscores_to_wp["againstelectron"][againstelectron]
