@@ -24,7 +24,7 @@ import ROOT
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
-
+TAGGER_COMB_TAG = ""
 
 def profile_nll(tree, poi):
   """For each unique value of `poi`, take min(deltaNLL) over all other-POI points."""
@@ -150,7 +150,7 @@ def collect_profiles(indir, year, jet_wp, ele_wp, dm):
      one profile dict per pt bin: {pt_idx, poi, xs, ys, bf, err_dn, err_up}."""
   out = {'tes': [], 'tid': []}
   for pt_idx in (1, 2, 3):
-    fname = (f"higgsCombine.mt_m_vis-{dm}_pt{pt_idx}_mutau_DeepTau-{year}"
+    fname = (f"higgsCombine.mt_m_vis-{dm}_pt{pt_idx}_mutau_{TAGGER_COMB_TAG}-{year}"
              f"-13TeV.MultiDimFit.mH90.root")
     fpath = os.path.join(indir, f'againstjet_{jet_wp}',
                          f'againstelectron_{ele_wp}', year, fname)
@@ -323,7 +323,7 @@ def collect_profiles_corr(indir, year, jet_wp, ele_wp, dm):
     region = f'{dm}_pt{pt_idx}'
     tes_poi = f'tes_{dm}'
     tid_poi = f'tid_SF_{region}'
-    fname = f"higgsCombine.mt_m_vis-{region}_mutau_DeepTau-{year}-13TeV.MultiDimFit.mH90.root"
+    fname = f"higgsCombine.mt_m_vis-{region}_mutau_{TAGGER_COMB_TAG}-{year}-13TeV.MultiDimFit.mH90.root"
     fpath = os.path.join(combo_dir, fname)
     # TES projection from this 2D scan
     p_tes = _profile_from_2d(fpath, tes_poi, tid_poi)
@@ -404,7 +404,7 @@ def collect_profiles_fullcorr(indir, year, jet_wp, ele_wp, dm):
      Returns {'tes': profile, 'tid': profile, 'pulls': {ptN: θ̂}, 'eff': {ptN: SF_eff}}."""
   combo_dir = os.path.join(indir, f'againstjet_{jet_wp}',
                            f'againstelectron_{ele_wp}', year)
-  fname = f"higgsCombine.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.MultiDimFit.mH90.root"
+  fname = f"higgsCombine.mt_m_vis-{dm}_mutau_{TAGGER_COMB_TAG}-{year}-13TeV.MultiDimFit.mH90.root"
   fpath = os.path.join(combo_dir, fname)
   tes_poi = f'tes_{dm}'
   tid_poi = f'tid_SF_{dm}'
@@ -412,7 +412,7 @@ def collect_profiles_fullcorr(indir, year, jet_wp, ele_wp, dm):
   out['tes'] = _profile_from_2d(fpath, tes_poi, tid_poi)
   out['tid'] = _profile_from_2d(fpath, tid_poi, tes_poi)
   # Per-pT pulls + effective SFs from the param file
-  pf = os.path.join(combo_dir, f"FitparameterValues_mutau_DeepTau_{year}-13TeV_{dm}.txt")
+  pf = os.path.join(combo_dir, f"FitparameterValues_mutau_{TAGGER_COMB_TAG}_{year}-13TeV_{dm}.txt")
   params = _read_param_file(pf)
   tid_bf = params.get(tid_poi, out['tid']['bf'] if out['tid'] else 1.0)
   for pt_idx in (1, 2, 3):
@@ -477,8 +477,9 @@ def main():
   ap.add_argument('--jet_wp', default=None)
   ap.add_argument('--ele_wp', default=None)
   ap.add_argument('--mode',   default='both', choices=['per-fit','overlay','both'])
-  ap.add_argument('--dms',    default='DM0,DM1,DM10,DM11',
+  ap.add_argument('--dms',    default='DM0,DM1,DM2,DM10,DM11',
                   help="comma-separated DMs (PNet/UParT: DM0,DM1,DM2,DM10,DM11,DMrest)")
+  ap.add_argument('--extratag', dest='extratag', type=str, default='PNet', help="Tagger that is in the Files names")
   args = ap.parse_args()
   dms = tuple(d for d in args.dms.split(',') if d)
 
@@ -488,6 +489,9 @@ def main():
     args.indir = f'output_pt_less_region{_suffix}'
   if args.outdir is None:
     args.outdir = f'plots_pt_less_region{_suffix}'
+  global TAGGER_COMB_TAG
+  if args.extratag:
+    TAGGER_COMB_TAG = args.extratag
 
   jet_glob = args.jet_wp if args.jet_wp else '*'
   ele_glob = args.ele_wp if args.ele_wp else '*'
@@ -550,7 +554,7 @@ def main():
   if args.mode in ('per-fit', 'both'):
     pattern = os.path.join(args.indir, f'againstjet_{jet_glob}',
                            f'againstelectron_{ele_glob}', args.year,
-                           f'higgsCombine.mt_m_vis-DM*_pt*_mutau_DeepTau-{args.year}-13TeV.MultiDimFit.mH90.root')
+                           f'higgsCombine.mt_m_vis-DM*_pt*_mutau_{TAGGER_COMB_TAG}-{args.year}-13TeV.MultiDimFit.mH90.root')
     files = sorted(glob.glob(pattern))
     print(f">>> [per-fit] Found {len(files)} MultiDimFit files")
     ok = skip = 0

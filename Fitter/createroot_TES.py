@@ -12,12 +12,13 @@ from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF1, TMul
 #from TauFW.Plotter.sample.utils import CMSStyle
 try:
     import correctionlib.schemav2 as cs
+    from correctionlib.JSONEncoder import write
 except ImportError:
     cs = None
 # import rich
 
 TREE_TAG = ""  # tagger suffix for the output tree (e.g. "_pnet"); set from --tagger, "" = DeepTau
-
+TAGGER_COMB_TAG = ""
 
 def load_pt_values(setup,**kwargs):
     pt_avg_list = []
@@ -74,7 +75,7 @@ def _load_fullcorr_tid(input_root, year, jet_wp, ele_wp):
     except ImportError:
         _ROOT = None
 
-    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_DM*.txt"
+    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_{TAGGER_COMB_TAG}_{year}-13TeV_DM*.txt"
     files = glob.glob(pattern)
     print(f"[fullcorr-tid] Found {len(files)} param files")
     # Postfit FitDiag tree (covariance source)
@@ -116,7 +117,7 @@ def _load_fullcorr_tid(input_root, year, jet_wp, ele_wp):
         # Try FitDiagnostics for full covariance error propagation
         sf_eff_map, sig_eff_map = {}, {}
         fitdiag_path = os.path.join(fitdiag_dir,
-            f"fitDiagnostics.mt_m_vis-{dm}_mutau_DeepTau-{year}-13TeV.root")
+            f"fitDiagnostics.mt_m_vis-{dm}_mutau_{TAGGER_COMB_TAG}-{year}-13TeV.root")
         if _ROOT is not None and os.path.exists(fitdiag_path):
             f_fd = _ROOT.TFile.Open(fitdiag_path)
             fr = f_fd.Get('fit_s') if f_fd else None
@@ -194,7 +195,7 @@ def load_sf_measurements(setup, year, **kwargs):
         return _load_fullcorr_tid(input_root, year, jet_wp, ele_wp)
 
     # Use glob to find all measurement files
-    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_DeepTau_{year}-13TeV_*.txt"
+    pattern = f"{input_root}/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/FitparameterValues_*_{TAGGER_COMB_TAG}_{year}-13TeV_*.txt"
     #f"plots_pt_less_region/againstjet_{jet_wp}/againstelectron_{ele_wp}/{year}/measurement_2D_tes_*_tid_SF_*_mt_*_mutau.txt"
     all_files = glob.glob(pattern)
     print(f"[DEBUG] Found {len(all_files)} measurement files")
@@ -298,8 +299,9 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     
     # Tagger-aware labels (DeepTau by default; PNet/UParT via config 'tagger' block)
     _tagger    = setup.get('tagger') or {}
-    id_label   = _tagger.get('id_label', 'DeepTau2018v2p5VSjet')          # e.g. ParticleNetVSjet
-    tagger_tag = id_label.replace('VSjet', '').rstrip('_') or 'DeepTau2018v2p5'  # filename component
+    id_label   = _tagger.get('id_label', 'PNetVSjet')          # e.g. ParticleNetVSjet
+    tagger_tag = TAGGER_COMB_TAG #id_label.replace('VSjet', '').rstrip('_') or TAGGER_COMB_TAG  # filename component
+    print(f">>>>>>>>>>>>.           [DEBUG] Using tagger label: {id_label}, tagger tag: {tagger_tag}")
 
     # Loop over DMs
     print(">>> DM exclusive ")
@@ -313,7 +315,7 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
     except Exception:
         dm_order = []
     if not dm_order:
-        dm_order = ["DM0", "DM1", "DM10", "DM11"]
+        dm_order = ["DM0", "DM1", "DM2" ,"DM10", "DM11"] # -> add as an input argument in the future
 
     # Define pt edges for each pt bin (adjust these based on your actual pt ranges)
     pt_bin_edges = { # should be configurable in the yml file, but for now hardcoded based on typical pt binning
@@ -589,8 +591,8 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                             cs.Variable(name="DM", type="int", description="Tau decay mode (e.g. 0,1,2,10,11; -1 = rest for PNet/UParT)"),
                             cs.Variable(name="pT", type="real", description="Tau transverse momentum"),
                             cs.Variable(name="syst", type="string", description="Systematic variation ('nom', 'up', 'down')"),
-                            cs.Variable(name="wp_VSmu", type="string", description="DeepTau2018v2p5 working point vs muon ('VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
-                            cs.Variable(name="wp_VSe", type="string", description="DeepTau2018v2p5 working point vs electron ('VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
+                            cs.Variable(name="wp_VSmu", type="string", description=f"{TAGGER_COMB_TAG} working point vs muon ('Tight')"),
+                            cs.Variable(name="wp_VSe", type="string", description=f"{TAGGER_COMB_TAG} working point vs electron ('VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight')"),
                             cs.Variable(name="wp_VSjet", type="string", description=f"{id_label} working point vs jet"),
                         ],
                         output={'name': "sf", 'type': "real", 'description': f"{name} scale factor"},
@@ -638,9 +640,11 @@ def plot_dm_graph(setup, form, ele_wp, jet_wp, **kwargs):
                     )
                     
                     json_filename = f"tau_sf/{name}_SF_dm_{tagger_tag}_{args.year}{({'corr': '_corrTES', 'fullcorr': '_fullcorr'}.get(variant, ''))}_VSjet{current_jet_wp}_VSele{ele_wp}.json"
-                    with open(json_filename, "w") as fout:
-                        print(f">>> Writing JSON: {json_filename}")
-                        fout.write(cset.json())
+                    write(cset,json_filename, sort_keys=True, indent=4)
+                    # with open(json_filename, "w") as fout:
+                    #     print(f">>> Writing JSON: {json_filename}")
+
+                    #     fout.write(cset.json())
         
         except ImportError as e:
             print(f"Warning: Failed to import correctionlib: {e}")
@@ -753,20 +757,26 @@ def main(args):
 
 
 if __name__ == '__main__':
+    
+    description = '''This script makes plot of pt-dependants id SF measurments from txt file and config file.'''
+    parser = ArgumentParser(prog="plot_it_SF",description=description,epilog="Success!")
+    parser.add_argument('-c', '--config', dest='config', type=str, default='TauES_ID/config/Default_FitSetupTES_mutau_DM_mt65pt_lessptregion.yml', action='store', help="set config file")
+    parser.add_argument('-f', '--form', dest='form', choices=['json', 'root'], type=str, default='root', action='store', help="select format")
+    parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
+    parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
+    parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
+    parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
+                        help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES & common TauID with per-pT effective SFs")
+    parser.add_argument('--tagger', dest='tagger', type=str, default='',
+                        help="output-tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
+    parser.add_argument('--extratag', dest='extratag', type=str, default='PNet', help="Tagger that is in the Files names")
 
-  description = '''This script makes plot of pt-dependants id SF measurments from txt file and config file.'''
-  parser = ArgumentParser(prog="plot_it_SF",description=description,epilog="Success!")
-  parser.add_argument('-c', '--config', dest='config', type=str, default='TauES_ID/config/Default_FitSetupTES_mutau_DM_mt65pt_lessptregion.yml', action='store', help="set config file")
-  parser.add_argument('-f', '--form', dest='form', choices=['json', 'root'], type=str, default='root', action='store', help="select format")
-  parser.add_argument('-e', '--electron_wp', dest='ele_wp', type=str, default='VVLoose', help="electron wp")
-  parser.add_argument('-j', '--jet_wp', dest='jet_wp', type=str, default='Tight', help="jet working point")
-  parser.add_argument('-y', '--year', dest='year', type=str, default='2025', help="year of the measurement")
-  parser.add_argument('--variant', dest='variant', choices=['uncorr','corr','fullcorr'], default='uncorr',
-                      help="uncorr: per-region; corr: per-DM TES; fullcorr: per-DM TES & common TauID with per-pT effective SFs")
-  parser.add_argument('--tagger', dest='tagger', type=str, default='',
-                      help="output-tree tagger suffix (e.g. pnet, upart); '' = DeepTau default")
-  args = parser.parse_args()
-  if args.tagger:
-    TREE_TAG = "_" + args.tagger
-  main(args)
-  print(">>>\n>>> done\n")
+    args = parser.parse_args()
+    if args.tagger:
+        TREE_TAG = "_" + args.tagger
+    
+    if args.extratag:
+        TAGGER_COMB_TAG = args.extratag
+
+    main(args)
+    print(">>>\n>>> done\n")

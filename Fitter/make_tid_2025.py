@@ -19,9 +19,9 @@ HERE       = os.path.dirname(os.path.abspath(__file__))
 SF_DIR     = os.path.join(HERE, 'tau_sf')
 VSJET_WPS  = ['VVLoose','VLoose','Loose','Medium','Tight','VTight']
 VSE_WPS    = ['VVLoose','Tight']
-DMS        = [0,1,10,11]
-LABEL      = 'DeepTau2018v2p5'        # filename tagger component (set from --config tagger)
-TID_LABEL  = 'DeepTau2018v2p5VSjet'   # correctionlib id label (set from --config tagger)
+DMS        = [0,1,2,10,11]
+LABEL      = 'PNet' #'DeepTau2018v2p5'        # filename tagger component (set from --config tagger)
+TID_LABEL  = 'PNetVSjet'  #'DeepTau2018v2p5VSjet'   # correctionlib id label (set from --config tagger)
 PT_BINS    = [20.0,40.0,60.0,200.0]  # 3 pT bins for TauID (and TES uncorr)
 TES_CORR_BINS = [20.0, 200.0]        # 1 inclusive bin for corrTES TES
 
@@ -131,6 +131,7 @@ def main():
                   help="output JSON (default: data/tau/TauCorrections_<year>[_<variant>]_with_uncorrelated_systs.json)")
   ap.add_argument('-c', '--config', default=None,
                   help="fit config with a 'tagger' block (PNet/UParT). If omitted, DeepTau defaults are used.")
+  ap.add_argument('--extratag', dest='extratag', type=str, default='PNet', help="Tagger that is in the Files names")
   args = ap.parse_args()
 
   year    = args.year
@@ -145,6 +146,7 @@ def main():
     _tagger = _setup.get('tagger') or {}
     TID_LABEL = _tagger.get('id_label', TID_LABEL)
     LABEL     = TID_LABEL.replace('VSjet', '').rstrip('_') or 'DeepTau2018v2p5'
+    LABEL    = args.extratag if args.extratag and args.extratag != LABEL else LABEL
     if _tagger.get('vsjet', {}).get('wps'):
       VSJET_WPS = list(_tagger['vsjet']['wps'].keys())
     try:  # DM list from scanRegions: DM0->0, DM11->11, DMrest->-1
