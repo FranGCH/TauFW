@@ -170,7 +170,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     tes_range = "0.900,1.300"
 
                 # Load the parameters from the text file (always from postfit_outdir)
-                param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt")
+                param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{r}.txt")
                 params = {}
                 with open(param_file, 'r') as f:
                     for line in f:
@@ -205,7 +205,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
                 # Postfit shape:
                 outf_postfit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/PostFitShape_{era}_{setup['tag']}_{r}.root" # {postfit_outdir}
-                outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}_PNet-{era}-13TeV.root" # {postfit_outdir}
+                outf_fit = f"output_pt_less_region/againstjet_Medium/againstelectron_Tight/2024/fitDiagnostics.mt_m_vis-{r}{setup['tag']}{extratag}-{era}-13TeV.root" # {postfit_outdir}
                 print(f"[DEBUG] PostFitShapesFromWorkspace command: PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
                 os.system(f"PostFitShapesFromWorkspace --output {outf_postfit} --workspace {workspace} -f {outf_fit}:fit_s --postfit")
                 print(f"[DEBUG] Created postfit shape file: {outf_postfit}")
@@ -262,7 +262,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 tes_range = "0.950,1.050"
 
             # Load parameters from file
-            param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt")
+            param_file = kwargs.get('param_file', f"{postfit_outdir}/FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{r}.txt")
             param_file = param_file.replace("postfit", "output")
             if os.path.exists(param_file):
                 params = {}
@@ -436,7 +436,8 @@ def main(args):
     config = args.config
     config_mumu = args.config_mumu 
     option = args.option
-    extratag     = "_PNet"
+    extratag = args.extratag or "_PNet"
+    extratag = extratag if extratag.startswith('_') else '_' + extratag
 
 
     print("Using configuration file: %s"%(args.config))
@@ -482,6 +483,7 @@ if __name__ == '__main__':
     parser.add_argument('--ele_wp', dest='ele_wp', type=str, required=True, help="electron working point")
     parser.add_argument('--impacts', dest='impacts', action='store_true', default=False, help="also run combineTool -M Impacts per region after FitDiagnostics (slow)")
     parser.add_argument('--impacts-parallel', dest='impacts_parallel', type=int, default=8, help="--parallel value for combineTool Impacts --doFits")
+    parser.add_argument('--extratag', dest='extratag', type=str, default='', help="Extra tag for the output files (e.g., '_PNet', 'PNet', '_PNet_HPS', etc.)")
     args = parser.parse_args()
 
     main(args)

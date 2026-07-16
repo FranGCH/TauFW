@@ -326,7 +326,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[BOOST] Reached MAX_BOOST_ITER={MAX_BOOST_ITER} without entry 0 becoming global min — accepting current result")
 
                 # Extract actual parameter values from the fit result
-                param_file = f"FitparameterValues_{setup['tag']}_PNet_{era}-13TeV_{r}.txt"
+                param_file = f"FitparameterValues_{setup['tag']}{extratag}_{era}-13TeV_{r}.txt"
                 print(f"[DEBUG] Looking for 2D fit result file: {fit_result_file}")
                 print(f"[DEBUG] Creating parameter file: {param_file}")
                 # if os.path.exists(fit_result_file):
@@ -557,10 +557,6 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(" No output plot...")
 
 
-
-
-
-
 ### main function
 def main(args):
 
@@ -570,7 +566,8 @@ def main(args):
     config_mumu = args.config_mumu 
     option = args.option
     # Always set extratag to a non-empty default value
-    extratag = "_PNet"
+    extratag = args.extratag or "_PNet"
+    extratag = extratag if extratag.startswith('_') else '_' + extratag
     input_dir = args.input_dir
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
     base_out = input_dir.replace('input', 'output')
@@ -631,6 +628,7 @@ if __name__ == '__main__':
     parser.add_argument('--mumu_datacard_file', dest='mumu_datacard_file', type=str, default=None, help="Path to the mumu datacard file to use (if not generating)")
     parser.add_argument('-i', '--input_dir', dest='input_dir', type=str, help="inputdir containing root files for datacard")
     parser.add_argument('--input_file', dest='input_file', type=str, required=True, help="Path to the input root file")
+    parser.add_argument('--extratag', dest='extratag', type=str, default='', help="Extra tag for the output files (e.g., '_PNet', 'PNet', '_PNet_HPS', etc.)")
     args = parser.parse_args()
 
     main(args)

@@ -14,6 +14,7 @@ import ROOT
 import numpy as np
 from math import sqrt, pi
 from argparse import ArgumentParser
+import logging
 from ROOT import gROOT, gPad, gStyle, TFile, TCanvas, TLegend, TLatex, TF2, TGraph2D, TH2D, TPolyMarker3D, TGraphAsymmErrors, TLine, TEllipse
 from ROOT import kBlack, kBlue, kRed, kGreen, kYellow, kOrange, kMagenta, kTeal, kAzure, TMath
 from TauFW.Plotter.sample.utils import CMSStyle
@@ -24,6 +25,8 @@ gStyle.SetOptTitle(0)
 
 # CMS style
 CMSStyle.setTDRStyle()
+
+logger = logging.getLogger(__name__)
 
 def ensureDirectory(dirname):
     """Make directory if it does not exist."""
@@ -38,11 +41,11 @@ def ensureDirectory(dirname):
 def ensureTFile(filename, option='READ'):
     """Open TFile and make sure it exists."""
     if not os.path.isfile(filename):
-        print(f"ERROR: File {filename} does not exist!")
+        logger.error(f"File {filename} does not exist!")
         sys.exit(1)
     file = TFile(filename, option)
     if not file or file.IsZombie():
-        print(f"ERROR: Could not open file {filename}")
+        logger.error(f"Could not open file {filename}")
         sys.exit(1)
     return file
 
@@ -1247,14 +1250,17 @@ def main(args):
             poi1_name = args.poi1
             poi2_name = args.poi2
         
+        print(f">>> POI names: {poi1_name}, {poi2_name} line 1250 (plot2DScan_MultiDimFit.py)")
+        
         # Construct MultiDimFit filename
         multidimfit_filename = f"{indir}/higgsCombine.{channel}_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
-        
+        print(f">>> Looking for MultiDimFit file: {multidimfit_filename} line 1252")
         if not os.path.exists(multidimfit_filename):
             # Try alternative naming
             multidimfit_filename = f"{indir}/higgsCombine.mt_m_vis-{region}{tag}{extratag}-{era}-13TeV.MultiDimFit.mH90.root"
             if not os.path.exists(multidimfit_filename):
-                print(f"WARNING: MultiDimFit file not found for {region}")
+                print(f"ERROR: {multidimfit_filename} not found. line 1257")
+                print(f"WARNING: MultiDimFit file not found for {region} line 1258")
                 scan_results_all_regions[region] = None
                 continue
         
