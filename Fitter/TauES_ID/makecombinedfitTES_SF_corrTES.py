@@ -17,7 +17,9 @@ import sys
 import os
 import yaml
 from argparse import ArgumentParser
+import logging
 
+logger = logging.getLogger(__name__)
 
 def nonempty_regions(input_file, regions, proc="data_obs", min_yield=0.0):
     """Drop regions whose `proc` histogram integral is <= min_yield (e.g. empty DMrest
@@ -773,8 +775,9 @@ def plotScan(setup, setup_mumu, option, **kwargs):
         print(">>> Plot 1D scans for each POI in each region (from 2D fit output)")
         # Then create individual 2D plots for each region (optional, for detailed view)
         for r in setup["observables"]["m_vis"]["scanRegions"]:
-            command_2D = f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit --extratag {extratag}"
-            print(command_2D)
+            # dm_part = r.split("_")[0]
+            command_2D = f"python3 TauES_ID/plot2DScan_MultiDimFit.py --poi1 tes_{r.split('_')[0]} --poi2 tid_SF_{r} -y {era} -c {config} -i {indir} -t multidimfit --extratag {extratag} -r {r}"
+            logger.info(f"Executing command: {command_2D}")
             os.system(command_2D)
         # for r in setup["observables"]["m_vis"]["scanRegions"]:
         #     # Plot TES
@@ -786,12 +789,13 @@ def plotScan(setup, setup_mumu, option, **kwargs):
 
     
     else:
-        print(" No output plot...")
+        logger.info(" No output plot...")
 
 
 
 ### main function
 def main(args):
+    logger.info(f"Running {__name__}")
     era    = args.era
     config = args.config
     config_mumu = args.config_mumu 
@@ -802,7 +806,10 @@ def main(args):
 
     input_dir = args.input_dir
     # build output_dir from input_dir but avoid duplicating the era if input_dir already ends with it
-    base_out = input_dir.replace('input', 'output')
+    if 'input_pt_less_region' in input_dir:
+        base_out = input_dir.replace('input_pt_less_region', 'output_pt_less_region_corrTES')
+    else:
+        base_out = input_dir.replace('input', 'output')
     if os.path.basename(os.path.normpath(input_dir)) == era:
         output_dir = os.path.normpath(base_out)
     else:
