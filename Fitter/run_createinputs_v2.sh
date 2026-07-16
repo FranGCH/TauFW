@@ -48,12 +48,13 @@ echo ">>> Running createinputsTES.py ..."
 # Execute your command, redirecting all output (stdout and stderr) to the log file
 python3 TauES/createinputsTES.py \
     -y 2024 \
-    -c TauES_ID/config/config_coarse_PNet_TT.yml \
-    --outbase /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src/TauFW/Fitter/input_pt_less_region \
+    -c TauES_ID/config/config_coarse_PNet_TT_hps.yml \
+    --outbase /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src/TauFW/Fitter/input_pt_less_region_pnet_hps \
     "$@"
 # python3 TauES/createinputsTES.py \
 #     -y 2024 \
 #     -c TauES/config/FitSetup_mumu.yml \
+#     --outbase /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src/TauFW/Fitter/input_pt_less_region_pnet_hps \
 #     "$@"
 
 # Record the exit status of the command

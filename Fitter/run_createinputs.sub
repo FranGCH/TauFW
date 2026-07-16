@@ -11,9 +11,9 @@ base_path = /eos/user/f/fcasalin/CMSSW_14_1_0_pre4/src
 arguments             = $(base_path) -j $(JWP) -e $(EWP)
 
 # --- Resource Requests ---
-# request_cpus = 4
+request_cpus = 4
 
-# request_memory = 3000 MB
+request_memory = 3000 MB
 
 # --- Log Files ---
 # Use separate log files for each DM to avoid conflicts
@@ -28,6 +28,16 @@ log    = condor_logs/log.job_$(JWP)_$(EWP)_$(ClusterId)
 # --- Submission Queue ---
 # This file describes a single job, so we only need queue 1
 queue JWP, EWP from (
+    VVLoose VVLoose
     VVLoose Tight
+    VLoose VVLoose
+    VLoose Tight
+    Loose VVLoose
+    Loose Tight
+    Medium VVLoose
     Medium Tight
+    Tight VVLoose
+    Tight Tight
+    VTight VVLoose
+    VTight Tight
 )
