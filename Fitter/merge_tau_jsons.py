@@ -14,7 +14,7 @@ import os
 import re
 from argparse import ArgumentParser
 import correctionlib.schemav2 as cs
-
+from correctionlib.JSONEncoder import write
 
 def extract_genmatch_data(data_node):
     """
@@ -58,9 +58,11 @@ def create_combined_correction(input_dir, output_filename, correction_type="tes"
     
     # Write file
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-    with open(output_filename, "w") as fout:
-        print(f"\n>>> Writing {correction_type.upper()} correction to {output_filename}!")
-        fout.write(cset.json(exclude_unset=True))
+    print(f"\n>>> Writing combined corrections to {output_filename}!")
+    write(cset, output_filename,sort_keys=True, indent=2)
+    # with open(output_filename, "w") as fout:
+    #     print(f"\n>>> Writing {correction_type.upper()} correction to {output_filename}!")
+    #     fout.write(cset.json(exclude_unset=True))
     
     print(f">>> Successfully created {correction_type.upper()} correction file")
     
@@ -158,9 +160,11 @@ def create_combined_both_corrections(input_dir, output_filename, variant="uncorr
     
     # Write file
     os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-    with open(output_filename, "w") as fout:
-        print(f"\n>>> Writing combined corrections to {output_filename}!")
-        fout.write(combined_cset.json(exclude_unset=True))
+    print(f"\n>>> Writing combined corrections to {output_filename}!")
+    write(combined_cset, output_filename,sort_keys=True, indent=2)
+    # with open(output_filename, "w") as fout:
+    #     print(f"\n>>> Writing combined corrections to {output_filename}!")
+    #     fout.write(combined_cset.json(exclude_unset=True))
     
     print(f">>> Successfully created combined file with {len(corrections_list)} correction(s)")
     
