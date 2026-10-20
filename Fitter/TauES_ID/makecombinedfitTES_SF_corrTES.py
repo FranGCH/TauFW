@@ -18,8 +18,22 @@ import os
 import yaml
 from argparse import ArgumentParser
 import logging
+import re
+import read_yaml_calc_min
+# from read_yaml_calc_min import best_parameters
 
 logger = logging.getLogger(__name__)
+
+JET_WP=None
+ELE_WP=None
+
+
+def jet_p_ele_wps(input_file):
+    """ Extract the jet and electron wps from the input file"""
+    wps =re.search(r"againstjet_([^/]+)/againstelectron_([^/]+)/", input_file)
+    if wps:
+        return wps.group(1), wps.group(2)
+    return None, None
 
 def nonempty_regions(input_file, regions, proc="data_obs", min_yield=0.0):
     """Drop regions whose `proc` histogram integral is <= min_yield (e.g. empty DMrest
@@ -188,6 +202,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # shallow attractor while the grid found deeper minima (deltaNLL<0 in tree),
     # which no amount of boost re-seeding could fix.
     fit_opts     = kwargs.get('fit_opts',      "--setRobustFitTolerance=1e-5 --robustFit=1 --setRobustFitAlgo=Minuit2 --cminDefaultMinimizerStrategy=2 --setRobustFitStrategy=2  --X-rtd MINIMIZER_analytic %s"%(npts_fit) )
+    fit_opts_og = fit_opts
     xrtd_opts    = kwargs.get('xrtd_opts',    "")
     cmin_opts    = kwargs.get('cmin_opts',     "--cminFallbackAlgo Minuit2,Migrad,2:1e-5 --cminPreScan")
     save_opts    = kwargs.get('save_opts',    "--saveNLL --saveSpecifiedNuis all --saveFitResult --saveWorkspace") #--saveSpecifiedNuis all --saveFitResult")   
@@ -209,9 +224,11 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # convert to absolute path & create it to prevent nested directories when changing cwd
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
-    print(f"input_dir: {input_dir}")
-    print(f"computed output_dir: {output_dir}")
+    print(f">>>>>> CACA1 input_dir: {input_dir}")
+    print(f">>>>>> CACA2 computed output_dir: {output_dir}")
     workspace = ""
+    jet_wp, ele_wp = jet_p_ele_wps(input_dir)
+    print(f">>>>>> CACA3 jet_wp: {jet_wp}, ele_wp: {ele_wp}")
 
     # ===== CORRELATED-TES OPTION 3 =====
     # Per-DM joint fit: tes_DM<X> (correlated across pT) + tid_SF_DM<X>_pt{1,2,3}.
@@ -221,6 +238,17 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
     # TES correlation across pT is enforced by sharing the same parameter name
     # 'tes_DM<X>' across all 3 channels of the combined card.
     if option == '3':
+
+        parameters_dictionary_default = {
+            'r': 1,
+            'tid_range': tid_SF_range,
+            'tes_range': tes_range,
+            'tid_p_tes_value': '',
+            'n_points': 1600
+        }
+        tid_range_dm_og = tid_SF_range  # save original for DM0_pt2 override below
+        tes_range_og = tes_range  # save original for DM1_pt3 override below
+
         LABEL = setup["tag"] + extratag + "-" + era + "-13TeV"
 
         # Unique DMs in stable order from scanRegions
@@ -263,7 +291,16 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             all_pois_csv = ",".join(all_pois)
 
             # DM11 widens TauID range (matches original option-3 behaviour)
+            # if dm == "DM11":
+            #     tid_range_dm = "0.5,1.2"
+            # elif "recovAllDMs" in dm:
+            #     tid_range_dm = "0.5,1.5"
+            # elif "DM10" in dm:
+            #     tid_range_dm = "0.5,1.5"
+            # elif "DM1" in dm or "DM0" in dm:
+            #     tid_range_dm = "0.5,1.5"
             tid_range_dm = "0.5,1.2" if dm == "DM11" else tid_SF_range
+
 
             os.chdir(output_dir)
             try:
@@ -274,6 +311,52 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 # (no pT suffix) vs 'tes_DM<X>_pt<N>' in uncorr.
                 region_to_bin = {}
                 for r in pt_regions:
+                    "Pay attention to the dots !!!!!!!!"
+                    # tid_range_dm = tid_range_dm_og
+                    # tid_range_dm = "0.8,1.4" if "DM0_pt2" in r else tid_range_dm
+                    # r_new, tid_range_new, tes_range_new, tid_p_tes_value_new, n_points_new = best_parameters('./2Dmap_config.yml', extratag, jet_wp, ele_wp, r, ['r', 'tid_range', 'tes_range', 'tid_p_tes_value', 'n_points'], parameters_dictionary_default)
+                    if r == "DM1_pt3" and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                        tid_range_dm = "0.5,1.4"
+                        fit_opts = fit_opts_og
+                        tes_range = tes_range_og
+                        #------------
+                    
+                    if r == "DM1_pt3" and jet_wp == "VVLoose" and ele_wp == "Tight":
+                        tid_range_dm = "0.8,1.4"
+                        fit_opts = fit_opts_og
+                        tes_range = tes_range_og
+                        # ----------
+
+                    elif r == "DM10_pt3" and jet_wp == "VLoose" and ele_wp == "Tight":
+                        tid_range_dm = "0.6,1.2"
+                        tes_range = tes_range_og
+                        fit_opts = fit_opts_og
+                    elif "DM11" in r and jet_wp == "VLoose" and ele_wp == "Tight":
+                        tid_range_dm = "0.5,1.4"
+                        tes_range = tes_range_og
+                        fit_opts = fit_opts_og
+                        #-----------
+                    elif r == "DM0_pt1" and jet_wp == "Loose" and ele_wp == "Tight":
+                        tid_range_dm = "0.8,1.2"
+                        tes_range = tes_range_og
+                        fit_opts = fit_opts_og
+                    elif r == "DM0_pt2" and jet_wp == "Loose" and ele_wp == "Tight":
+                        tid_range_dm = "0.8,1.2"
+                        tes_range = tes_range_og
+                        fit_opts = fit_opts_og
+                    elif r == "DM0_pt3" and jet_wp == "Loose" and ele_wp == "Tight":
+                        tid_range_dm = "0.8,1.2"
+                        tes_range = tes_range_og #"0.95,1.02" #with this, the TES value is 0.9919
+                        fit_opts = fit_opts_og
+
+
+                    else:
+                        tid_range_dm = tid_range_dm_og
+                        tes_range = tes_range_og
+                        fit_opts = fit_opts_og
+                        
+                    print(f"Default parameters for {r}: tid_range={tid_range_dm}, tes_range={tes_range}")
+
                     BINLABELoutput = f"mt_m_vis-{r}{setup['tag']}{extratag}-{era}-13TeV"
                     region_to_bin[r] = BINLABELoutput
                     POI1 = f"tid_SF_{r}"   # pT-bin-specific TauID SF (scanned)
@@ -290,6 +373,49 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                         f"--freezeParameters r "
                         f"--floatOtherPOIs=1"
                     )
+                    POI_OPTS_OG = POI_OPTS
+                    if "DM1_pt3" in r and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM1_pt3=1.04,tes_DM1=1.0"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                    elif "DM10_pt1" in r and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM10_pt1=1.05,tes_DM10=1.010"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value) 
+                    elif "DM10_pt2" in r and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM10_pt2=0.92,tes_DM10=1.015"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value) 
+                    elif "DM10_pt3" in r and jet_wp == "VVLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM10_pt3=0.81,tes_DM10=1.010"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value) 
+                        #-----------
+                    elif "DM1_pt3" in r and jet_wp == "VVLoose" and ele_wp == "Tight":
+                        r_value = "r=1,tid_SF_DM1_pt3=1.1202,tes_DM1=1.013"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                        #-----------
+                    elif "DM10_pt3" in r and jet_wp == "VLoose" and ele_wp == "Tight":
+                        r_value = "r=1,tid_SF_DM10_pt3=0.92,tes_DM10=1.0081"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                        #-----------
+                    elif "DM1_pt1" in r and jet_wp == "VLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM1_pt1=1.087,tes_DM1=0.991"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                    elif "DM1_pt2" in r and jet_wp == "VLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM1_pt2=1.035,tes_DM1=0.99"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                    elif "DM1_pt3" in r and jet_wp == "VLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM1_pt3=1.16,tes_DM1=1.0"
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)
+                    elif "DM11_pt3" in r and jet_wp == "VLoose" and ele_wp == "VVLoose":
+                        r_value = "r=1,tid_SF_DM11_pt3=1.171" #1.171
+                        POI_OPTS = POI_OPTS.replace("r=1",r_value)                          
+                        ##### L & T
+                    # elif r == "recovAllDMs_pt1" and jet_wp == "Loose" and ele_wp == "Tight":
+                    #     r_value = "r=1,tid_SF_recovAllDMs_pt1=1.000,tes_recovAllDMs=0.991" -> to do this tomorrow
+                    #     POI_OPTS = POI_OPTS.replace("r=1",r_value)   
+
+
+                    else:
+                        POI_OPTS = POI_OPTS_OG
+                        r_value = "r=1"
                     MultiDimFit_opts = (
                         f"-m 90 {workspace_file} {algo} {POI_OPTS} -n .{BINLABELoutput} "
                         f"{fit_opts} {xrtd_opts} {cmin_opts} {save_opts}"
@@ -297,6 +423,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     print(f"[corrTES] 2D scan ({POI2}, {POI1}) BIN={BINLABELoutput}")
                     print(f"  {MultiDimFit_opts}")
                     os.system(f"combine -M MultiDimFit {MultiDimFit_opts}")
+                    print(f"[corrTES] 2D scan command options {MultiDimFit_opts}")
 
                     # ---- Iterative boost: up to 5 retries (max 6 passes total).
                     # After each pass, if the grid found a deeper basin than the
@@ -304,19 +431,21 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                     # re-scan. Each pass reuses -n .{BINLABELoutput} and so
                     # overwrites the previous pass's ROOT file in place. ----
                     fres = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
-                    MAX_PASSES = 6
+                    max_passes = 6 if "DM_pt2" in r else 6
+                    MAX_PASSES = max_passes
                     for pass_n in range(2, MAX_PASSES + 1):
                         boost = find_boost_params(fres, POI2, POI1)
                         if not boost:
                             print(f"[BOOST] {dm}/{r} converged before pass-{pass_n} (no deeper basin)")
                             break
                         boosted_opts = MultiDimFit_opts.replace(
-                            "--setParameters r=1 ",
+                            f"--setParameters{r_value} ",
                             f"--setParameters r=1,{boost} ",
                             1,
                         )
                         print(f"[BOOST] {dm}/{r} pass-{pass_n} (seeded from pass-{pass_n-1} deepest grid point)")
                         os.system(f"combine -M MultiDimFit {boosted_opts}")
+                        print(f"[BOOST] 2D scan command options {boosted_opts}")
                         print(f"[BOOST] {dm}/{r} pass-{pass_n} complete — overwrote {fres}")
 
                 # ---- Extract best-fits + 1σ; write per-DM param file ----
@@ -503,14 +632,15 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             print("MultidimFit %s : " %(r), '\t', MultiDimFit_opts)
             os.system("combine -M MultiDimFit %s " %(MultiDimFit_opts))
 
-            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doInitialFit --robustFit 1   --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2")  
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doInitialFit --robustFit 1   --cminFallbackAlgo Minuit2,0:1 -v 0 --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.4")  
         
-            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2 -v 0")
-            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 -o tid_impacts_{r}.json --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.2 -v 0") 
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 --doFits --robustFit 1  --parallel 8  --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.4 -v 0")
+            os.system(f"combineTool.py -M Impacts -d {workspace} -m 90 -o tid_impacts_{r}.json --redefineSignalPOIs {POI} --setParameterRange r=0.96,1.04:{POI}=0.5,1.4 -v 0") 
             os.system(f"plotImpacts.py -i tid_impacts_{r}.json -o impacts_tid_SF_{r}")
 
         # 2D Fit of tes_DM and tid_SF_DM by DM, both are pois
         elif option == '3':
+            print("CACACACA")
             print(">>>>>>> Fit of tid_SF_"+r+" and tes_"+r)
             POI1 = "tid_SF_%s" % (r)
             POI2 = "tes_%s" % (r)
@@ -518,7 +648,9 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
             # widen the range so the grid scan finds a real interior minimum instead
             # of pegging at the boundary.
             if r.startswith("DM11"):
-                tid_SF_range = "0.5,1.2"
+                tid_SF_range = "0.5,1.4"
+            if r.startswith("recovAllDMs"):
+                tid_SF_range = "0.5,1.4"
             POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s --setParameters r=1 --redefineSignalPOIs %s,%s --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1) # :r=0.96,1.04 %s=1,%s=1, ,POI2, POI1  --freezeParameters r
             # POI_OPTS = "-P %s -P %s --setParameterRanges %s=%s:%s=%s  --setParameters r=1,%s=0.8,%s=1.025 --redefineSignalPOIs %s,%s  --freezeParameters r" % (POI2, POI1, POI2, tes_range, POI1,tid_SF_range, POI2, POI1, POI2,POI1) # %s=1,%s=1, ,POI2, POI1  --freezeParameters r  --freezeParameters r
             MultiDimFit_opts = " -m 90 %s %s %s -n .%s %s %s %s %s " %(workspace, algo, POI_OPTS, BINLABELoutput, fit_opts, xrtd_opts, cmin_opts, save_opts) #--trackParameters rgx{.*tid.*},rgx{.*W.*},rgx{.*dy.*} --cminFallbackAlgo Minuit2,Migrad,0:0.001
@@ -540,7 +672,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
                 # 0 is the deepest point or after MAX_BOOST_ITER iterations. Each
                 # pass reuses the same -n tag, overwriting the previous file. ---
                 fit_result_file = f"higgsCombine.{BINLABELoutput}.MultiDimFit.mH90.root"
-                MAX_BOOST_ITER = 3
+                MAX_BOOST_ITER = 5
                 for boost_iter in range(1, MAX_BOOST_ITER + 1):
                     boost = find_boost_params(fit_result_file, f"tes_{r}", f"tid_SF_{r}")
                     if not boost:
@@ -753,7 +885,7 @@ def run_combined_fit(setup, setup_mumu, option, **kwargs):
 
 # Plot the scan using output file of combined 
 def plotScan(setup, setup_mumu, option, **kwargs):
-    tid_SF_range = kwargs.get('tid_SF_range', "0.8,1.2")
+    tid_SF_range = kwargs.get('tid_SF_range', "0.8,1.4")
     extratag     = kwargs.get('extratag',     "_PNet")
     era          = kwargs.get('era',          ""        )
     config       = kwargs.get('config',       ""        )
@@ -861,6 +993,7 @@ def main(args):
     run_combined_fit(setup, setup_mumu, era=era, input_dir=input_dir, config=config, config_mumu=config_mumu, option=option, extratag=extratag, mumu_input_file=args.mumu_datacard_file)
 
     # Plots
+    print(">>> Plotting the scan results line 996")
     plotScan(setup, setup_mumu, era=era, config=config, config_mumu=config_mumu, option=option, indir=output_dir, extratag=extratag)
 
 

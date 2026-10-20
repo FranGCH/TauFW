@@ -87,11 +87,11 @@ regions:
 
 
 plottingOrder: &region_list [
-                "DM0", 
-                "DM1", 
-                "recovAllDMs",
-                "DM10", 
-                "DM11",
+                # "DM0", 
+                # "DM1", 
+                # "recovAllDMs",
+                # "DM10", 
+                # "DM11",
                 "DM0_pt1", "DM0_pt2", "DM0_pt3",
                 "recovAllDMs_pt1", "recovAllDMs_pt2", "recovAllDMs_pt3",
                 "DM1_pt1", "DM1_pt2", "DM1_pt3",
