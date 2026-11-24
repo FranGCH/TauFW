@@ -13,7 +13,7 @@ channel: mutau
 
 tag: "_mutau" #"_mutau_mt65_DM_pt_Dt2p5_puppimet"
 
-baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter && rawPNetVSe_2>=0.1266 && rawPNetVSjet_2>=0.8347 && rawPNetVSmu_2>=0.9451 && mt_1<65"
+baselineCuts: "q_1*q_2<0 && iso_1<0.15 && !lepton_vetoes_notau && metfilter && rawPNetVSe_2>=0.3547 && rawPNetVSjet_2>=0.8347 && rawPNetVSmu_2>=0.9451 && mt_1<65"
 
 
 # These regions will be defined when creating inputs or making plots
